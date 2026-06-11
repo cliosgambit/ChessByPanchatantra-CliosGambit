@@ -15,7 +15,7 @@ import {
   FormErrorMessage,
   VStack,
 } from '@chakra-ui/react';
-import { updateLoginUser } from '../../services/usersService';
+import { resolveLoginRole, updateLoginUser } from '../../services/usersService';
 
 const ROLES = [
   { value: 'student', label: 'Student' },
@@ -23,11 +23,17 @@ const ROLES = [
   { value: 'admin', label: 'Admin' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'PAUSED', label: 'Paused' },
+];
+
 function EditUserModal({ isOpen, onClose, user, onSuccess }) {
   const [playerName, setPlayerName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
+  const [status, setStatus] = useState('ACTIVE');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +42,7 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
       setPlayerName(user.name || '');
       setEmail(user.email || '');
       setRole(user.roleRaw || user.role?.toLowerCase() || 'student');
+      setStatus(user.status === 'PAUSED' ? 'PAUSED' : 'ACTIVE');
       setPassword('');
       setError('');
     }
@@ -50,7 +57,7 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
       const payload = {
         Player_Name: playerName.trim(),
         email: email.trim(),
-        Role: role,
+        Role: resolveLoginRole(role, status),
       };
       if (password.trim()) payload.password = password.trim();
       await updateLoginUser(user.chessComId || user.id, payload);
@@ -71,31 +78,41 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4} align="stretch">
+            <FormControl isRequired>
+              <FormLabel fontSize="sm">Name</FormLabel>
+              <Input value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel fontSize="sm">Email</FormLabel>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </FormControl>
             <FormControl isDisabled>
               <FormLabel fontSize="sm">Chess.com ID</FormLabel>
               <Input value={user?.chessComId || user?.id || ''} />
             </FormControl>
-            <FormControl>
-              <FormLabel fontSize="sm">Player Name</FormLabel>
-              <Input value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
-            </FormControl>
-            <FormControl>
-              <FormLabel fontSize="sm">Email</FormLabel>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </FormControl>
-            <FormControl>
-              <FormLabel fontSize="sm">New Password (optional)</FormLabel>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            </FormControl>
-            <FormControl>
+            <FormControl isRequired>
               <FormLabel fontSize="sm">Role</FormLabel>
-              <Select value={role} onChange={(e) => setRole(e.target.value)}>
+              <Select value={role} onChange={(e) => setRole(e.target.value)} isDisabled={status === 'PAUSED'}>
                 {ROLES.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
                 ))}
               </Select>
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel fontSize="sm">Status</FormLabel>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl>
+              <FormLabel fontSize="sm">New Password (optional)</FormLabel>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </FormControl>
             {error && <FormErrorMessage>{error}</FormErrorMessage>}
           </VStack>

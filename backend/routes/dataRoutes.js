@@ -20,6 +20,7 @@ const TABLE_SQL = {
   '3000_rated_puzzles': '"3000_rated_puzzles"',
   roles_control: 'roles_control',
   story_mapping: 'story_mapping',
+  users: 'users',
 };
 
 const WRITE_TABLES = new Set(['module', 'chapter', 'story', 'principles', 'principle_position', 'chess_puzzle']);

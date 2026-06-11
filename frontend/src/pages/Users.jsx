@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Box,
@@ -22,9 +23,10 @@ import ErrorPanel from '../components/common/ErrorPanel';
 import EmptyState from '../components/common/EmptyState';
 import PaginationBar from '../components/common/PaginationBar';
 import { useUsers } from '../hooks/useUsers';
-import { deleteLoginUser, pauseLoginUser } from '../services/usersService';
+import { deleteLoginUser } from '../services/usersService';
 
 function Users() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [editUser, setEditUser] = useState(null);
@@ -48,24 +50,13 @@ function Users() {
 
   const pageHeight = `calc(100vh - ${NAVBAR_HEIGHT}px)`;
 
+  const handleRowClick = (user) => {
+    navigate(`/users/${encodeURIComponent(user.chessComId || user.id)}`);
+  };
+
   const handleEdit = (user) => {
     setEditUser(user);
     onEditOpen();
-  };
-
-  const handlePause = async (user) => {
-    const paused = user.status !== 'PAUSED';
-    try {
-      await pauseLoginUser(user.chessComId || user.id, paused);
-      toast({
-        title: paused ? 'User paused' : 'User resumed',
-        status: 'success',
-        duration: 2000,
-      });
-      refetch();
-    } catch (err) {
-      toast({ title: err.message, status: 'error', duration: 3000 });
-    }
   };
 
   const handleDelete = async (user) => {
@@ -95,8 +86,8 @@ function Users() {
         <UsersTable
           users={users}
           emptyMessage="No users match your search or filter."
+          onRowClick={handleRowClick}
           onEdit={handleEdit}
-          onPause={handlePause}
           onDelete={handleDelete}
         />
         <PaginationBar

@@ -53,7 +53,7 @@ function UsersFilters({ search, onSearchChange, roleFilter, onRoleFilterChange }
           borderColor={borderColor}
           borderRadius="md"
           fontSize="xs"
-          placeholder="Search users by name, email, or role..."
+          placeholder="Search users by name, email, or Chess.com ID..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           _hover={{ borderColor: 'gray.300' }}

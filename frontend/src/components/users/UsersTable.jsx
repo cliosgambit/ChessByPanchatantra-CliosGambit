@@ -12,14 +12,11 @@ import {
   HStack,
   Button,
   useColorModeValue,
-  useToast,
 } from '@chakra-ui/react';
 import UserStatusBadge from './UserStatusBadge';
 
 const ACTION_STYLES = {
-  view: { color: 'navy.700', _hover: { color: 'navy.600', textDecoration: 'underline' } },
   edit: { color: 'blue.600', _hover: { color: 'blue.500', textDecoration: 'underline' } },
-  pause: { color: 'gold.600', _hover: { color: 'gold.500', textDecoration: 'underline' } },
   delete: { color: 'red.600', _hover: { color: 'red.500', textDecoration: 'underline' } },
 };
 
@@ -45,27 +42,34 @@ function ActionLink({ label, styleKey, onClick }) {
 function UsersTable({
   users,
   emptyMessage = 'No users match your search or filter.',
+  onRowClick,
   onEdit,
-  onPause,
   onDelete,
 }) {
-  const toast = useToast();
   const cardBg = useColorModeValue('white', 'navy.800');
   const borderColor = useColorModeValue('gray.100', 'whiteAlpha.200');
   const headerColor = useColorModeValue('gray.500', 'gray.400');
   const rowBorder = useColorModeValue('gray.100', 'whiteAlpha.100');
-  const rowHover = useColorModeValue('gray.50', 'whiteAlpha.50');
+  const rowHover = useColorModeValue('gray.50', 'whiteAlpha.100');
   const nameColor = useColorModeValue('navy.800', 'white');
   const subColor = useColorModeValue('gray.500', 'gray.400');
   const roleColor = useColorModeValue('gray.700', 'gray.200');
+  const chessIdColor = useColorModeValue('gray.700', 'gray.200');
+  const emptyChessIdColor = useColorModeValue('gray.400', 'gray.500');
 
-  const handleView = (user) => {
-    toast({
-      title: user.chessComId || user.id,
-      description: `${user.email} · ${user.role}`,
-      status: 'info',
-      duration: 2500,
-    });
+  const formatChessComId = (user) => user.chessComId || user.id || '—';
+
+  const activateRow = (user) => onRowClick?.(user);
+
+  const handleRowKeyDown = (event, user) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      activateRow(user);
+    }
+  };
+
+  const stopRowActivation = (event) => {
+    event.stopPropagation();
   };
 
   return (
@@ -164,7 +168,19 @@ function UsersTable({
                   borderBottomWidth="1px"
                   borderColor={rowBorder}
                   _last={{ borderBottom: 'none' }}
+                  cursor="pointer"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Open profile for ${user.name}`}
+                  onClick={() => activateRow(user)}
+                  onKeyDown={(event) => handleRowKeyDown(event, user)}
                   _hover={{ bg: rowHover }}
+                  _focus={{
+                    bg: rowHover,
+                    outline: '2px solid',
+                    outlineColor: 'gold.400',
+                    outlineOffset: '-2px',
+                  }}
                   sx={{ transition: 'background 0.2s ease' }}
                 >
                   <Td py={{ base: 3, md: 3.5 }} px={{ base: 3, md: 4 }}>
@@ -176,6 +192,15 @@ function UsersTable({
                     </Text>
                   </Td>
                   <Td py={{ base: 3, md: 3.5 }} px={{ base: 3, md: 4 }}>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="500"
+                      color={formatChessComId(user) === '—' ? emptyChessIdColor : chessIdColor}
+                    >
+                      {formatChessComId(user)}
+                    </Text>
+                  </Td>
+                  <Td py={{ base: 3, md: 3.5 }} px={{ base: 3, md: 4 }}>
                     <Text fontSize="sm" fontWeight="500" color={roleColor}>
                       {user.role}
                     </Text>
@@ -183,16 +208,24 @@ function UsersTable({
                   <Td py={{ base: 3, md: 3.5 }} px={{ base: 3, md: 4 }}>
                     <UserStatusBadge status={user.status} />
                   </Td>
-                  <Td py={{ base: 3, md: 3.5 }} px={{ base: 3, md: 4 }}>
+                  <Td py={{ base: 3, md: 3.5 }} px={{ base: 3, md: 4 }} onClick={stopRowActivation}>
                     <HStack spacing={4} justify="flex-end" flexWrap="wrap">
-                      <ActionLink label="View" styleKey="view" onClick={() => handleView(user)} />
-                      <ActionLink label="Edit" styleKey="edit" onClick={() => onEdit?.(user)} />
                       <ActionLink
-                        label={user.status === 'PAUSED' ? 'Resume' : 'Pause'}
-                        styleKey="pause"
-                        onClick={() => onPause?.(user)}
+                        label="Edit"
+                        styleKey="edit"
+                        onClick={(event) => {
+                          stopRowActivation(event);
+                          onEdit?.(user);
+                        }}
                       />
-                      <ActionLink label="Delete" styleKey="delete" onClick={() => onDelete?.(user)} />
+                      <ActionLink
+                        label="Delete"
+                        styleKey="delete"
+                        onClick={(event) => {
+                          stopRowActivation(event);
+                          onDelete?.(user);
+                        }}
+                      />
                     </HStack>
                   </Td>
                 </Tr>

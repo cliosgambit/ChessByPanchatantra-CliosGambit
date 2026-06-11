@@ -14,6 +14,13 @@ const LOGIN_KEY_MAP = {
   Role: ['Role', 'role'],
 };
 
+/** Maps UI role + status to Login.Role (paused users store Role as "paused"). */
+export function resolveLoginRole(role, status) {
+  const normalizedStatus = (status || 'ACTIVE').toUpperCase();
+  if (normalizedStatus === 'PAUSED') return 'paused';
+  return (role || 'student').toLowerCase();
+}
+
 export function formatRoleLabel(role) {
   if (!role) return 'Student';
   const normalized = String(role).toLowerCase();

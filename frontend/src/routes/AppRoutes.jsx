@@ -10,6 +10,7 @@ import Dashboard from '../pages/Dashboard';
 import StudentDashboard from '../pages/StudentDashboard';
 import CoachDashboard from '../pages/CoachDashboard';
 import Users from '../pages/Users';
+import UserProfilePage from '../pages/UserProfilePage';
 import PlayerDetails from '../pages/PlayerDetails';
 import Curriculum from '../pages/Curriculum';
 import Principles from '../pages/Principles';
@@ -59,6 +60,7 @@ function AppRoutesContent() {
 
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
               <Route path="/users" element={<Users />} />
+              <Route path="/users/:userId" element={<UserProfilePage />} />
               <Route path="/principles" element={<Principles />} />
               <Route path="/principles/:principleId" element={<PrincipleDetails />} />
               <Route path="/module-access" element={<ModuleAccess />} />
