@@ -1,0 +1,91 @@
+[2026-06-02T09:16:25.122Z] Running export_supabase.js
+[2026-06-02T09:16:32.780Z] Running create_sqlite.js
+[2026-06-02T09:16:33.046Z] Migrating table: public.3000_rated_puzzles
+[2026-06-02T09:16:33.047Z] Rows fetched: 417
+[2026-06-02T09:16:33.175Z] Rows inserted: 417 into public.3000_rated_puzzles
+[2026-06-02T09:16:33.176Z] Rows inserted: 417
+[2026-06-02T09:16:33.177Z] Verification: source=417, sqlite=417
+[2026-06-02T09:16:33.178Z] Migrating table: public.Login
+[2026-06-02T09:16:33.179Z] Rows fetched: 43
+[2026-06-02T09:16:33.192Z] Rows inserted: 43 into public.Login
+[2026-06-02T09:16:33.194Z] Rows inserted: 43
+[2026-06-02T09:16:33.194Z] Verification: source=43, sqlite=43
+[2026-06-02T09:16:33.195Z] Migrating table: public.brilliant_moves
+[2026-06-02T09:16:33.196Z] Rows fetched: 14
+[2026-06-02T09:16:33.205Z] Rows inserted: 14 into public.brilliant_moves
+[2026-06-02T09:16:33.206Z] Rows inserted: 14
+[2026-06-02T09:16:33.207Z] Verification: source=14, sqlite=14
+[2026-06-02T09:16:33.207Z] Migrating table: public.chapter
+[2026-06-02T09:16:33.208Z] Rows fetched: 18
+[2026-06-02T09:16:33.217Z] Rows inserted: 18 into public.chapter
+[2026-06-02T09:16:33.219Z] Rows inserted: 18
+[2026-06-02T09:16:33.220Z] Verification: source=18, sqlite=18
+[2026-06-02T09:16:33.221Z] Migrating table: public.chess_puzzle
+[2026-06-02T09:16:33.222Z] Rows fetched: 1612
+[2026-06-02T09:16:33.481Z] Rows inserted: 1612 into public.chess_puzzle
+[2026-06-02T09:16:33.482Z] Rows inserted: 1612
+[2026-06-02T09:16:33.482Z] Verification: source=1612, sqlite=1612
+[2026-06-02T09:16:33.483Z] Migrating table: public.module
+[2026-06-02T09:16:33.484Z] Rows fetched: 6
+[2026-06-02T09:16:33.487Z] Rows inserted: 6 into public.module
+[2026-06-02T09:16:33.489Z] Rows inserted: 6
+[2026-06-02T09:16:33.489Z] Verification: source=6, sqlite=6
+[2026-06-02T09:16:33.490Z] Migrating table: public.player_games
+[2026-06-02T09:16:33.491Z] Rows fetched: 218
+[2026-06-02T09:16:33.531Z] Rows inserted: 218 into public.player_games
+[2026-06-02T09:16:33.533Z] Rows inserted: 218
+[2026-06-02T09:16:33.535Z] Verification: source=218, sqlite=218
+[2026-06-02T09:16:33.536Z] Migrating table: public.players
+[2026-06-02T09:16:33.537Z] Rows fetched: 42
+[2026-06-02T09:16:33.548Z] Rows inserted: 42 into public.players
+[2026-06-02T09:16:33.549Z] Rows inserted: 42
+[2026-06-02T09:16:33.549Z] Verification: source=42, sqlite=42
+[2026-06-02T09:16:33.550Z] Migrating table: public.players_activity
+[2026-06-02T09:16:33.551Z] Rows fetched: 3876
+[2026-06-02T09:16:34.483Z] Rows inserted: 3876 into public.players_activity
+[2026-06-02T09:16:34.487Z] Rows inserted: 3876
+[2026-06-02T09:16:34.489Z] Verification: source=3876, sqlite=3876
+[2026-06-02T09:16:34.490Z] Migrating table: public.principle_position
+[2026-06-02T09:16:34.492Z] Rows fetched: 199
+[2026-06-02T09:16:34.588Z] Rows inserted: 199 into public.principle_position
+[2026-06-02T09:16:34.590Z] Rows inserted: 199
+[2026-06-02T09:16:34.591Z] Verification: source=199, sqlite=199
+[2026-06-02T09:16:34.591Z] Migrating table: public.principles
+[2026-06-02T09:16:34.592Z] Rows fetched: 199
+[2026-06-02T09:16:34.690Z] Rows inserted: 199 into public.principles
+[2026-06-02T09:16:34.693Z] Rows inserted: 199
+[2026-06-02T09:16:34.695Z] Verification: source=199, sqlite=199
+[2026-06-02T09:16:34.696Z] Migrating table: public.roles_control
+[2026-06-02T09:16:34.697Z] Rows fetched: 2
+[2026-06-02T09:16:34.701Z] Rows inserted: 2 into public.roles_control
+[2026-06-02T09:16:34.703Z] Rows inserted: 2
+[2026-06-02T09:16:34.704Z] Verification: source=2, sqlite=2
+[2026-06-02T09:16:34.707Z] Migrating table: public.story
+[2026-06-02T09:16:34.708Z] Rows fetched: 127
+[2026-06-02T09:16:34.805Z] Rows inserted: 127 into public.story
+[2026-06-02T09:16:34.808Z] Rows inserted: 127
+[2026-06-02T09:16:34.809Z] Verification: source=127, sqlite=127
+[2026-06-02T09:16:34.810Z] Migrating table: public.story_mapping
+[2026-06-02T09:16:34.811Z] Rows fetched: 261
+[2026-06-02T09:16:34.959Z] Rows inserted: 261 into public.story_mapping
+[2026-06-02T09:16:34.962Z] Rows inserted: 261
+[2026-06-02T09:16:34.964Z] Verification: source=261, sqlite=261
+[2026-06-02T09:16:34.993Z] --- FINAL VERIFICATION SUMMARY ---
+[2026-06-02T09:16:34.995Z] Total tables migrated: 14
+[2026-06-02T09:16:34.996Z] Total rows migrated: 7034
+[2026-06-02T09:16:34.997Z] Verification success: true
+[2026-06-02T09:16:34.998Z] SQLite DB path: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\database.db
+[2026-06-02T09:16:35.002Z] Preview public.3000_rated_puzzles: total=417
+[2026-06-02T09:16:35.008Z] Preview public.Login: total=43
+[2026-06-02T09:16:35.012Z] Preview public.brilliant_moves: total=14
+[2026-06-02T09:16:35.016Z] Preview public.chapter: total=18
+[2026-06-02T09:16:35.021Z] Preview public.chess_puzzle: total=1612
+[2026-06-02T09:16:35.025Z] Preview public.module: total=6
+[2026-06-02T09:16:35.029Z] Preview public.player_games: total=218
+[2026-06-02T09:16:35.033Z] Preview public.players: total=42
+[2026-06-02T09:16:35.039Z] Preview public.players_activity: total=3876
+[2026-06-02T09:16:35.044Z] Preview public.principle_position: total=199
+[2026-06-02T09:16:35.047Z] Preview public.principles: total=199
+[2026-06-02T09:16:35.049Z] Preview public.roles_control: total=2
+[2026-06-02T09:16:35.053Z] Preview public.story: total=127
+[2026-06-02T09:16:35.057Z] Preview public.story_mapping: total=261

@@ -1,0 +1,33 @@
+[2026-06-02T10:28:58.923Z] Using SQLite source: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\database.db
+[2026-06-02T10:28:59.018Z] Discovered 14 SQLite tables.
+[2026-06-02T10:29:00.767Z] Connected to PostgreSQL.
+[2026-06-02T10:29:01.351Z] Dropping conflicting table: public.3000_rated_puzzles
+[2026-06-02T10:29:01.759Z] Dropping conflicting table: public.Login
+[2026-06-02T10:29:02.193Z] Dropping conflicting table: public.brilliant_moves
+[2026-06-02T10:29:02.598Z] Dropping conflicting table: public.chapter
+[2026-06-02T10:29:03.011Z] Dropping conflicting table: public.chess_puzzle
+[2026-06-02T10:29:03.403Z] Dropping conflicting table: public.module
+[2026-06-02T10:29:03.748Z] Dropping conflicting table: public.player_games
+[2026-06-02T10:29:04.096Z] Dropping conflicting table: public.players
+[2026-06-02T10:29:04.478Z] Dropping conflicting table: public.players_activity
+[2026-06-02T10:29:04.915Z] Dropping conflicting table: public.principle_position
+[2026-06-02T10:29:05.293Z] Dropping conflicting table: public.principles
+[2026-06-02T10:29:05.743Z] Dropping conflicting table: public.roles_control
+[2026-06-02T10:29:06.153Z] Dropping conflicting table: public.story
+[2026-06-02T10:29:06.532Z] Dropping conflicting table: public.story_mapping
+[2026-06-02T10:29:06.934Z] Creating table: public.3000_rated_puzzles
+[2026-06-02T10:29:07.189Z] Creating table: public.Login
+[2026-06-02T10:29:07.381Z] Creating table: public.brilliant_moves
+[2026-06-02T10:29:07.579Z] Creating table: public.chapter
+[2026-06-02T10:29:07.798Z] Creating table: public.chess_puzzle
+[2026-06-02T10:29:07.996Z] Creating table: public.module
+[2026-06-02T10:29:08.180Z] Creating table: public.player_games
+[2026-06-02T10:29:08.347Z] Creating table: public.players
+[2026-06-02T10:29:08.685Z] Creating table: public.players_activity
+[2026-06-02T10:29:08.891Z] Creating table: public.principle_position
+[2026-06-02T10:29:09.078Z] Creating table: public.principles
+[2026-06-02T10:29:09.286Z] Creating table: public.roles_control
+[2026-06-02T10:29:09.464Z] Creating table: public.story
+[2026-06-02T10:29:09.644Z] Creating table: public.story_mapping
+[2026-06-02T10:29:10.799Z] Schema creation SQL written: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\migration_output\schema_creation.sql
+[2026-06-02T10:29:10.801Z] SQLite metadata written: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\migration_output\sqlite_metadata.json

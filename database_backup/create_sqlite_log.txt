@@ -1,0 +1,35 @@
+[2026-06-02T09:16:32.920Z] Creating table: public.3000_rated_puzzles
+[2026-06-02T09:16:32.936Z] Creating table: public.Login
+[2026-06-02T09:16:32.940Z] Creating table: public.brilliant_moves
+[2026-06-02T09:16:32.942Z] Creating table: public.chapter
+[2026-06-02T09:16:32.944Z] Creating table: public.chess_puzzle
+[2026-06-02T09:16:32.945Z] Creating table: public.module
+[2026-06-02T09:16:32.947Z] Creating table: public.player_games
+[2026-06-02T09:16:32.949Z] Creating table: public.players
+[2026-06-02T09:16:32.951Z] Creating table: public.players_activity
+[2026-06-02T09:16:32.953Z] Creating table: public.principle_position
+[2026-06-02T09:16:32.956Z] Creating table: public.principles
+[2026-06-02T09:16:32.957Z] Creating table: public.roles_control
+[2026-06-02T09:16:32.959Z] Creating table: public.story
+[2026-06-02T09:16:32.960Z] Creating table: public.story_mapping
+[2026-06-02T09:16:32.964Z] Skipped incompatible index: public.3000_rated_puzzles.3000_rated_puzzles_pkey
+[2026-06-02T09:16:32.966Z] Skipped incompatible index: public.Login.Login_pkey
+[2026-06-02T09:16:32.967Z] Skipped incompatible index: public.brilliant_moves.brilliant_moves_pkey
+[2026-06-02T09:16:32.969Z] Skipped incompatible index: public.brilliant_moves.idx_brilliant_moves_chess_com_id
+[2026-06-02T09:16:32.971Z] Skipped incompatible index: public.brilliant_moves.idx_brilliant_moves_game_date
+[2026-06-02T09:16:32.972Z] Skipped incompatible index: public.brilliant_moves.idx_brilliant_moves_game_move
+[2026-06-02T09:16:32.973Z] Skipped incompatible index: public.brilliant_moves.idx_brilliant_moves_player_name
+[2026-06-02T09:16:32.975Z] Skipped incompatible index: public.chapter.chapter_pkey
+[2026-06-02T09:16:32.975Z] Skipped incompatible index: public.chess_puzzle.chess_puzzle_pkey
+[2026-06-02T09:16:32.976Z] Skipped incompatible index: public.module.module_pkey
+[2026-06-02T09:16:32.977Z] Skipped incompatible index: public.player_games.player_games_pkey
+[2026-06-02T09:16:32.979Z] Skipped incompatible index: public.players.players_pkey
+[2026-06-02T09:16:32.980Z] Skipped incompatible index: public.players_activity.players_activity_index_key
+[2026-06-02T09:16:32.981Z] Skipped incompatible index: public.players_activity.players_activity_pkey
+[2026-06-02T09:16:32.982Z] Skipped incompatible index: public.players_activity.unique_player_date
+[2026-06-02T09:16:32.984Z] Skipped incompatible index: public.principle_position.principle_position_pkey
+[2026-06-02T09:16:32.985Z] Skipped incompatible index: public.principles.principles_pkey
+[2026-06-02T09:16:32.986Z] Skipped incompatible index: public.roles_control.roles_permission_pkey
+[2026-06-02T09:16:32.988Z] Skipped incompatible index: public.story.story_pkey
+[2026-06-02T09:16:32.989Z] Skipped incompatible index: public.story_mapping.story_mapping_pkey
+[2026-06-02T09:16:32.997Z] Schema created in C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\database.db

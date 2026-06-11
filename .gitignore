@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Secrets
+.env
+.env.*
+backend/.env
+
+# Local database artifacts
+database_backup/*.db
+database_backup/supabase_export.json
+
+# Production build
+frontend/build/

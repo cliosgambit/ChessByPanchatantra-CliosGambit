@@ -1,0 +1,79 @@
+/* Premium dashboard top navbar — complements Chakra UI tokens */
+
+.top-navbar {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.top-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.top-nav-link:hover {
+  text-decoration: none;
+}
+
+.top-nav-link--active {
+  font-weight: 600;
+}
+
+.top-nav-active-indicator {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.2rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c9a227 0%, #e8c547 50%, #c9a227 100%);
+  pointer-events: none;
+}
+
+.top-navbar-brand {
+  background: linear-gradient(135deg, #c9a227 0%, #f0d78c 45%, #c9a227 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.top-navbar-notification-pulse {
+  animation: top-navbar-pulse 2s ease-in-out infinite;
+}
+
+@keyframes top-navbar-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.85;
+  }
+}
+
+.top-navbar-mobile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.top-navbar-mobile-link:hover {
+  text-decoration: none;
+}

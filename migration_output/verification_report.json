@@ -1,0 +1,773 @@
+{
+  "generated_at_utc": "2026-06-02T10:31:06.144Z",
+  "sqlite_source": "C:\\Users\\AMAN ARIF\\Desktop\\Clio's Gambit\\Cliosgambit-old\\database_backup\\database.db",
+  "total_tables_migrated": 14,
+  "total_rows_migrated": 7034,
+  "verification_success": true,
+  "tables": [
+    {
+      "table": "public.3000_rated_puzzles",
+      "sqlite_rows": 417,
+      "postgres_rows": 417,
+      "match": true,
+      "first_5_rows": [
+        {
+          "Rated_id": "R001",
+          "principle_id": "P001",
+          "Fen": "2r5/1Q2k3/pP6/Pn6/3PpB2/2q5/5P2/1K6 b - - 2 55"
+        },
+        {
+          "Rated_id": "R002",
+          "principle_id": "P002",
+          "Fen": "8/pp4k1/2b1pNp1/6P1/2PP4/2P1p1n1/P1B5/2K5 b - - 0 37"
+        },
+        {
+          "Rated_id": "R003",
+          "principle_id": "P003",
+          "Fen": "8/8/2pk4/2Rp1p2/P1bP1Ppp/2P5/7N/4K3 b - - 1 46"
+        },
+        {
+          "Rated_id": "R004",
+          "principle_id": "P004",
+          "Fen": "5rk1/4q1pp/3pP2b/1p6/1P4Q1/P2P2P1/1B5P/5RK1 b - - 1 1"
+        },
+        {
+          "Rated_id": "R005",
+          "principle_id": "P005",
+          "Fen": "2q2r1k/5Rpp/7r/8/2P1Bp2/P2p2P1/4bQ2/1R4K1 w - - 1 2"
+        }
+      ]
+    },
+    {
+      "table": "public.Login",
+      "sqlite_rows": 43,
+      "postgres_rows": 43,
+      "match": true,
+      "first_5_rows": [
+        {
+          "Chess_com_ID": "mahi18042015",
+          "Player_Name": "Mahanyas,Mahi",
+          "email": null,
+          "password": null,
+          "Role": "student",
+          "otp": null,
+          "otp_expires_at": null
+        },
+        {
+          "Chess_com_ID": "Mayukha113",
+          "Player_Name": "Mayukha",
+          "email": null,
+          "password": null,
+          "Role": "student",
+          "otp": null,
+          "otp_expires_at": null
+        },
+        {
+          "Chess_com_ID": "MohitAlgeshwara",
+          "Player_Name": "Mohit A G",
+          "email": null,
+          "password": null,
+          "Role": "student",
+          "otp": null,
+          "otp_expires_at": null
+        },
+        {
+          "Chess_com_ID": "mvk14",
+          "Player_Name": "Vamsi Krishna",
+          "email": null,
+          "password": null,
+          "Role": "student",
+          "otp": null,
+          "otp_expires_at": null
+        },
+        {
+          "Chess_com_ID": "pranav_arizona",
+          "Player_Name": "Pranav Vinod",
+          "email": null,
+          "password": null,
+          "Role": "student",
+          "otp": null,
+          "otp_expires_at": null
+        }
+      ]
+    },
+    {
+      "table": "public.brilliant_moves",
+      "sqlite_rows": 14,
+      "postgres_rows": 14,
+      "match": true,
+      "first_5_rows": [
+        {
+          "id": "1280",
+          "game_link": "https://www.chess.com/game/live/143769403598",
+          "chess_com_id": "Akshajdec2013",
+          "player_name": "Akshaj",
+          "move_number": "6",
+          "move_san": "Nxf7",
+          "move_uci": "g5f7",
+          "player_color": "w",
+          "game_date": "2025-09-30T18:30:00.000Z",
+          "white_player": "Akshajdec2013",
+          "black_player": "IlyaGerman2020",
+          "game_result": "ongoing",
+          "pgn_moves": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2025.10.01\"]\n[Round \"-\"]\n[White \"Akshajdec2013\"]\n[Black \"IlyaGerman2020\"]\n[Result \"1/2-1/2\"]\n[CurrentPosition \"5B2/7p/2p4P/2P1Kp2/5Pk1/8/8/1b6 w - - 73 78\"]\n[Timezone \"UTC\"]\n[ECO \"C57\"]\n[ECOUrl \"https://www.chess.com/openings/Italian-Game-Knight-Attack-Normal-Variation-5.exd5\"]\n[UTCDate \"2025.10.01\"]\n[UTCTime \"09:19:24\"]\n[WhiteElo \"740\"]\n[BlackElo \"760\"]\n[TimeControl \"600\"]\n[Termination \"Game drawn by repetition\"]\n[StartTime \"09:19:24\"]\n[EndDate \"2025.10.01\"]\n[EndTime \"09:33:02\"]\n[Link \"https://www.chess.com/game/live/143769403598\"]\n\n1. e4 {[%clk 0:09:59.8]} 1... e5 {[%clk 0:09:58.6]} 2. Nf3 {[%clk 0:09:58.5]} 2... Nc6 {[%clk 0:09:58.1]} 3. Bc4 {[%clk 0:09:56.6]} 3... Nf6 {[%clk 0:09:56.7]} 4. Ng5 {[%clk 0:09:55.3]} 4... d5 {[%clk 0:09:55.2]} 5. exd5 {[%clk 0:09:53.9]} 5... Nxd5 {[%clk 0:09:53.8]} 6. Nxf7 {[%clk 0:09:52.2]} 6... Kxf7 {[%clk 0:09:50.8]} 7. Qf3+ {[%clk 0:09:49.7]} 7... Ke8 {[%clk 0:09:49.7]} 8. Bxd5 {[%clk 0:09:47.6]} 8... Qe7 {[%clk 0:09:34.8]} 9. O-O {[%clk 0:09:42.8]} 9... Qf6 {[%clk 0:09:32.5]} 10. Bxc6+ {[%clk 0:09:36.9]} 10... bxc6 {[%clk 0:09:24.7]} 11. Qxf6 {[%clk 0:09:27.5]} 11... gxf6 {[%clk 0:09:23.1]} 12. Nc3 {[%clk 0:09:24.4]} 12... Bf5 {[%clk 0:09:21.2]} 13. d3 {[%clk 0:09:21.3]} 13... Bb4 {[%clk 0:09:13.7]} 14. a3 {[%clk 0:09:18.9]} 14... Bxc3 {[%clk 0:09:12.3]} 15. bxc3 {[%clk 0:09:17.9]} 15... e4 {[%clk 0:09:12.2]} 16. dxe4 {[%clk 0:09:16.3]} 16... Bxe4 {[%clk 0:09:11.4]} 17. Ra2 {[%clk 0:09:13.9]} 17... Kf7 {[%clk 0:09:02.8]} 18. Re1 {[%clk 0:09:11.6]} 18... Rae8 {[%clk 0:08:59.5]} 19. c4 {[%clk 0:09:07]} 19... Rhg8 {[%clk 0:08:53.5]} 20. c3 {[%clk 0:09:03.4]} 20... Rxg2+ {[%clk 0:08:51.4]} 21. Kf1 {[%clk 0:09:02.3]} 21... Rg6 {[%clk 0:08:43.9]} 22. f3 {[%clk 0:08:43.6]} 22... Bd3+ {[%clk 0:08:38.7]} 23. Kf2 {[%clk 0:08:39.4]} 23... Rxe1 {[%clk 0:08:34.9]} 24. Kxe1 {[%clk 0:08:37.5]} 24... Rg1+ {[%clk 0:08:33.6]} 25. Kd2 {[%clk 0:08:36.2]} 25... Bxc4 {[%clk 0:08:31.2]} 26. Rb2 {[%clk 0:08:31.5]} 26... Rg2+ {[%clk 0:08:24.9]} 27. Ke3 {[%clk 0:08:26.5]} 27... Rxb2 {[%clk 0:08:22.2]} 28. Bxb2 {[%clk 0:08:25.4]} 28... Ke6 {[%clk 0:08:20.4]} 29. f4 {[%clk 0:08:17.5]} 29... f5 {[%clk 0:08:17.6]} 30. Kd4 {[%clk 0:08:16.3]} 30... Bd5 {[%clk 0:08:14.3]} 31. c4 {[%clk 0:08:13.2]} 31... Be4 {[%clk 0:08:10.9]} 32. a4 {[%clk 0:08:10.8]} 32... a5 {[%clk 0:07:57.5]} 33. c5 {[%clk 0:08:07.6]} 33... Bc2 {[%clk 0:07:54.8]} 34. Bc3 {[%clk 0:07:54.9]} 34... Bxa4 {[%clk 0:07:52.6]} 35. Bxa5 {[%clk 0:07:53.3]} 35... Kd7 {[%clk 0:07:51.6]} 36. Ke5 {[%clk 0:07:50.4]} 36... Bc2 {[%clk 0:07:38.9]} 37. Kf6 {[%clk 0:07:46.6]} 37... Bd3 {[%clk 0:07:30.9]} 38. h4 {[%clk 0:07:44.6]} 38... Kd8 {[%clk 0:07:23.2]} 39. h5 {[%clk 0:07:39.4]} 39... Ke8 {[%clk 0:07:17]} 40. h6 {[%clk 0:07:37]} 40... Kf8 {[%clk 0:07:15.2]} 41. Bxc7 {[%clk 0:07:34.2]} 41... Bc2 {[%clk 0:07:11.4]} 42. Bd6+ {[%clk 0:07:30.8]} 42... Kg8 {[%clk 0:07:09.6]} 43. Kg5 {[%clk 0:07:21.4]} 43... Kf7 {[%clk 0:06:43.1]} 44. Be5 {[%clk 0:07:18]} 44... Be4 {[%clk 0:06:36.3]} 45. Bf6 {[%clk 0:06:56]} 45... Bf3 {[%clk 0:06:27.4]} 46. Bg7 {[%clk 0:06:42.4]} 46... Be4 {[%clk 0:06:11.2]} 47. Bf6 {[%clk 0:06:38]} 47... Bb1 {[%clk 0:06:06.7]} 48. Ba1 {[%clk 0:06:29.3]} 48... Bc2 {[%clk 0:05:56.8]} 49. Be5 {[%clk 0:06:19.2]} 49... Be4 {[%clk 0:05:54.7]} 50. Bd6 {[%clk 0:06:17.1]} 50... Ke6 {[%clk 0:05:16.2]} 51. Kh5 {[%clk 0:06:11.5]} 51... Bf3+ {[%clk 0:05:13.4]} 52. Kg5 {[%clk 0:06:10.3]} 52... Bg4 {[%clk 0:05:06.7]} 53. Kh4 {[%clk 0:06:04.6]} 53... Kf6 {[%clk 0:04:59.4]} 54. Kg3 {[%clk 0:05:56.1]} 54... Kg6 {[%clk 0:04:57.2]} 55. Kh4 {[%clk 0:05:47.5]} 55... Bd1 {[%clk 0:04:53.5]} 56. Bf8 {[%clk 0:05:39.5]} 56... Be2 {[%clk 0:04:14.4]} 57. Bg7 {[%clk 0:05:37]} 57... Bg4 {[%clk 0:04:09.3]} 58. Bf8 {[%clk 0:05:32.9]} 58... Bd1 {[%clk 0:04:06.4]} 59. Bg7 {[%clk 0:05:25.8]} 59... Bg4 {[%clk 0:04:05.2]} 60. Kg3 {[%clk 0:05:22.9]} 60... Kh5 {[%clk 0:04:03]} 61. Kf2 {[%clk 0:05:19.2]} 61... Bh3 {[%clk 0:04:00.7]} 62. Ke3 {[%clk 0:05:17.1]} 62... Kg4 {[%clk 0:03:59.3]} 63. Bf8 {[%clk 0:05:09.9]} 63... Bg2 {[%clk 0:03:54.8]} 64. Bg7 {[%clk 0:05:08.1]} 64... Be4 {[%clk 0:03:53]} 65. Bf8 {[%clk 0:05:03.3]} 65... Bd5 {[%clk 0:03:51.6]} 66. Bd6 {[%clk 0:04:53.7]} 66... Be4 {[%clk 0:03:45.2]} 67. Be5 {[%clk 0:04:46.8]} 67... Bd5 {[%clk 0:03:44]} 68. Bg7 {[%clk 0:04:44.5]} 68... Be4 {[%clk 0:03:38.2]} 69. Be5 {[%clk 0:04:41]} 69... Kh5 {[%clk 0:03:36.8]} 70. Bg7 {[%clk 0:04:38.9]} 70... Bb1 {[%clk 0:03:34.8]} 71. Kd4 {[%clk 0:04:33.5]} 71... Kg4 {[%clk 0:03:28.2]} 72. Ke5 {[%clk 0:04:31.7]} 72... Ba2 {[%clk 0:03:23.8]} 73. Bf8 {[%clk 0:04:23.8]} 73... Bb1 {[%clk 0:03:19.6]} 74. Bd6 {[%clk 0:04:21.5]} 74... Be4 {[%clk 0:03:17.6]} 75. Bf8 {[%clk 0:04:18.9]} 75... Bb1 {[%clk 0:03:11]} 76. Bg7 {[%clk 0:04:17.3]} 76... Be4 {[%clk 0:03:07.7]} 77. Bf8 {[%clk 0:04:16]} 77... Bb1 {[%clk 0:03:06]} 1/2-1/2\n",
+          "hanging_pieces": "Hanging: N on f7",
+          "analysis_depth": "1",
+          "weighted_eval_score": -0.09,
+          "eval_summary": "Move 6   (Akshajdec2013 ): Nxf7     | (Depth 1/12) | W | -1.97 / 21 = -0.09 | Hanging: N on f7",
+          "created_at": "2025-10-02T11:32:39.896Z",
+          "fen_before_move": "r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6",
+          "fen_after_move": "r1bqkb1r/ppp2Npp/2n5/3np3/2B5/8/PPPP1PPP/RNBQK2R b KQkq - 0 6",
+          "move_from": "g5",
+          "move_to": "f7",
+          "captured_piece": "p",
+          "promotion": null
+        },
+        {
+          "id": "1289",
+          "game_link": "https://www.chess.com/game/live/143767730286",
+          "chess_com_id": "Blunderraccoon",
+          "player_name": "Aaradhya Nisal ",
+          "move_number": "23",
+          "move_san": "Qh4",
+          "move_uci": "d8h4",
+          "player_color": "b",
+          "game_date": "2025-09-30T18:30:00.000Z",
+          "white_player": "Ryo_24",
+          "black_player": "BlunderRaccoon",
+          "game_result": "ongoing",
+          "pgn_moves": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2025.10.01\"]\n[Round \"-\"]\n[White \"Ryo_24\"]\n[Black \"BlunderRaccoon\"]\n[Result \"1-0\"]\n[CurrentPosition \"5b2/4k3/6p1/1P2p3/8/4P2p/P7/5R1K b - - 0 36\"]\n[Timezone \"UTC\"]\n[ECO \"B34\"]\n[ECOUrl \"https://www.chess.com/openings/Sicilian-Defense-Open-Accelerated-Dragon-Modern-Variation-5...Bg7\"]\n[UTCDate \"2025.10.01\"]\n[UTCTime \"08:14:31\"]\n[WhiteElo \"1577\"]\n[BlackElo \"1570\"]\n[TimeControl \"600\"]\n[Termination \"Ryo_24 won by resignation\"]\n[StartTime \"08:14:31\"]\n[EndDate \"2025.10.01\"]\n[EndTime \"08:26:17\"]\n[Link \"https://www.chess.com/game/live/143767730286\"]\n\n1. e4 {[%clk 0:09:59.8]} 1... c5 {[%clk 0:09:58.1]} 2. Nf3 {[%clk 0:09:58.6]} 2... Nc6 {[%clk 0:09:56.3]} 3. d4 {[%clk 0:09:58.5]} 3... cxd4 {[%clk 0:09:54.6]} 4. Nxd4 {[%clk 0:09:58.4]} 4... g6 {[%clk 0:09:53.1]} 5. Nc3 {[%clk 0:09:55.5]} 5... Bg7 {[%clk 0:09:50.6]} 6. Nxc6 {[%clk 0:09:49.6]} 6... bxc6 {[%clk 0:09:49.4]} 7. Bd2 {[%clk 0:09:47.2]} 7... Nf6 {[%clk 0:09:45]} 8. Bd3 {[%clk 0:09:45]} 8... O-O {[%clk 0:09:39.9]} 9. O-O {[%clk 0:09:43.5]} 9... a5 {[%clk 0:09:39.1]} 10. Qf3 {[%clk 0:09:31.7]} 10... d6 {[%clk 0:09:18.4]} 11. Rfe1 {[%clk 0:09:27.4]} 11... Bg4 {[%clk 0:09:12.8]} 12. Qe3 {[%clk 0:09:20.2]} 12... c5 {[%clk 0:08:58.5]} 13. h3 {[%clk 0:09:09.7]} 13... Bd7 {[%clk 0:08:49.9]} 14. e5 {[%clk 0:09:07.9]} 14... dxe5 {[%clk 0:08:45.6]} 15. Qxe5 {[%clk 0:09:04.3]} 15... Re8 {[%clk 0:08:20.8]} 16. Qxc5 {[%clk 0:09:00.3]} 16... Rc8 {[%clk 0:08:18]} 17. Qa3 {[%clk 0:08:47]} 17... e5 {[%clk 0:07:55.8]} 18. Ne4 {[%clk 0:08:27.9]} 18... Nxe4 {[%clk 0:07:50]} 19. Bxe4 {[%clk 0:08:25.1]} 19... a4 {[%clk 0:07:44.6]} 20. Bb7 {[%clk 0:07:54.9]} 20... Rxc2 {[%clk 0:07:36.3]} 21. Bc3 {[%clk 0:07:42.8]} 21... Bf8 {[%clk 0:07:21]} 22. b4 {[%clk 0:07:31.3]} 22... Bf5 {[%clk 0:06:45.1]} 23. g4 {[%clk 0:06:38.7]} 23... Qh4 {[%clk 0:06:07.7]} 24. Rf1 {[%clk 0:05:40]} 24... Bxg4 {[%clk 0:05:50.2]} 25. hxg4 {[%clk 0:05:30.4]} 25... Qxg4+ {[%clk 0:05:48]} 26. Bg2 {[%clk 0:05:27.2]} 26... h5 {[%clk 0:05:41]} 27. Qxa4 {[%clk 0:05:25]} 27... h4 {[%clk 0:05:24]} 28. Kh1 {[%clk 0:05:01.2]} 28... h3 {[%clk 0:05:21.1]} 29. Bd5 {[%clk 0:04:32.9]} 29... Rxc3 {[%clk 0:05:11]} 30. Qxe8 {[%clk 0:04:28.5]} 30... Qf5 {[%clk 0:04:47.2]} 31. Bxf7+ {[%clk 0:04:15.2]} 31... Qxf7 {[%clk 0:04:42.9]} 32. Qxf7+ {[%clk 0:04:13.7]} 32... Kxf7 {[%clk 0:04:42.8]} 33. Rae1 {[%clk 0:04:11.2]} 33... Kf6 {[%clk 0:04:38.4]} 34. Re3 {[%clk 0:04:08.3]} 34... Rxe3 {[%clk 0:04:27.2]} 35. fxe3+ {[%clk 0:04:08.2]} 35... Ke7 {[%clk 0:04:26.3]} 36. b5 {[%clk 0:04:05.7]} 1-0\n",
+          "hanging_pieces": "Hanging: B on f5",
+          "analysis_depth": "6",
+          "weighted_eval_score": -0.08,
+          "eval_summary": "Move 23  (BlunderRaccoon): Qh4      | (Depth 6/12) | B | -4.16 / 51 = -0.08 | Hanging: B on f5",
+          "created_at": "2025-10-02T11:32:52.964Z",
+          "fen_before_move": "3qrbk1/1B3p1p/6p1/4pb2/pP4P1/Q1B4P/P1r2P2/R3R1K1 b - - 0 23",
+          "fen_after_move": "4rbk1/1B3p1p/6p1/4pb2/pP4Pq/Q1B4P/P1r2P2/R3R1K1 w - - 1 24",
+          "move_from": "d8",
+          "move_to": "h4",
+          "captured_piece": null,
+          "promotion": null
+        },
+        {
+          "id": "1297",
+          "game_link": "https://www.chess.com/game/live/143768656070",
+          "chess_com_id": "Blunderraccoon",
+          "player_name": "Aaradhya Nisal ",
+          "move_number": "19",
+          "move_san": "Rxf6",
+          "move_uci": "f1f6",
+          "player_color": "w",
+          "game_date": "2025-09-30T18:30:00.000Z",
+          "white_player": "BlunderRaccoon",
+          "black_player": "Johnbasim",
+          "game_result": "ongoing",
+          "pgn_moves": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2025.10.01\"]\n[Round \"-\"]\n[White \"BlunderRaccoon\"]\n[Black \"Johnbasim\"]\n[Result \"1-0\"]\n[CurrentPosition \"r1r5/pppkR2p/q4Q2/n2p4/3P4/2P3P1/3B3P/6K1 b - - 2 24\"]\n[Timezone \"UTC\"]\n[ECO \"C30\"]\n[ECOUrl \"https://www.chess.com/openings/Kings-Gambit-Declined-Keene-Defense-3.g3\"]\n[UTCDate \"2025.10.01\"]\n[UTCTime \"08:50:48\"]\n[WhiteElo \"1592\"]\n[BlackElo \"1554\"]\n[TimeControl \"600\"]\n[Termination \"BlunderRaccoon won by resignation\"]\n[StartTime \"08:50:48\"]\n[EndDate \"2025.10.01\"]\n[EndTime \"08:57:56\"]\n[Link \"https://www.chess.com/game/live/143768656070\"]\n\n1. e4 {[%clk 0:09:57.3]} 1... e5 {[%clk 0:09:58.4]} 2. f4 {[%clk 0:09:50.1]} 2... Qh4+ {[%clk 0:09:56.4]} 3. g3 {[%clk 0:09:48.4]} 3... Qf6 {[%clk 0:09:55.5]} 4. d3 {[%clk 0:09:36.7]} 4... exf4 {[%clk 0:09:52.8]} 5. Bxf4 {[%clk 0:09:34.9]} 5... Qxb2 {[%clk 0:09:51.2]} 6. Nd2 {[%clk 0:09:32.1]} 6... Bb4 {[%clk 0:09:41]} 7. Rb1 {[%clk 0:09:28.2]} 7... Bxd2+ {[%clk 0:09:29.8]} 8. Bxd2 {[%clk 0:09:28.1]} 8... Qxa2 {[%clk 0:09:24.5]} 9. Nf3 {[%clk 0:09:26]} 9... Nf6 {[%clk 0:09:17]} 10. Bh3 {[%clk 0:09:23.6]} 10... O-O {[%clk 0:09:14.4]} 11. O-O {[%clk 0:09:22]} 11... d5 {[%clk 0:09:07.6]} 12. Bxc8 {[%clk 0:09:20]} 12... Rxc8 {[%clk 0:09:05.9]} 13. e5 {[%clk 0:09:19.2]} 13... Nfd7 {[%clk 0:08:48.6]} 14. d4 {[%clk 0:09:09.6]} 14... Nc6 {[%clk 0:08:33.3]} 15. c3 {[%clk 0:08:38.4]} 15... Qa6 {[%clk 0:08:07.2]} 16. Ng5 {[%clk 0:08:33.4]} 16... f6 {[%clk 0:07:44.1]} 17. exf6 {[%clk 0:08:15.5]} 17... Nxf6 {[%clk 0:07:42.7]} 18. Ne6 {[%clk 0:07:44.4]} 18... Na5 {[%clk 0:07:17]} 19. Rxf6 {[%clk 0:07:33.9]} 19... gxf6 {[%clk 0:06:32.8]} 20. Qg4+ {[%clk 0:07:30.6]} 20... Kf7 {[%clk 0:06:31.8]} 21. Qg7+ {[%clk 0:07:13]} 21... Kxe6 {[%clk 0:06:30.2]} 22. Re1+ {[%clk 0:07:09.8]} 22... Kd6 {[%clk 0:06:15.9]} 23. Qxf6+ {[%clk 0:07:06.3]} 23... Kd7 {[%clk 0:06:08.9]} 24. Re7+ {[%clk 0:07:05.6]} 1-0\n",
+          "hanging_pieces": "Hanging: R on f6",
+          "analysis_depth": "1",
+          "weighted_eval_score": -0.13,
+          "eval_summary": "Move 19  (BlunderRaccoon): Rxf6     | (Depth 1/12) | W | -2.46 / 19 = -0.13 | Hanging: R on f6",
+          "created_at": "2025-10-02T11:32:56.373Z",
+          "fen_before_move": "r1r3k1/ppp3pp/q3Nn2/n2p4/3P4/2P3P1/3B3P/1R1Q1RK1 w - - 2 19",
+          "fen_after_move": "r1r3k1/ppp3pp/q3NR2/n2p4/3P4/2P3P1/3B3P/1R1Q2K1 b - - 0 19",
+          "move_from": "f1",
+          "move_to": "f6",
+          "captured_piece": "n",
+          "promotion": null
+        },
+        {
+          "id": "1303",
+          "game_link": "https://www.chess.com/game/live/143815451414",
+          "chess_com_id": "Dogwarts",
+          "player_name": "Ashith Kiran Reddy",
+          "move_number": "21",
+          "move_san": "Nxd5",
+          "move_uci": "c3d5",
+          "player_color": "w",
+          "game_date": "2025-10-01T18:30:00.000Z",
+          "white_player": "Dogwarts",
+          "black_player": "DavidAiznberg",
+          "game_result": "ongoing",
+          "pgn_moves": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2025.10.02\"]\n[Round \"-\"]\n[White \"Dogwarts\"]\n[Black \"DavidAiznberg\"]\n[Result \"0-1\"]\n[CurrentPosition \"8/1B4k1/5pPp/pp3P2/3n2P1/P5K1/1r6/8 w - - 0 47\"]\n[Timezone \"UTC\"]\n[ECO \"B13\"]\n[ECOUrl \"https://www.chess.com/openings/Caro-Kann-Defense-Panov-Modern-Defense...8.Nf3-Be7-9.O-O-O-O-10.Re1\"]\n[UTCDate \"2025.10.02\"]\n[UTCTime \"13:29:39\"]\n[WhiteElo \"2242\"]\n[BlackElo \"2199\"]\n[TimeControl \"600\"]\n[Termination \"DavidAiznberg won on time\"]\n[StartTime \"13:29:39\"]\n[EndDate \"2025.10.02\"]\n[EndTime \"13:49:20\"]\n[Link \"https://www.chess.com/game/live/143815451414\"]\n\n1. d4 {[%clk 0:09:56.7]} 1... d5 {[%clk 0:09:58.1]} 2. c4 {[%clk 0:09:54.7]} 2... dxc4 {[%clk 0:09:57.2]} 3. e3 {[%clk 0:09:51.7]} 3... c5 {[%clk 0:09:54.9]} 4. Bxc4 {[%clk 0:09:50]} 4... cxd4 {[%clk 0:09:53.5]} 5. exd4 {[%clk 0:09:49.9]} 5... Nf6 {[%clk 0:09:52.1]} 6. Nf3 {[%clk 0:09:48.3]} 6... Nc6 {[%clk 0:09:48.5]} 7. O-O {[%clk 0:09:45.4]} 7... e6 {[%clk 0:09:47.2]} 8. Nc3 {[%clk 0:09:43.3]} 8... Be7 {[%clk 0:09:43.7]} 9. Re1 {[%clk 0:09:39.1]} 9... O-O {[%clk 0:09:42.2]} 10. Bg5 {[%clk 0:09:33.7]} 10... h6 {[%clk 0:09:40.3]} 11. Bh4 {[%clk 0:09:26.3]} 11... a6 {[%clk 0:09:39.2]} 12. Bd3 {[%clk 0:09:20.2]} 12... b5 {[%clk 0:09:36.3]} 13. a3 {[%clk 0:09:17.6]} 13... Bb7 {[%clk 0:09:35.2]} 14. Rc1 {[%clk 0:09:10.9]} 14... Rc8 {[%clk 0:09:30.1]} 15. Bb1 {[%clk 0:09:05.4]} 15... Ne8 {[%clk 0:08:45.7]} 16. Qd3 {[%clk 0:08:42.1]} 16... g6 {[%clk 0:08:43.4]} 17. Bxe7 {[%clk 0:08:15.9]} 17... Nxe7 {[%clk 0:08:42.1]} 18. Ne5 {[%clk 0:08:12.7]} 18... Ng7 {[%clk 0:08:35.1]} 19. Ng4 {[%clk 0:07:14.9]} 19... Nef5 {[%clk 0:08:22.3]} 20. d5 {[%clk 0:06:41.6]} 20... exd5 {[%clk 0:08:15.9]} 21. Nxd5 {[%clk 0:05:57.3]} 21... Rxc1 {[%clk 0:07:56.5]} 22. Ngf6+ {[%clk 0:05:46]} 22... Kh8 {[%clk 0:07:52.3]} 23. Rxc1 {[%clk 0:05:42.9]} 23... Ne6 {[%clk 0:07:15.1]} 24. g4 {[%clk 0:05:26.5]} 24... Nh4 {[%clk 0:05:54.4]} 25. Qh3 {[%clk 0:04:20.7]} 25... Ng5 {[%clk 0:05:52.9]} 26. Qc3 {[%clk 0:04:08.3]} 26... Nhf3+ {[%clk 0:04:26.4]} 27. Kh1 {[%clk 0:02:58.6]} 27... Bxd5 {[%clk 0:04:20.5]} 28. Nxd5+ {[%clk 0:02:55.9]} 28... f6 {[%clk 0:04:19.2]} 29. Rd1 {[%clk 0:02:41.6]} 29... Qd6 {[%clk 0:03:07.9]} 30. Qc7 {[%clk 0:02:19.1]} 30... Rd8 {[%clk 0:02:25.1]} 31. Qxd6 {[%clk 0:01:45.5]} 31... Rxd6 {[%clk 0:02:25]} 32. Bxg6 {[%clk 0:01:32.7]} 32... Ne5 {[%clk 0:01:34.8]} 33. Bf5 {[%clk 0:01:29]} 33... Nh3 {[%clk 0:01:33.2]} 34. Rd2 {[%clk 0:00:48.2]} 34... Nf3 {[%clk 0:01:21.4]} 35. Kg2 {[%clk 0:00:28.6]} 35... Nxd2 {[%clk 0:01:20]} 36. Ne7 {[%clk 0:00:26.9]} 36... Nf4+ {[%clk 0:01:12.1]} 37. Kg3 {[%clk 0:00:25.1]} 37... Ne6 {[%clk 0:01:05.2]} 38. Ng6+ {[%clk 0:00:23]} 38... Kg7 {[%clk 0:01:03.8]} 39. h4 {[%clk 0:00:21]} 39... Nc4 {[%clk 0:00:56.3]} 40. h5 {[%clk 0:00:19.3]} 40... Ne5 {[%clk 0:00:54.9]} 41. f4 {[%clk 0:00:17]} 41... Nxg6 {[%clk 0:00:52.3]} 42. hxg6 {[%clk 0:00:14.8]} 42... Nd4 {[%clk 0:00:49.6]} 43. Be4 {[%clk 0:00:12.9]} 43... Re6 {[%clk 0:00:47.6]} 44. Bd5 {[%clk 0:00:08.5]} 44... Re2 {[%clk 0:00:44.6]} 45. f5 {[%clk 0:00:06.3]} 45... Rxb2 {[%clk 0:00:42.7]} 46. Bb7 {[%clk 0:00:04.3]} 46... a5 {[%clk 0:00:41.9]} 0-1\n",
+          "hanging_pieces": "Hanging: N on d5",
+          "analysis_depth": "10",
+          "weighted_eval_score": -0.01,
+          "eval_summary": "Move 21  (Dogwarts      ): Nxd5     | (Depth 10/12) | W | -1.05 / 75 = -0.01 | Hanging: N on d5",
+          "created_at": "2025-10-03T08:51:38.675Z",
+          "fen_before_move": "2rq1rk1/1b3pn1/p5pp/1p1p1n2/6N1/P1NQ4/1P3PPP/1BR1R1K1 w - - 0 21",
+          "fen_after_move": "2rq1rk1/1b3pn1/p5pp/1p1N1n2/6N1/P2Q4/1P3PPP/1BR1R1K1 b - - 0 21",
+          "move_from": "c3",
+          "move_to": "d5",
+          "captured_piece": "p",
+          "promotion": null
+        },
+        {
+          "id": "1306",
+          "game_link": "https://www.chess.com/game/live/143821706484",
+          "chess_com_id": "priyanshig1",
+          "player_name": "Priyanshi Gupta",
+          "move_number": "22",
+          "move_san": "Qxe5",
+          "move_uci": "c5e5",
+          "player_color": "b",
+          "game_date": "2025-10-01T18:30:00.000Z",
+          "white_player": "JONASANTONY",
+          "black_player": "priyanshig1",
+          "game_result": "checkmate",
+          "pgn_moves": "[Event \"Live Chess\"]\n[Site \"Chess.com\"]\n[Date \"2025.10.02\"]\n[Round \"-\"]\n[White \"JONASANTONY\"]\n[Black \"priyanshig1\"]\n[Result \"1-0\"]\n[CurrentPosition \"r3bQ1k/p1p3pp/2pn4/5P2/2B5/1P6/P1P3PP/5R1K b - - 0 25\"]\n[Timezone \"UTC\"]\n[ECO \"C45\"]\n[ECOUrl \"https://www.chess.com/openings/Scotch-Game-Classical-Variation-5.Nxc6-bxc6\"]\n[UTCDate \"2025.10.02\"]\n[UTCTime \"16:23:07\"]\n[WhiteElo \"1161\"]\n[BlackElo \"1007\"]\n[TimeControl \"600+5\"]\n[Termination \"JONASANTONY won by checkmate\"]\n[StartTime \"16:23:07\"]\n[EndDate \"2025.10.02\"]\n[EndTime \"16:40:16\"]\n[Link \"https://www.chess.com/game/live/143821706484\"]\n\n1. e4 {[%clk 0:10:03.1]} 1... e5 {[%clk 0:10:02.5]} 2. Nf3 {[%clk 0:10:03.9]} 2... Nc6 {[%clk 0:10:05.4]} 3. d4 {[%clk 0:10:06.4]} 3... exd4 {[%clk 0:09:56.3]} 4. Nxd4 {[%clk 0:10:08.9]} 4... Bc5 {[%clk 0:09:55.6]} 5. Nxc6 {[%clk 0:10:09]} 5... bxc6 {[%clk 0:09:49.9]} 6. Nc3 {[%clk 0:10:07.4]} 6... Bb4 {[%clk 0:09:25.7]} 7. Bd2 {[%clk 0:10:06.3]} 7... Bxc3 {[%clk 0:09:17.2]} 8. Bxc3 {[%clk 0:10:08.3]} 8... Nf6 {[%clk 0:09:17.6]} 9. Bd3 {[%clk 0:10:04.8]} 9... O-O {[%clk 0:09:07.5]} 10. O-O {[%clk 0:10:06]} 10... d6 {[%clk 0:08:39.1]} 11. Qf3 {[%clk 0:10:04.4]} 11... Nd7 {[%clk 0:07:38.6]} 12. Qg3 {[%clk 0:09:29.1]} 12... f6 {[%clk 0:07:19.8]} 13. Rae1 {[%clk 0:09:28.3]} 13... Ne5 {[%clk 0:07:03]} 14. Be2 {[%clk 0:09:10.8]} 14... Be6 {[%clk 0:06:05.4]} 15. b3 {[%clk 0:09:11.7]} 15... Qe7 {[%clk 0:05:48.6]} 16. f4 {[%clk 0:09:10.4]} 16... Nf7 {[%clk 0:04:55.4]} 17. f5 {[%clk 0:08:52.1]} 17... Bd7 {[%clk 0:04:55]} 18. Bc4 {[%clk 0:08:47.6]} 18... Be8 {[%clk 0:03:36.6]} 19. e5 {[%clk 0:08:33.7]} 19... dxe5 {[%clk 0:03:19.2]} 20. Rxe5 {[%clk 0:07:35.8]} 20... fxe5 {[%clk 0:02:19.4]} 21. Bxe5 {[%clk 0:07:37.1]} 21... Qc5+ {[%clk 0:00:40.8]} 22. Kh1 {[%clk 0:07:35.7]} 22... Qxe5 {[%clk 0:00:14.9]} 23. Qxe5 {[%clk 0:07:37.1]} 23... Kh8 {[%clk 0:00:16.9]} 24. Qe7 {[%clk 0:07:09.5]} 24... Nd6 {[%clk 0:00:12.8]} 25. Qxf8# {[%clk 0:07:04.7]} 1-0\n",
+          "hanging_pieces": "Hanging: Q on e5",
+          "analysis_depth": "4",
+          "weighted_eval_score": -0.2,
+          "eval_summary": "Move 22  (priyanshig1   ): Qxe5     | (Depth 4/12) | B | -7.82 / 39 = -0.20 | Hanging: Q on e5",
+          "created_at": "2025-10-03T08:51:42.026Z",
+          "fen_before_move": "r3brk1/p1p2npp/2p5/2q1BP2/2B5/1P4Q1/P1P3PP/5R1K b - - 2 22",
+          "fen_after_move": "r3brk1/p1p2npp/2p5/4qP2/2B5/1P4Q1/P1P3PP/5R1K w - - 0 23",
+          "move_from": "c5",
+          "move_to": "e5",
+          "captured_piece": "b",
+          "promotion": null
+        }
+      ]
+    },
+    {
+      "table": "public.chapter",
+      "sqlite_rows": 18,
+      "postgres_rows": 18,
+      "match": true,
+      "first_5_rows": [
+        {
+          "chapter_id": "CHAP1",
+          "chapter_name": "Foundations of Inner Strength: Grit, Patience, and Purpose",
+          "story_ids": "['ST001', 'ST002', 'ST003', 'ST004', 'ST005', 'ST006', 'ST007', 'ST008', 'ST009', 'ST010', 'ST011']",
+          "module_id": "MOD1"
+        },
+        {
+          "chapter_id": "CHAP2",
+          "chapter_name": "The Power of the Unseen: Disruption, Deception, and the Small Advantage",
+          "story_ids": "['ST012', 'ST013', 'ST014', 'ST015', 'ST016', 'ST017', 'ST018', 'ST019', 'ST020', 'ST021']",
+          "module_id": "MOD1"
+        },
+        {
+          "chapter_id": "CHAP3",
+          "chapter_name": "Harmony and Resilience: The Quiet Strength of Character",
+          "story_ids": "['ST022', 'ST023', 'ST024', 'ST025', 'ST026', 'ST027', 'ST028', 'ST029']",
+          "module_id": "MOD1"
+        },
+        {
+          "chapter_id": "CHAP4",
+          "chapter_name": "Vision Beyond the Obvious: Branding, Strategy, and the Art of Smart Play",
+          "story_ids": "['ST030', 'ST031', 'ST032', 'ST033', 'ST034', 'ST035', 'ST036', 'ST037']",
+          "module_id": "MOD2"
+        },
+        {
+          "chapter_id": "CHAP5",
+          "chapter_name": "Legacy and Leverage: Building Platforms, Identity, and Enduring Strength",
+          "story_ids": "['ST038', 'ST039', 'ST040', 'ST041', 'ST042', 'ST043', 'ST044', 'ST045', 'ST046', 'ST047', 'ST048', 'ST049']",
+          "module_id": "MOD2"
+        }
+      ]
+    },
+    {
+      "table": "public.chess_puzzle",
+      "sqlite_rows": 1612,
+      "postgres_rows": 1612,
+      "match": true,
+      "first_5_rows": [
+        {
+          "chess_puzzle_id": "CP0001",
+          "principle_id": "P002",
+          "fen_with_move": "1r5k/pbp4p/1p1qpNp1/4Q3/3P4/2P5/PP4PP/5RK1 w KQkq - 0 1",
+          "isdone": "0",
+          "answer": "1. Ne8+ Qxe5 ( 1... Kg8 2. Qg7# ) 2. Rf8# *"
+        },
+        {
+          "chess_puzzle_id": "CP0002",
+          "principle_id": "P002",
+          "fen_with_move": "8/R4p1k/6p1/1P5p/1b6/5PPB/4r2P/6K1 b - - 0 1",
+          "isdone": "0",
+          "answer": "1... Bc5+ 2. Kf1 Rf2+ 3. Ke1 Bxa7 *"
+        },
+        {
+          "chess_puzzle_id": "CP0003",
+          "principle_id": "P002",
+          "fen_with_move": "3k4/p4pb1/2P5/1N6/1p5P/1P3p2/1P6/4K3 w - - 0 1",
+          "isdone": "0",
+          "answer": "1. c7+ Kd7 2. Nd6 Kxc7 3. Ne8+ Kd7 4. Nxg7 *"
+        },
+        {
+          "chess_puzzle_id": "CP0004",
+          "principle_id": "P002",
+          "fen_with_move": "r3k2r/ppp1b2p/2n1p1p1/1Q1q4/2ppN3/8/PPP2PPP/R1B1R1K1 w kq - 0 1",
+          "isdone": "0",
+          "answer": "1. Nf6+ $1 1... Bxf6 2. Qxd5 *"
+        },
+        {
+          "chess_puzzle_id": "CP0005",
+          "principle_id": "P002",
+          "fen_with_move": "4B3/1R3pk1/6p1/P1r2b2/7p/6P1/5P1P/6K1 b - - 2 36",
+          "isdone": "0",
+          "answer": "36... Rc1+ 37. Kg2 Be4+ 38. Kh3 Bxb7 *"
+        }
+      ]
+    },
+    {
+      "table": "public.module",
+      "sqlite_rows": 6,
+      "postgres_rows": 6,
+      "match": true,
+      "first_5_rows": [
+        {
+          "module_id": "MOD1",
+          "module_name": "Foundations of Inner Strength: Grit, Patience, and Purpose",
+          "chapter_ids": "[CHAP1, CHAP2, CHAP3]"
+        },
+        {
+          "module_id": "MOD2",
+          "module_name": "Identity and Influence – Branding, Positioning, and Long-Term Play",
+          "chapter_ids": "[CHAP4, CHAP5, CHAP6]"
+        },
+        {
+          "module_id": "MOD3",
+          "module_name": "Courage and Confidence – First Moves, Adaptation, and Excellence",
+          "chapter_ids": "[CHAP7, CHAP8, CHAP9]"
+        },
+        {
+          "module_id": "MOD4",
+          "module_name": "Clarity and Core – Strategy, Self-Reliance, and Smart Scaling",
+          "chapter_ids": "[CHAP10, CHAP11, CHAP12]"
+        },
+        {
+          "module_id": "MOD5",
+          "module_name": "Innovation and Differentiation – Versatility, Vision, and Reinvention",
+          "chapter_ids": "[CHAP13, CHAP14, CHAP15]"
+        }
+      ]
+    },
+    {
+      "table": "public.player_games",
+      "sqlite_rows": 218,
+      "postgres_rows": 218,
+      "match": true,
+      "first_5_rows": [
+        {
+          "game_id": "825834368",
+          "chess_com_id": "DhyanPraveen",
+          "game_date": "2025-08-13T18:30:00.000Z",
+          "pgn": "1. e4  1... e5  2. d4  2... Bb4+  3. c3  3... Bd6  4. dxe5  4... Bxe5  5. f4  5... Bd6  6. e5  6... Qh4+  7. g3  7... Qe7  8. Bc4  8... Bc5  9. b4  9... Bb6  10. Ba3  10... d6  11. b5  11... c6  12. Bxd6  12... Qd8  13. Nf3  13... f6  14. exf6  14... Nxf6  15. Qe2+  15... Kd7  16. Qe6#  1-0",
+          "white_player": null,
+          "black_player": null,
+          "is_brilliant_found": false,
+          "brilliant_moves": "{}"
+        },
+        {
+          "game_id": "141855025146",
+          "chess_com_id": "SVihaan161",
+          "game_date": "2025-08-13T18:30:00.000Z",
+          "pgn": "1. e4  1... c6  2. d4  2... e6  3. c3  3... Nf6  4. f3  4... g6  5. g3  5... d5  6. b3  6... dxe4  7. fxe4  7... Nxe4  8. a3  8... Nxc3  9. Nxc3  9... Na6  10. Ne4  1-0",
+          "white_player": null,
+          "black_player": null,
+          "is_brilliant_found": false,
+          "brilliant_moves": "{}"
+        },
+        {
+          "game_id": "141855065038",
+          "chess_com_id": "SVihaan161",
+          "game_date": "2025-08-13T18:30:00.000Z",
+          "pgn": "1. e4  1... e5  2. Nc3  2... d5  3. Bb5+  3... c6  4. Be2  4... c5  5. Nf3  5... c4  6. Nxe5  6... f6  7. Nf3  7... f5  8. exf5  8... d4  9. Na4  9... b5  10. Nc5  10... Qb6  11. b4  11... a5  12. bxa5  12... Rxa5  13. Nxd4  13... Qxc5  14. c3  14... Qxd4  15. cxd4  15... Rxa2  16. Rxa2  16... Na6  17. d5  17... Nb4  18. Rb2  18... Na2  19. Rxa2  1-0",
+          "white_player": null,
+          "black_player": null,
+          "is_brilliant_found": false,
+          "brilliant_moves": "{}"
+        },
+        {
+          "game_id": "141855109748",
+          "chess_com_id": "SVihaan161",
+          "game_date": "2025-08-13T18:30:00.000Z",
+          "pgn": "1. e4  1... e5  2. d4  2... Nc6  3. Qf3  3... Nxd4  4. Qd1  4... c5  5. c3  5... Nb5  6. c4  6... Nd4  7. Be3  7... b6  8. Bc1  8... Ba6  9. b4  9... Bxc4  10. Bxc4  10... d5  11. Bf1  11... dxe4  12. f3  12... exf3  13. gxf3  13... Nxf3+  14. Qxf3  14... Be7  15. Nh3  15... Bh4+  16. Ke2  16... cxb4  17. a3  17... bxa3  18. Rxa3  18... f5  19. Rg1  19... Kf8  20. Bg2  20... e4  21. Qb3  21... Rc8  22. Qb4+  22... Ke8  23. Qb5+  23... Kf8  24. Qb3  24... f4  25. Nxf4  25... b5  26. Qxb5  26... a5  27. Qxa5  27... Nf6  28. Qxd8+  28... Rxd8  29. Ra5  29... Ng4  30. Nh5  30... Nxh2  31. Rh1  31... Nf3  32. Bxf3  32... exf3+  33. Kxf3  33... Be1  34. Rxe1  34... Kf7  35. Rf1  35... Rb8  36. Nc3  36... Rhc8  37. Ne2  37... Rb3+  38. Be3  38... Re8  39. Nhg3  39... Rexe3+  40. Kf2  40... Rxg3  41. Nxg3  41... h5  42. Nxh5  42... Rh3  43. Nf4  43... g5  44. Nxh3  44... g4  45. Nf4  45... Kf6  46. Rg1  46... Kf7  47. Rxg4  47... Kf6  48. Rg1  48... Ke7  49. Ra6  49... Kd7  50. Ra7+  50... Kc6  51. Ra4  51... Kc5  52. Rg5+  52... Kb6  53. Nd5+  53... Kc5  54. Rgg4  54... Kxd5  55. Rg5+  55... Kd6  56. Raa5  56... Kc7  57. Rg6  57... Kd7  58. Raa6  58... Ke7  59. Rg7+  59... Kf8  60. Rh7  60... Kg8  61. Rb7  61... Kf8  62. Ra8#  1-0",
+          "white_player": null,
+          "black_player": null,
+          "is_brilliant_found": false,
+          "brilliant_moves": "{}"
+        },
+        {
+          "game_id": "141856031506",
+          "chess_com_id": "mvk14",
+          "game_date": "2025-08-13T18:30:00.000Z",
+          "pgn": "1. Nf3  1... c5  2. e3  2... Nc6  3. d4  3... cxd4  4. exd4  4... d5  5. Nbd2  5... Bg4  6. Be2  6... e6  7. O-O  7... Bd6  8. c3  8... Qc7  9. h3  9... Bh5  10. Re1  10... Nf6  11. Qc2  11... O-O  12. Nb3  12... a6  13. Bg5  13... Ne4  14. Be3  14... f5  15. Nbd2  15... f4  16. Nxe4  16... dxe4  17. Ne5  17... Bxe2  18. Rxe2  18... fxe3  19. Qxe4  19... exf2+  20. Kf1  20... Nxe5  21. dxe5  21... Bc5  22. b4  22... Ba7  23. c4  23... Rad8  24. c5  24... Qc6  25. Qg4  25... Rf5  26. Qh4  26... Rdf8  27. Rd1  27... Qb5  28. Qe7  28... Rxe5  29. Rd2  29... Rxe2  30. Rxe2  30... Qxe2+  0-1",
+          "white_player": null,
+          "black_player": null,
+          "is_brilliant_found": false,
+          "brilliant_moves": "{}"
+        }
+      ]
+    },
+    {
+      "table": "public.players",
+      "sqlite_rows": 42,
+      "postgres_rows": 42,
+      "match": true,
+      "first_5_rows": [
+        {
+          "Chess_com_ID": "Dogwarts",
+          "Player_Name": "Ashith Kiran Reddy",
+          "Joining_Date": "2021-12-02T18:30:00.000Z",
+          "activity_tracker": "{\"2026-05-19\":{\"lock\":true,\"types\":{\"Blitz\":{\"ratings\":[],\"last_rating\":null},\"Rapid\":{\"ratings\":[2362,2353,2345,2352],\"last_rating\":2352}},\"total_games\":4}}",
+          "current_elo": "2371",
+          "chess_profile_url": "https://www.chess.com/member/Dogwarts",
+          "chess_country_url": "https://api.chess.com/pub/country/IN",
+          "rapid_rating": "2371",
+          "rapid_best": "2410",
+          "blitz_rating": "2154",
+          "blitz_best": "2243",
+          "bullet_rating": "1878",
+          "bullet_best": "1919",
+          "fide_rating": "1643",
+          "tactics_highest": "2380",
+          "puzzle_rush_best": "60",
+          "chess_last_synced_at": "2026-05-19T08:44:43.358Z"
+        },
+        {
+          "Chess_com_ID": "Blunderraccoon",
+          "Player_Name": "Aaradhya Nisal ",
+          "Joining_Date": "2026-05-18T18:30:00.000Z",
+          "activity_tracker": "{\"is_paused\":false,\"2026-05-19\":{\"lock\":false,\"error\":\"Chess.com user not found\",\"last_attempt\":\"2026-05-19T08:44:44.051Z\"}}",
+          "current_elo": "0",
+          "chess_profile_url": null,
+          "chess_country_url": null,
+          "rapid_rating": null,
+          "rapid_best": null,
+          "blitz_rating": null,
+          "blitz_best": null,
+          "bullet_rating": null,
+          "bullet_best": null,
+          "fide_rating": null,
+          "tactics_highest": null,
+          "puzzle_rush_best": null,
+          "chess_last_synced_at": null
+        },
+        {
+          "Chess_com_ID": "pullela09",
+          "Player_Name": "Sahiti Pullela",
+          "Joining_Date": "2022-08-19T18:30:00.000Z",
+          "activity_tracker": "{\"2026-05-19\":{\"lock\":true,\"types\":{\"Blitz\":{},\"Rapid\":{}},\"total_games\":0}}",
+          "current_elo": "1946",
+          "chess_profile_url": "https://www.chess.com/member/Pullela09",
+          "chess_country_url": "https://api.chess.com/pub/country/IN",
+          "rapid_rating": "1946",
+          "rapid_best": "1988",
+          "blitz_rating": "1879",
+          "blitz_best": "2072",
+          "bullet_rating": "1410",
+          "bullet_best": "1698",
+          "fide_rating": "1514",
+          "tactics_highest": "2020",
+          "puzzle_rush_best": "42",
+          "chess_last_synced_at": "2026-05-19T08:44:50.048Z"
+        },
+        {
+          "Chess_com_ID": "shreya7483",
+          "Player_Name": "Akshaya",
+          "Joining_Date": "2023-08-04T18:30:00.000Z",
+          "activity_tracker": "{\"2026-05-19\":{\"lock\":true,\"types\":{\"Blitz\":{},\"Rapid\":{}},\"total_games\":0}}",
+          "current_elo": "771",
+          "chess_profile_url": "https://www.chess.com/member/shreya7483",
+          "chess_country_url": "https://api.chess.com/pub/country/IN",
+          "rapid_rating": "573",
+          "rapid_best": "694",
+          "blitz_rating": "733",
+          "blitz_best": "834",
+          "bullet_rating": "771",
+          "bullet_best": "979",
+          "fide_rating": "0",
+          "tactics_highest": "1409",
+          "puzzle_rush_best": "6",
+          "chess_last_synced_at": "2026-05-19T08:44:33.138Z"
+        },
+        {
+          "Chess_com_ID": "hustlebjst",
+          "Player_Name": "Tarun B",
+          "Joining_Date": "2026-05-18T18:30:00.000Z",
+          "activity_tracker": "{\"2026-05-19\":{\"lock\":false,\"error\":\"Chess.com user not found\",\"last_attempt\":\"2026-05-19T08:45:44.907Z\"}}",
+          "current_elo": "0",
+          "chess_profile_url": null,
+          "chess_country_url": null,
+          "rapid_rating": null,
+          "rapid_best": null,
+          "blitz_rating": null,
+          "blitz_best": null,
+          "bullet_rating": null,
+          "bullet_best": null,
+          "fide_rating": null,
+          "tactics_highest": null,
+          "puzzle_rush_best": null,
+          "chess_last_synced_at": null
+        }
+      ]
+    },
+    {
+      "table": "public.players_activity",
+      "sqlite_rows": 3876,
+      "postgres_rows": 3876,
+      "match": true,
+      "first_5_rows": [
+        {
+          "Chess_com_ID": "Blunderraccoon",
+          "index": "1",
+          "status": null,
+          "total_games": "0",
+          "blitz_rating": "[]",
+          "rapid_rating": "[]",
+          "rapid_results": "[]",
+          "blitz_results": "[]",
+          "fetch_lock": "1",
+          "date": "2025-07-09",
+          "blitz_times": "[]",
+          "rapid_times": "[]"
+        },
+        {
+          "Chess_com_ID": "Blunderraccoon",
+          "index": "2",
+          "status": null,
+          "total_games": "0",
+          "blitz_rating": "[]",
+          "rapid_rating": "[]",
+          "rapid_results": "[]",
+          "blitz_results": "[]",
+          "fetch_lock": "1",
+          "date": "2025-07-10",
+          "blitz_times": "[]",
+          "rapid_times": "[]"
+        },
+        {
+          "Chess_com_ID": "Blunderraccoon",
+          "index": "3",
+          "status": null,
+          "total_games": "4",
+          "blitz_rating": "[]",
+          "rapid_rating": "[1471,1463,1471]",
+          "rapid_results": "[0,0,1]",
+          "blitz_results": "[]",
+          "fetch_lock": "1",
+          "date": "2025-07-11",
+          "blitz_times": "[]",
+          "rapid_times": "[\"2025-07-11T11:03:03.000Z\",\"2025-07-11T11:08:14.000Z\",\"2025-07-11T11:15:23.000Z\"]"
+        },
+        {
+          "Chess_com_ID": "Blunderraccoon",
+          "index": "4",
+          "status": null,
+          "total_games": "0",
+          "blitz_rating": "[]",
+          "rapid_rating": "[]",
+          "rapid_results": "[]",
+          "blitz_results": "[]",
+          "fetch_lock": "1",
+          "date": "2025-07-12",
+          "blitz_times": "[]",
+          "rapid_times": "[]"
+        },
+        {
+          "Chess_com_ID": "Blunderraccoon",
+          "index": "5",
+          "status": null,
+          "total_games": "0",
+          "blitz_rating": "[]",
+          "rapid_rating": "[]",
+          "rapid_results": "[]",
+          "blitz_results": "[]",
+          "fetch_lock": "1",
+          "date": "2025-07-13",
+          "blitz_times": "[]",
+          "rapid_times": "[]"
+        }
+      ]
+    },
+    {
+      "table": "public.principle_position",
+      "sqlite_rows": 199,
+      "postgres_rows": 199,
+      "match": true,
+      "first_5_rows": [
+        {
+          "principle_id": "P001",
+          "principle": "If you control more than half of the squares on the board, you have an advantage.",
+          "fen_with_move": "1KR1Q2R/PP1B2PP/2NB1N2/4PP2/2bP4/3p1nn1/pppb1ppp/1kr1q2r b",
+          "puzzle_list": "['CP0360', 'CP0361', 'CP0731', 'CP0749', 'CP0826', 'CP0901', 'CP0950', 'CP0985', 'CP1241', 'CP1364']",
+          "isdone": "0"
+        },
+        {
+          "principle_id": "P002",
+          "principle": "A knight on the rim is grim.",
+          "fen_with_move": "8/8/p2p2p1/n2B1k1p/5P1P/4K1P1/P7/8 b",
+          "puzzle_list": "['CP0001', 'CP0002', 'CP0003', 'CP0004', 'CP0005', 'CP0006', 'CP0007', 'CP0008', 'CP0608', 'CP0633', 'CP1499', 'CP1598']",
+          "isdone": "0"
+        },
+        {
+          "principle_id": "P003",
+          "principle": "Place your pawns on the opposite color square as your bishop.",
+          "fen_with_move": "r1bqkbnr/pp1b1ppp/2n1p3/2ppP3/3P4/P1P2N2/1P3PPP/RNBQKB1R b KQkq - 0 6",
+          "puzzle_list": "['CP0461', 'CP0462', 'CP0463', 'CP0464', 'CP0465', 'CP0572', 'CP0670', 'CP0834', 'CP0996', 'CP1293']",
+          "isdone": "0"
+        },
+        {
+          "principle_id": "P004",
+          "principle": "The path from a1 to a8 is the same length as the path from a1 to h8.",
+          "fen_with_move": "8/8/8/8/P7/5p1K/8/k7 b",
+          "puzzle_list": "['CP0009', 'CP0010', 'CP0656', 'CP0696', 'CP0772', 'CP0774', 'CP0787', 'CP0935', 'CP1077', 'CP1348']",
+          "isdone": "0"
+        },
+        {
+          "principle_id": "P005",
+          "principle": "Leave the pawns alone, except for center pawns and passed pawns.",
+          "fen_with_move": "4rrk1/1pb2p2/p1nqp3/2p3p1/2P4p/1P1B4/PB3PPP/R2Q1RK1 w",
+          "puzzle_list": "['CP0011', 'CP0577', 'CP0798', 'CP0857', 'CP0866', 'CP0938', 'CP0949', 'CP0989', 'CP0997', 'CP1196', 'CP1537']",
+          "isdone": "0"
+        }
+      ]
+    },
+    {
+      "table": "public.principles",
+      "sqlite_rows": 199,
+      "postgres_rows": 199,
+      "match": true,
+      "first_5_rows": [
+        {
+          "id": "P001",
+          "name": "If you control more than half of the squares on..."
+        },
+        {
+          "id": "P002",
+          "name": "A knight on the rim is grim."
+        },
+        {
+          "id": "P003",
+          "name": "Place your pawns on the opposite color square a..."
+        },
+        {
+          "id": "P004",
+          "name": "The path from a1 to a8 is the same length as th..."
+        },
+        {
+          "id": "P005",
+          "name": "Leave the pawns alone, except for center pawns ..."
+        }
+      ]
+    },
+    {
+      "table": "public.roles_control",
+      "sqlite_rows": 2,
+      "postgres_rows": 2,
+      "match": true,
+      "first_5_rows": [
+        {
+          "role": "student",
+          "mod_access": "[\"MOD3\",\"MOD5\",\"MOD4\",\"MOD1\",\"MOD2\"]",
+          "chap_access": "[\"CHAP1\",\"CHAP2\",\"CHAP3\",\"CHAP4\",\"CHAP5\",\"CHAP6\",\"CHAP7\",\"CHAP8\",\"CHAP9\"]",
+          "story_access": "[\"ST002\",\"ST003\",\"ST006\",\"ST007\",\"ST008\",\"ST009\",\"ST011\",\"ST001\",\"ST010\",\"ST012\",\"ST013\",\"ST014\",\"ST015\",\"ST016\",\"ST017\",\"ST004\",\"ST005\",\"ST018\",\"ST020\",\"ST021\",\"ST019\",\"ST022\",\"ST023\",\"ST024\",\"ST025\",\"ST026\",\"ST027\",\"ST028\",\"ST029\",\"ST030\",\"ST031\",\"ST037\",\"ST036\",\"ST035\",\"ST034\",\"ST033\",\"ST032\",\"ST040\",\"ST039\",\"ST038\",\"ST041\",\"ST042\",\"ST049\",\"ST048\",\"ST047\",\"ST046\",\"ST045\",\"ST044\",\"ST043\",\"ST051\",\"ST050\",\"ST052\",\"ST053\",\"ST056\",\"ST057\",\"ST055\",\"ST054\",\"ST058\",\"ST059\",\"ST060\",\"ST061\",\"ST062\",\"ST063\",\"ST064\"]"
+        },
+        {
+          "role": "guest",
+          "mod_access": "[\"MOD1\",\"MOD3\",\"MOD4\",\"MOD5\",\"MOD2\"]",
+          "chap_access": "[\"CHAP1\"]",
+          "story_access": "[\"ST001\",\"ST002\",\"ST003\"]"
+        }
+      ]
+    },
+    {
+      "table": "public.story",
+      "sqlite_rows": 127,
+      "postgres_rows": 127,
+      "match": true,
+      "first_5_rows": [
+        {
+          "story_id": "ST061",
+          "title": "Swan and Crane",
+          "description": "Deceptive appearances can influence actions.",
+          "chapter_id": "CHAP7",
+          "module_id": "MOD3",
+          "status": "published",
+          "tags": "[]"
+        },
+        {
+          "story_id": "ST067",
+          "title": "Harikrishna vs Elderly Man",
+          "description": "Respect and wisdom go hand in hand.",
+          "chapter_id": "CHAP8",
+          "module_id": "MOD3",
+          "status": "published",
+          "tags": "[]"
+        },
+        {
+          "story_id": "ST096",
+          "title": "American Eagle’s Reinvention of Beak",
+          "description": "Upskill or Perish.",
+          "chapter_id": "CHAP12",
+          "module_id": "MOD4",
+          "status": "published",
+          "tags": "[]"
+        },
+        {
+          "story_id": "ST097",
+          "title": "Positioning Matters",
+          "description": "Assertive Confidence Creates Deterrence.",
+          "chapter_id": "CHAP12",
+          "module_id": "MOD4",
+          "status": "published",
+          "tags": "[]"
+        },
+        {
+          "story_id": "ST070",
+          "title": "Look Before You Leap",
+          "description": "Patience and awareness prevent regret.",
+          "chapter_id": "CHAP8",
+          "module_id": "MOD3",
+          "status": "published",
+          "tags": "[]"
+        }
+      ]
+    },
+    {
+      "table": "public.story_mapping",
+      "sqlite_rows": 261,
+      "postgres_rows": 261,
+      "match": true,
+      "first_5_rows": [
+        {
+          "mapping_id": "MP001",
+          "story_id": "ST001",
+          "principle_id": "P164",
+          "story_text": "At your zone of comfort, you are the super hero & heroine, drag opponent to the same\n",
+          "isdone": "0"
+        },
+        {
+          "mapping_id": "MP002",
+          "story_id": "ST001",
+          "principle_id": "P146",
+          "story_text": "At zone of unknown, be cautious",
+          "isdone": "0"
+        },
+        {
+          "mapping_id": "MP003",
+          "story_id": "ST002",
+          "principle_id": "P177",
+          "story_text": "The path to success to could be Mongoose or the grit, feed it with honey of confidence, not despair\n",
+          "isdone": "0"
+        },
+        {
+          "mapping_id": "MP004",
+          "story_id": "ST002",
+          "principle_id": "P066",
+          "story_text": "Number doesn't matter, adequacy is an unfulfilling need, make best use of resources, you may never have adequate resources ever to aspire\n",
+          "isdone": "0"
+        },
+        {
+          "mapping_id": "MP005",
+          "story_id": "ST002",
+          "principle_id": "P041",
+          "story_text": "Bold targets, seemingly impossible is what brings you laurels, be surrounded by people people who can feed you to become strong\n",
+          "isdone": "0"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+[2026-06-02T09:16:26.422Z] Connected to Supabase PostgreSQL.
+[2026-06-02T09:16:26.518Z] Discovered 14 tables in public schema.
+[2026-06-02T09:16:26.519Z] Exporting table: public.3000_rated_puzzles
+[2026-06-02T09:16:27.152Z] Rows exported from public.3000_rated_puzzles: 417/417
+[2026-06-02T09:16:27.155Z] Exporting table: public.Login
+[2026-06-02T09:16:27.644Z] Rows exported from public.Login: 43/43
+[2026-06-02T09:16:27.645Z] Exporting table: public.brilliant_moves
+[2026-06-02T09:16:28.090Z] Rows exported from public.brilliant_moves: 14/14
+[2026-06-02T09:16:28.093Z] Exporting table: public.chapter
+[2026-06-02T09:16:28.323Z] Rows exported from public.chapter: 18/18
+[2026-06-02T09:16:28.327Z] Exporting table: public.chess_puzzle
+[2026-06-02T09:16:28.616Z] Rows exported from public.chess_puzzle: 1612/1612
+[2026-06-02T09:16:28.617Z] Exporting table: public.module
+[2026-06-02T09:16:28.840Z] Rows exported from public.module: 6/6
+[2026-06-02T09:16:28.842Z] Exporting table: public.player_games
+[2026-06-02T09:16:29.196Z] Rows exported from public.player_games: 218/218
+[2026-06-02T09:16:29.197Z] Exporting table: public.players
+[2026-06-02T09:16:29.611Z] Rows exported from public.players: 42/42
+[2026-06-02T09:16:29.613Z] Exporting table: public.players_activity
+[2026-06-02T09:16:30.382Z] Rows exported from public.players_activity: 3876/3876
+[2026-06-02T09:16:30.384Z] Exporting table: public.principle_position
+[2026-06-02T09:16:30.926Z] Rows exported from public.principle_position: 199/199
+[2026-06-02T09:16:30.929Z] Exporting table: public.principles
+[2026-06-02T09:16:31.346Z] Rows exported from public.principles: 199/199
+[2026-06-02T09:16:31.348Z] Exporting table: public.roles_control
+[2026-06-02T09:16:31.683Z] Rows exported from public.roles_control: 2/2
+[2026-06-02T09:16:31.684Z] Exporting table: public.story
+[2026-06-02T09:16:32.089Z] Rows exported from public.story: 127/127
+[2026-06-02T09:16:32.091Z] Exporting table: public.story_mapping
+[2026-06-02T09:16:32.610Z] Rows exported from public.story_mapping: 261/261
+[2026-06-02T09:16:32.682Z] Export JSON written: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\supabase_export.json
+[2026-06-02T09:16:32.731Z] Export completed.

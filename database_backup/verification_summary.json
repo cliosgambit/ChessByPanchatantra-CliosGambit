@@ -1,0 +1,94 @@
+{
+  "generated_at_utc": "2026-06-02T09:16:34.991Z",
+  "sqlite_path": "C:\\Users\\AMAN ARIF\\Desktop\\Clio's Gambit\\Cliosgambit-old\\database_backup\\database.db",
+  "total_tables_migrated": 14,
+  "total_rows_migrated": 7034,
+  "failed_tables": 0,
+  "verification_success": true,
+  "table_results": [
+    {
+      "table": "public.3000_rated_puzzles",
+      "source_rows": 417,
+      "sqlite_rows": 417,
+      "success": true
+    },
+    {
+      "table": "public.Login",
+      "source_rows": 43,
+      "sqlite_rows": 43,
+      "success": true
+    },
+    {
+      "table": "public.brilliant_moves",
+      "source_rows": 14,
+      "sqlite_rows": 14,
+      "success": true
+    },
+    {
+      "table": "public.chapter",
+      "source_rows": 18,
+      "sqlite_rows": 18,
+      "success": true
+    },
+    {
+      "table": "public.chess_puzzle",
+      "source_rows": 1612,
+      "sqlite_rows": 1612,
+      "success": true
+    },
+    {
+      "table": "public.module",
+      "source_rows": 6,
+      "sqlite_rows": 6,
+      "success": true
+    },
+    {
+      "table": "public.player_games",
+      "source_rows": 218,
+      "sqlite_rows": 218,
+      "success": true
+    },
+    {
+      "table": "public.players",
+      "source_rows": 42,
+      "sqlite_rows": 42,
+      "success": true
+    },
+    {
+      "table": "public.players_activity",
+      "source_rows": 3876,
+      "sqlite_rows": 3876,
+      "success": true
+    },
+    {
+      "table": "public.principle_position",
+      "source_rows": 199,
+      "sqlite_rows": 199,
+      "success": true
+    },
+    {
+      "table": "public.principles",
+      "source_rows": 199,
+      "sqlite_rows": 199,
+      "success": true
+    },
+    {
+      "table": "public.roles_control",
+      "source_rows": 2,
+      "sqlite_rows": 2,
+      "success": true
+    },
+    {
+      "table": "public.story",
+      "source_rows": 127,
+      "sqlite_rows": 127,
+      "success": true
+    },
+    {
+      "table": "public.story_mapping",
+      "source_rows": 261,
+      "sqlite_rows": 261,
+      "success": true
+    }
+  ]
+}

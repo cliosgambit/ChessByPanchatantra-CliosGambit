@@ -1,0 +1,59 @@
+[2026-06-02T10:29:21.503Z] Connected. Source SQLite: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\database.db
+[2026-06-02T10:29:21.848Z] Current table: public.3000_rated_puzzles
+[2026-06-02T10:29:21.849Z] Rows to migrate: 417
+[2026-06-02T10:29:22.959Z] Rows migrated: 417
+[2026-06-02T10:29:22.959Z] Failed rows: 0
+[2026-06-02T10:29:22.963Z] Current table: public.Login
+[2026-06-02T10:29:22.965Z] Rows to migrate: 43
+[2026-06-02T10:29:23.420Z] Rows migrated: 43
+[2026-06-02T10:29:23.421Z] Failed rows: 0
+[2026-06-02T10:29:23.423Z] Current table: public.brilliant_moves
+[2026-06-02T10:29:23.423Z] Rows to migrate: 14
+[2026-06-02T10:29:24.089Z] Rows migrated: 14
+[2026-06-02T10:29:24.090Z] Failed rows: 0
+[2026-06-02T10:29:24.093Z] Current table: public.chapter
+[2026-06-02T10:29:24.095Z] Rows to migrate: 18
+[2026-06-02T10:29:24.295Z] Rows migrated: 18
+[2026-06-02T10:29:24.297Z] Failed rows: 0
+[2026-06-02T10:29:24.311Z] Current table: public.chess_puzzle
+[2026-06-02T10:29:24.313Z] Rows to migrate: 1612
+[2026-06-02T10:29:27.970Z] Rows migrated: 1612
+[2026-06-02T10:29:27.971Z] Failed rows: 0
+[2026-06-02T10:29:27.973Z] Current table: public.module
+[2026-06-02T10:29:27.974Z] Rows to migrate: 6
+[2026-06-02T10:29:28.249Z] Rows migrated: 6
+[2026-06-02T10:29:28.252Z] Failed rows: 0
+[2026-06-02T10:29:28.259Z] Current table: public.player_games
+[2026-06-02T10:29:28.262Z] Rows to migrate: 218
+[2026-06-02T10:29:30.337Z] Rows migrated: 218
+[2026-06-02T10:29:30.338Z] Failed rows: 0
+[2026-06-02T10:29:30.344Z] Current table: public.players
+[2026-06-02T10:29:30.347Z] Rows to migrate: 42
+[2026-06-02T10:29:30.728Z] Rows migrated: 42
+[2026-06-02T10:29:30.729Z] Failed rows: 0
+[2026-06-02T10:29:30.784Z] Current table: public.players_activity
+[2026-06-02T10:29:30.785Z] Rows to migrate: 3876
+[2026-06-02T10:29:48.779Z] Rows migrated: 3876
+[2026-06-02T10:29:48.780Z] Failed rows: 0
+[2026-06-02T10:29:48.782Z] Current table: public.principle_position
+[2026-06-02T10:29:48.782Z] Rows to migrate: 199
+[2026-06-02T10:29:49.846Z] Rows migrated: 199
+[2026-06-02T10:29:49.847Z] Failed rows: 0
+[2026-06-02T10:29:49.849Z] Current table: public.principles
+[2026-06-02T10:29:49.849Z] Rows to migrate: 199
+[2026-06-02T10:29:50.212Z] Rows migrated: 199
+[2026-06-02T10:29:50.213Z] Failed rows: 0
+[2026-06-02T10:29:50.214Z] Current table: public.roles_control
+[2026-06-02T10:29:50.215Z] Rows to migrate: 2
+[2026-06-02T10:29:50.419Z] Rows migrated: 2
+[2026-06-02T10:29:50.420Z] Failed rows: 0
+[2026-06-02T10:29:50.422Z] Current table: public.story
+[2026-06-02T10:29:50.423Z] Rows to migrate: 127
+[2026-06-02T10:29:50.928Z] Rows migrated: 127
+[2026-06-02T10:29:50.929Z] Failed rows: 0
+[2026-06-02T10:29:50.931Z] Current table: public.story_mapping
+[2026-06-02T10:29:50.932Z] Rows to migrate: 261
+[2026-06-02T10:29:52.062Z] Rows migrated: 261
+[2026-06-02T10:29:52.064Z] Failed rows: 0
+[2026-06-02T10:29:52.463Z] Total rows migrated: 7034
+[2026-06-02T10:29:52.465Z] Failure report: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\migration_output\failure_report.json

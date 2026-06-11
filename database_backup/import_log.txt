@@ -1,0 +1,168 @@
+[2026-06-02T06:42:14.614Z] Target database is locked, writing to fallback file: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\database_1780382534614.db
+[2026-06-02T06:42:14.626Z] Creating table: auth.audit_log_entries
+[2026-06-02T06:42:14.631Z] Rows imported for auth.audit_log_entries: 0
+[2026-06-02T06:42:14.635Z] Creating table: auth.custom_oauth_providers
+[2026-06-02T06:42:14.637Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_authorization_url_https
+[2026-06-02T06:42:14.638Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_identifier_format
+[2026-06-02T06:42:14.638Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_jwks_uri_https
+[2026-06-02T06:42:14.639Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_oauth2_requires_endpoints
+[2026-06-02T06:42:14.640Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_oidc_discovery_url_https
+[2026-06-02T06:42:14.640Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_oidc_issuer_https
+[2026-06-02T06:42:14.641Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_oidc_requires_issuer
+[2026-06-02T06:42:14.642Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_provider_type_check
+[2026-06-02T06:42:14.642Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_token_url_https
+[2026-06-02T06:42:14.643Z] Skipped incompatible CHECK on auth.custom_oauth_providers: custom_oauth_providers_userinfo_url_https
+[2026-06-02T06:42:14.645Z] Rows imported for auth.custom_oauth_providers: 0
+[2026-06-02T06:42:14.649Z] Creating table: auth.flow_state
+[2026-06-02T06:42:14.651Z] Rows imported for auth.flow_state: 0
+[2026-06-02T06:42:14.653Z] Creating table: auth.identities
+[2026-06-02T06:42:14.655Z] Rows imported for auth.identities: 0
+[2026-06-02T06:42:14.657Z] Creating table: auth.instances
+[2026-06-02T06:42:14.658Z] Rows imported for auth.instances: 0
+[2026-06-02T06:42:14.660Z] Creating table: auth.mfa_amr_claims
+[2026-06-02T06:42:14.661Z] Rows imported for auth.mfa_amr_claims: 0
+[2026-06-02T06:42:14.664Z] Creating table: auth.mfa_challenges
+[2026-06-02T06:42:14.665Z] Rows imported for auth.mfa_challenges: 0
+[2026-06-02T06:42:14.667Z] Creating table: auth.mfa_factors
+[2026-06-02T06:42:14.668Z] Rows imported for auth.mfa_factors: 0
+[2026-06-02T06:42:14.672Z] Creating table: auth.oauth_authorizations
+[2026-06-02T06:42:14.674Z] Rows imported for auth.oauth_authorizations: 0
+[2026-06-02T06:42:14.678Z] Creating table: auth.oauth_client_states
+[2026-06-02T06:42:14.680Z] Rows imported for auth.oauth_client_states: 0
+[2026-06-02T06:42:14.682Z] Creating table: auth.oauth_clients
+[2026-06-02T06:42:14.683Z] Skipped incompatible CHECK on auth.oauth_clients: oauth_clients_token_endpoint_auth_method_check
+[2026-06-02T06:42:14.684Z] Rows imported for auth.oauth_clients: 0
+[2026-06-02T06:42:14.686Z] Creating table: auth.oauth_consents
+[2026-06-02T06:42:14.688Z] Rows imported for auth.oauth_consents: 0
+[2026-06-02T06:42:14.690Z] Creating table: auth.one_time_tokens
+[2026-06-02T06:42:14.692Z] Rows imported for auth.one_time_tokens: 0
+[2026-06-02T06:42:14.695Z] Creating table: auth.refresh_tokens
+[2026-06-02T06:42:14.696Z] Rows imported for auth.refresh_tokens: 0
+[2026-06-02T06:42:14.700Z] Creating table: auth.saml_providers
+[2026-06-02T06:42:14.700Z] Skipped incompatible CHECK on auth.saml_providers: metadata_url not empty
+[2026-06-02T06:42:14.701Z] Rows imported for auth.saml_providers: 0
+[2026-06-02T06:42:14.704Z] Creating table: auth.saml_relay_states
+[2026-06-02T06:42:14.705Z] Rows imported for auth.saml_relay_states: 0
+[2026-06-02T06:42:14.707Z] Creating table: auth.schema_migrations
+[2026-06-02T06:42:14.737Z] Rows imported for auth.schema_migrations: 76
+[2026-06-02T06:42:14.739Z] Creating table: auth.sessions
+[2026-06-02T06:42:14.741Z] Rows imported for auth.sessions: 0
+[2026-06-02T06:42:14.744Z] Creating table: auth.sso_domains
+[2026-06-02T06:42:14.746Z] Rows imported for auth.sso_domains: 0
+[2026-06-02T06:42:14.748Z] Creating table: auth.sso_providers
+[2026-06-02T06:42:14.749Z] Skipped incompatible CHECK on auth.sso_providers: resource_id not empty
+[2026-06-02T06:42:14.750Z] Rows imported for auth.sso_providers: 0
+[2026-06-02T06:42:14.752Z] Creating table: auth.users
+[2026-06-02T06:42:14.753Z] Rows imported for auth.users: 0
+[2026-06-02T06:42:14.756Z] Creating table: auth.webauthn_challenges
+[2026-06-02T06:42:14.757Z] Skipped incompatible CHECK on auth.webauthn_challenges: webauthn_challenges_challenge_type_check
+[2026-06-02T06:42:14.758Z] Rows imported for auth.webauthn_challenges: 0
+[2026-06-02T06:42:14.761Z] Creating table: auth.webauthn_credentials
+[2026-06-02T06:42:14.762Z] Rows imported for auth.webauthn_credentials: 0
+[2026-06-02T06:42:14.765Z] Creating table: public.3000_rated_puzzles
+[2026-06-02T06:42:14.847Z] Rows imported for public.3000_rated_puzzles: 417
+[2026-06-02T06:42:14.848Z] Creating table: public.Login
+[2026-06-02T06:42:14.864Z] Rows imported for public.Login: 43
+[2026-06-02T06:42:14.865Z] Creating table: public.brilliant_moves
+[2026-06-02T06:42:14.874Z] Rows imported for public.brilliant_moves: 14
+[2026-06-02T06:42:14.876Z] Creating table: public.chapter
+[2026-06-02T06:42:14.881Z] Rows imported for public.chapter: 18
+[2026-06-02T06:42:14.883Z] Creating table: public.chess_puzzle
+[2026-06-02T06:42:15.163Z] Rows imported for public.chess_puzzle: 1612
+[2026-06-02T06:42:15.164Z] Creating table: public.module
+[2026-06-02T06:42:15.166Z] Rows imported for public.module: 6
+[2026-06-02T06:42:15.167Z] Creating table: public.player_games
+[2026-06-02T06:42:15.214Z] Rows imported for public.player_games: 218
+[2026-06-02T06:42:15.215Z] Creating table: public.players
+[2026-06-02T06:42:15.223Z] Rows imported for public.players: 42
+[2026-06-02T06:42:15.224Z] Creating table: public.players_activity
+[2026-06-02T06:42:16.024Z] Rows imported for public.players_activity: 3876
+[2026-06-02T06:42:16.028Z] Creating table: public.principle_position
+[2026-06-02T06:42:16.067Z] Rows imported for public.principle_position: 199
+[2026-06-02T06:42:16.069Z] Creating table: public.principles
+[2026-06-02T06:42:16.112Z] Rows imported for public.principles: 199
+[2026-06-02T06:42:16.115Z] Creating table: public.roles_control
+[2026-06-02T06:42:16.117Z] Rows imported for public.roles_control: 2
+[2026-06-02T06:42:16.118Z] Creating table: public.story
+[2026-06-02T06:42:16.155Z] Rows imported for public.story: 127
+[2026-06-02T06:42:16.156Z] Creating table: public.story_mapping
+[2026-06-02T06:42:16.222Z] Rows imported for public.story_mapping: 261
+[2026-06-02T06:42:16.224Z] Creating table: realtime.messages
+[2026-06-02T06:42:16.227Z] Rows imported for realtime.messages: 0
+[2026-06-02T06:42:16.229Z] Creating table: realtime.schema_migrations
+[2026-06-02T06:42:16.249Z] Rows imported for realtime.schema_migrations: 69
+[2026-06-02T06:42:16.250Z] Creating table: realtime.subscription
+[2026-06-02T06:42:16.251Z] Skipped incompatible CHECK on realtime.subscription: subscription_action_filter_check
+[2026-06-02T06:42:16.252Z] Rows imported for realtime.subscription: 0
+[2026-06-02T06:42:16.254Z] Creating table: storage.buckets
+[2026-06-02T06:42:16.255Z] Rows imported for storage.buckets: 0
+[2026-06-02T06:42:16.256Z] Creating table: storage.buckets_analytics
+[2026-06-02T06:42:16.258Z] Rows imported for storage.buckets_analytics: 0
+[2026-06-02T06:42:16.261Z] Creating table: storage.buckets_vectors
+[2026-06-02T06:42:16.262Z] Rows imported for storage.buckets_vectors: 0
+[2026-06-02T06:42:16.263Z] Creating table: storage.migrations
+[2026-06-02T06:42:16.280Z] Rows imported for storage.migrations: 61
+[2026-06-02T06:42:16.282Z] Creating table: storage.objects
+[2026-06-02T06:42:16.284Z] Rows imported for storage.objects: 0
+[2026-06-02T06:42:16.286Z] Creating table: storage.s3_multipart_uploads
+[2026-06-02T06:42:16.287Z] Rows imported for storage.s3_multipart_uploads: 0
+[2026-06-02T06:42:16.288Z] Creating table: storage.s3_multipart_uploads_parts
+[2026-06-02T06:42:16.290Z] Rows imported for storage.s3_multipart_uploads_parts: 0
+[2026-06-02T06:42:16.291Z] Creating table: storage.vector_indexes
+[2026-06-02T06:42:16.293Z] Rows imported for storage.vector_indexes: 0
+[2026-06-02T06:42:16.295Z] Creating table: vault.secrets
+[2026-06-02T06:42:16.297Z] Rows imported for vault.secrets: 0
+[2026-06-02T06:42:16.314Z] Verification - source tables: 49
+[2026-06-02T06:42:16.315Z] Verification - sqlite tables: 49
+[2026-06-02T06:42:16.316Z] Verification - auth.audit_log_entries: source=0, sqlite=0
+[2026-06-02T06:42:16.317Z] Verification - auth.custom_oauth_providers: source=0, sqlite=0
+[2026-06-02T06:42:16.318Z] Verification - auth.flow_state: source=0, sqlite=0
+[2026-06-02T06:42:16.318Z] Verification - auth.identities: source=0, sqlite=0
+[2026-06-02T06:42:16.319Z] Verification - auth.instances: source=0, sqlite=0
+[2026-06-02T06:42:16.319Z] Verification - auth.mfa_amr_claims: source=0, sqlite=0
+[2026-06-02T06:42:16.319Z] Verification - auth.mfa_challenges: source=0, sqlite=0
+[2026-06-02T06:42:16.320Z] Verification - auth.mfa_factors: source=0, sqlite=0
+[2026-06-02T06:42:16.321Z] Verification - auth.oauth_authorizations: source=0, sqlite=0
+[2026-06-02T06:42:16.321Z] Verification - auth.oauth_client_states: source=0, sqlite=0
+[2026-06-02T06:42:16.321Z] Verification - auth.oauth_clients: source=0, sqlite=0
+[2026-06-02T06:42:16.323Z] Verification - auth.oauth_consents: source=0, sqlite=0
+[2026-06-02T06:42:16.324Z] Verification - auth.one_time_tokens: source=0, sqlite=0
+[2026-06-02T06:42:16.326Z] Verification - auth.refresh_tokens: source=0, sqlite=0
+[2026-06-02T06:42:16.327Z] Verification - auth.saml_providers: source=0, sqlite=0
+[2026-06-02T06:42:16.328Z] Verification - auth.saml_relay_states: source=0, sqlite=0
+[2026-06-02T06:42:16.329Z] Verification - auth.schema_migrations: source=76, sqlite=76
+[2026-06-02T06:42:16.331Z] Verification - auth.sessions: source=0, sqlite=0
+[2026-06-02T06:42:16.332Z] Verification - auth.sso_domains: source=0, sqlite=0
+[2026-06-02T06:42:16.334Z] Verification - auth.sso_providers: source=0, sqlite=0
+[2026-06-02T06:42:16.335Z] Verification - auth.users: source=0, sqlite=0
+[2026-06-02T06:42:16.336Z] Verification - auth.webauthn_challenges: source=0, sqlite=0
+[2026-06-02T06:42:16.337Z] Verification - auth.webauthn_credentials: source=0, sqlite=0
+[2026-06-02T06:42:16.338Z] Verification - public.3000_rated_puzzles: source=417, sqlite=417
+[2026-06-02T06:42:16.339Z] Verification - public.Login: source=43, sqlite=43
+[2026-06-02T06:42:16.340Z] Verification - public.brilliant_moves: source=14, sqlite=14
+[2026-06-02T06:42:16.342Z] Verification - public.chapter: source=18, sqlite=18
+[2026-06-02T06:42:16.344Z] Verification - public.chess_puzzle: source=1612, sqlite=1612
+[2026-06-02T06:42:16.345Z] Verification - public.module: source=6, sqlite=6
+[2026-06-02T06:42:16.346Z] Verification - public.player_games: source=218, sqlite=218
+[2026-06-02T06:42:16.347Z] Verification - public.players: source=42, sqlite=42
+[2026-06-02T06:42:16.349Z] Verification - public.players_activity: source=3876, sqlite=3876
+[2026-06-02T06:42:16.349Z] Verification - public.principle_position: source=199, sqlite=199
+[2026-06-02T06:42:16.350Z] Verification - public.principles: source=199, sqlite=199
+[2026-06-02T06:42:16.351Z] Verification - public.roles_control: source=2, sqlite=2
+[2026-06-02T06:42:16.351Z] Verification - public.story: source=127, sqlite=127
+[2026-06-02T06:42:16.352Z] Verification - public.story_mapping: source=261, sqlite=261
+[2026-06-02T06:42:16.352Z] Verification - realtime.messages: source=0, sqlite=0
+[2026-06-02T06:42:16.353Z] Verification - realtime.schema_migrations: source=69, sqlite=69
+[2026-06-02T06:42:16.354Z] Verification - realtime.subscription: source=0, sqlite=0
+[2026-06-02T06:42:16.354Z] Verification - storage.buckets: source=0, sqlite=0
+[2026-06-02T06:42:16.355Z] Verification - storage.buckets_analytics: source=0, sqlite=0
+[2026-06-02T06:42:16.355Z] Verification - storage.buckets_vectors: source=0, sqlite=0
+[2026-06-02T06:42:16.356Z] Verification - storage.migrations: source=61, sqlite=61
+[2026-06-02T06:42:16.357Z] Verification - storage.objects: source=0, sqlite=0
+[2026-06-02T06:42:16.358Z] Verification - storage.s3_multipart_uploads: source=0, sqlite=0
+[2026-06-02T06:42:16.359Z] Verification - storage.s3_multipart_uploads_parts: source=0, sqlite=0
+[2026-06-02T06:42:16.360Z] Verification - storage.vector_indexes: source=0, sqlite=0
+[2026-06-02T06:42:16.361Z] Verification - vault.secrets: source=0, sqlite=0
+[2026-06-02T06:42:16.363Z] Verification result: PASS
+[2026-06-02T06:42:16.363Z] SQLite database written: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\database_1780382534614.db
+[2026-06-02T06:42:16.364Z] Summary written: C:\Users\AMAN ARIF\Desktop\Clio's Gambit\Cliosgambit-old\database_backup\verification_summary.json

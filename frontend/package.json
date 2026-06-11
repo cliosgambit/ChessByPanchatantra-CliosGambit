@@ -1,0 +1,68 @@
+{
+  "homepage": "/",
+  "proxy": "http://localhost:10000",
+  "name": "chess-story",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@chakra-ui/icons": "^2.2.4",
+    "@chakra-ui/react": "^2.10.7",
+    "@chakra-ui/system": "^2.6.2",
+    "@chakra-ui/theme": "^3.4.6",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@supabase/supabase-js": "^2.107.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.9.0",
+    "chess": "^1.2.2",
+    "chess.js": "^1.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "framer-motion": "^12.9.4",
+    "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
+    "react": "^19.1.0",
+    "react-chessboard": "^4.7.3",
+    "react-confetti": "^6.4.0",
+    "react-dom": "^19.1.0",
+    "react-draggable": "^4.5.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.5.3",
+    "react-scripts": "5.0.1",
+    "recharts": "^3.1.0",
+    "sqlite3": "^5.1.7",
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "postinstall": "node scripts/ensure-chess-sourcemap.js",
+    "start": "node scripts/ensure-chess-sourcemap.js && react-scripts start",
+    "build": "node scripts/ensure-chess-sourcemap.js && cross-env CI=false react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}

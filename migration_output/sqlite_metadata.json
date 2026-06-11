@@ -1,0 +1,1142 @@
+{
+  "sqlitePath": "C:\\Users\\AMAN ARIF\\Desktop\\Clio's Gambit\\Cliosgambit-old\\database_backup\\database.db",
+  "tables": [
+    {
+      "name": "public.3000_rated_puzzles",
+      "create_sql": "CREATE TABLE \"public.3000_rated_puzzles\" (\n  \"Rated_id\" TEXT,\n  \"principle_id\" TEXT,\n  \"Fen\" TEXT,\n  PRIMARY KEY (\"Rated_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "Rated_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "principle_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "Fen",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.3000_rated_puzzles_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "Rated_id"
+          ]
+        }
+      ],
+      "row_count": 417
+    },
+    {
+      "name": "public.Login",
+      "create_sql": "CREATE TABLE \"public.Login\" (\n  \"Chess_com_ID\" TEXT,\n  \"Player_Name\" TEXT,\n  \"email\" TEXT,\n  \"password\" TEXT,\n  \"Role\" TEXT NOT NULL DEFAULT 'student',\n  \"otp\" TEXT,\n  \"otp_expires_at\" TEXT,\n  PRIMARY KEY (\"Chess_com_ID\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "Chess_com_ID",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "Player_Name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "email",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "password",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "Role",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'student'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "otp",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "otp_expires_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.Login_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "Chess_com_ID"
+          ]
+        }
+      ],
+      "row_count": 43
+    },
+    {
+      "name": "public.brilliant_moves",
+      "create_sql": "CREATE TABLE \"public.brilliant_moves\" (\n  \"id\" INTEGER,\n  \"game_link\" TEXT NOT NULL,\n  \"chess_com_id\" TEXT NOT NULL,\n  \"player_name\" TEXT NOT NULL,\n  \"move_number\" INTEGER NOT NULL,\n  \"move_san\" TEXT NOT NULL,\n  \"move_uci\" TEXT NOT NULL,\n  \"player_color\" TEXT NOT NULL,\n  \"game_date\" TEXT NOT NULL,\n  \"white_player\" TEXT NOT NULL,\n  \"black_player\" TEXT NOT NULL,\n  \"game_result\" TEXT NOT NULL,\n  \"pgn_moves\" TEXT NOT NULL,\n  \"hanging_pieces\" TEXT NOT NULL,\n  \"analysis_depth\" INTEGER NOT NULL,\n  \"weighted_eval_score\" REAL,\n  \"eval_summary\" TEXT,\n  \"created_at\" TEXT DEFAULT CURRENT_TIMESTAMP,\n  \"fen_before_move\" TEXT NOT NULL,\n  \"fen_after_move\" TEXT NOT NULL,\n  \"move_from\" TEXT NOT NULL,\n  \"move_to\" TEXT NOT NULL,\n  \"captured_piece\" TEXT,\n  \"promotion\" TEXT,\n  PRIMARY KEY (\"id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "game_link",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "chess_com_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "player_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "move_number",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "move_san",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "move_uci",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "player_color",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "game_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "white_player",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "black_player",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "game_result",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "pgn_moves",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "hanging_pieces",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "analysis_depth",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "weighted_eval_score",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "eval_summary",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "fen_before_move",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "fen_after_move",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 20,
+          "name": "move_from",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 21,
+          "name": "move_to",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 22,
+          "name": "captured_piece",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 23,
+          "name": "promotion",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "row_count": 14
+    },
+    {
+      "name": "public.chapter",
+      "create_sql": "CREATE TABLE \"public.chapter\" (\n  \"chapter_id\" TEXT,\n  \"chapter_name\" TEXT,\n  \"story_ids\" TEXT,\n  \"module_id\" TEXT,\n  PRIMARY KEY (\"chapter_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "chapter_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "chapter_name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "story_ids",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "module_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.chapter_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "chapter_id"
+          ]
+        }
+      ],
+      "row_count": 18
+    },
+    {
+      "name": "public.chess_puzzle",
+      "create_sql": "CREATE TABLE \"public.chess_puzzle\" (\n  \"chess_puzzle_id\" TEXT,\n  \"principle_id\" TEXT,\n  \"fen_with_move\" TEXT,\n  \"isdone\" INTEGER DEFAULT 0,\n  \"answer\" TEXT,\n  PRIMARY KEY (\"chess_puzzle_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "chess_puzzle_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "principle_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "fen_with_move",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "isdone",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "answer",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.chess_puzzle_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "chess_puzzle_id"
+          ]
+        }
+      ],
+      "row_count": 1612
+    },
+    {
+      "name": "public.module",
+      "create_sql": "CREATE TABLE \"public.module\" (\n  \"module_id\" TEXT,\n  \"module_name\" TEXT,\n  \"chapter_ids\" TEXT,\n  PRIMARY KEY (\"module_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "module_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "module_name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "chapter_ids",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.module_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "module_id"
+          ]
+        }
+      ],
+      "row_count": 6
+    },
+    {
+      "name": "public.player_games",
+      "create_sql": "CREATE TABLE \"public.player_games\" (\n  \"game_id\" INTEGER,\n  \"chess_com_id\" TEXT NOT NULL,\n  \"game_date\" TEXT NOT NULL,\n  \"pgn\" TEXT NOT NULL,\n  \"white_player\" TEXT,\n  \"black_player\" TEXT,\n  \"is_brilliant_found\" INTEGER,\n  \"brilliant_moves\" TEXT,\n  PRIMARY KEY (\"game_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "game_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "chess_com_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "game_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "pgn",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "white_player",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "black_player",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "is_brilliant_found",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "brilliant_moves",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "row_count": 218
+    },
+    {
+      "name": "public.players",
+      "create_sql": "CREATE TABLE \"public.players\" (\n  \"Chess_com_ID\" TEXT,\n  \"Player_Name\" TEXT,\n  \"Joining_Date\" TEXT,\n  \"activity_tracker\" TEXT,\n  \"current_elo\" INTEGER,\n  \"chess_profile_url\" TEXT,\n  \"chess_country_url\" TEXT,\n  \"rapid_rating\" INTEGER,\n  \"rapid_best\" INTEGER,\n  \"blitz_rating\" INTEGER,\n  \"blitz_best\" INTEGER,\n  \"bullet_rating\" INTEGER,\n  \"bullet_best\" INTEGER,\n  \"fide_rating\" INTEGER,\n  \"tactics_highest\" INTEGER,\n  \"puzzle_rush_best\" INTEGER,\n  \"chess_last_synced_at\" TEXT,\n  PRIMARY KEY (\"Chess_com_ID\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "Chess_com_ID",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "Player_Name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "Joining_Date",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "activity_tracker",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "current_elo",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "chess_profile_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "chess_country_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "rapid_rating",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "rapid_best",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "blitz_rating",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "blitz_best",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "bullet_rating",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "bullet_best",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "fide_rating",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "tactics_highest",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "puzzle_rush_best",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "chess_last_synced_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.players_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "Chess_com_ID"
+          ]
+        }
+      ],
+      "row_count": 42
+    },
+    {
+      "name": "public.players_activity",
+      "create_sql": "CREATE TABLE \"public.players_activity\" (\n  \"Chess_com_ID\" TEXT NOT NULL,\n  \"index\" INTEGER,\n  \"status\" TEXT,\n  \"total_games\" INTEGER,\n  \"blitz_rating\" TEXT,\n  \"rapid_rating\" TEXT,\n  \"rapid_results\" TEXT,\n  \"blitz_results\" TEXT,\n  \"fetch_lock\" INTEGER,\n  \"date\" TEXT,\n  \"blitz_times\" TEXT,\n  \"rapid_times\" TEXT,\n  PRIMARY KEY (\"index\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "Chess_com_ID",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 1,
+          "name": "index",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 2,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "total_games",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "blitz_rating",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "rapid_rating",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "rapid_results",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "blitz_results",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "fetch_lock",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "blitz_times",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "rapid_times",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [],
+      "row_count": 3876
+    },
+    {
+      "name": "public.principle_position",
+      "create_sql": "CREATE TABLE \"public.principle_position\" (\n  \"principle_id\" TEXT,\n  \"principle\" TEXT,\n  \"fen_with_move\" TEXT,\n  \"puzzle_list\" TEXT,\n  \"isdone\" INTEGER DEFAULT 0,\n  PRIMARY KEY (\"principle_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "principle_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "principle",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "fen_with_move",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "puzzle_list",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "isdone",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.principle_position_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "principle_id"
+          ]
+        }
+      ],
+      "row_count": 199
+    },
+    {
+      "name": "public.principles",
+      "create_sql": "CREATE TABLE \"public.principles\" (\n  \"id\" TEXT,\n  \"name\" TEXT NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.principles_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "row_count": 199
+    },
+    {
+      "name": "public.roles_control",
+      "create_sql": "CREATE TABLE \"public.roles_control\" (\n  \"role\" TEXT,\n  \"mod_access\" TEXT,\n  \"chap_access\" TEXT,\n  \"story_access\" TEXT,\n  PRIMARY KEY (\"role\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "role",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "mod_access",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "chap_access",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "story_access",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.roles_control_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "role"
+          ]
+        }
+      ],
+      "row_count": 2
+    },
+    {
+      "name": "public.story",
+      "create_sql": "CREATE TABLE \"public.story\" (\n  \"story_id\" TEXT,\n  \"title\" TEXT,\n  \"description\" TEXT,\n  \"chapter_id\" TEXT,\n  \"module_id\" TEXT,\n  \"status\" TEXT DEFAULT 'published',\n  \"tags\" TEXT DEFAULT '[]',\n  PRIMARY KEY (\"story_id\"),\n  FOREIGN KEY (\"chapter_id\") REFERENCES \"public.chapter\" (\"chapter_id\"),\n  FOREIGN KEY (\"module_id\") REFERENCES \"public.module\" (\"module_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "story_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "chapter_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "module_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'published'",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "tags",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'[]'",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "public.module",
+          "from": "module_id",
+          "to": "module_id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "public.chapter",
+          "from": "chapter_id",
+          "to": "chapter_id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.story_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "story_id"
+          ]
+        }
+      ],
+      "row_count": 127
+    },
+    {
+      "name": "public.story_mapping",
+      "create_sql": "CREATE TABLE \"public.story_mapping\" (\n  \"mapping_id\" TEXT,\n  \"story_id\" TEXT,\n  \"principle_id\" TEXT,\n  \"story_text\" TEXT,\n  \"isdone\" INTEGER DEFAULT 0,\n  PRIMARY KEY (\"mapping_id\"),\n  FOREIGN KEY (\"principle_id\") REFERENCES \"public.principles\" (\"id\"),\n  FOREIGN KEY (\"story_id\") REFERENCES \"public.story\" (\"story_id\")\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "mapping_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "story_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "principle_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "story_text",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "isdone",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "public.story",
+          "from": "story_id",
+          "to": "story_id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "public.principles",
+          "from": "principle_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_public.story_mapping_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            "mapping_id"
+          ]
+        }
+      ],
+      "row_count": 261
+    }
+  ]
+}
