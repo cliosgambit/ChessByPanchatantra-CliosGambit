@@ -35,23 +35,6 @@ coverage/
 *.db
 *.sqlite
 *.sqlite3
-database_backup/*.db
-database_backup/supabase_export.json
-database_backup/*_log.txt
-database_backup/migration_log.txt
-database_backup/import_log.txt
-database_backup/export_log.txt
-database_backup/create_sqlite_log.txt
-database_backup/verification_summary.json
-
-# --- Migration tooling outputs (keep scripts, ignore generated artifacts) ---
-migration_output/*_log.txt
-migration_output/*_logs.txt
-migration_output/verification_report.json
-migration_output/verification_summary.json
-migration_output/failure_report.json
-migration_output/sqlite_metadata.json
-migration_output/data_import.sql
 
 # --- Python (backend email helper) ---
 __pycache__/

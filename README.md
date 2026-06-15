@@ -23,16 +23,15 @@ In production-style mode, the backend serves the built React app from `frontend/
 
 - **JavaScript** with **JSX** (React components)
 - **CSS** (component and global styles)
-- **HTML** (CRA `public/` template)
+- **HTML** (`frontend/index.html`)
 
 ### Core framework & tooling
 
 | Tool | Role |
 |------|------|
 | [React](https://react.dev/) 19 | UI library |
-| [Create React App](https://create-react-app.dev/) (`react-scripts` 5) | Build, dev server, and test runner |
+| [Vite](https://vitejs.dev/) 6 | Dev server and production build |
 | [React Router](https://reactrouter.com/) 7 | Client-side routing |
-| [cross-env](https://www.npmjs.com/package/cross-env) | Cross-platform env vars for Windows-friendly builds |
 
 ### UI & UX libraries
 
@@ -69,7 +68,7 @@ In production-style mode, the backend serves the built React app from `frontend/
 
 ### Dev vs production
 
-- **Development:** `npm start` → CRA dev server on port **3000**, with `"proxy": "http://localhost:10000"` so API requests forward to the backend.
+- **Development:** `npm start` in `frontend/` → Vite dev server on port **3000**, proxying `/api` to `http://localhost:10000`.
 - **Production:** `npm run build` → static assets in `frontend/build`, served by the Express backend.
 
 ---
@@ -97,7 +96,6 @@ In production-style mode, the backend serves the built React app from `frontend/
 |------|------|
 | [pg](https://node-postgres.com/) (node-postgres) | PostgreSQL connection pool |
 | [Supabase](https://supabase.com/) | Hosted PostgreSQL (`DATABASE_URL` in `.env`) |
-| [sqlite3](https://www.npmjs.com/package/sqlite3) | Used in migration/backup scripts under `database_backup/` |
 
 ### Security & auth
 
@@ -134,12 +132,6 @@ Routes live under `backend/api/`:
 | Python 3 + `smtplib` | `backend/api/services/send_email.py` sends OTP via Gmail (credentials from `.env`) |
 
 Requires **Python** on the PATH when using OTP login (`python` spawned from `authController.js`).
-
----
-
-## Data migration tooling (repo extras)
-
-Scripts in `database_backup/` and `migration_output/` support exporting/importing data (Supabase ↔ SQLite ↔ PostgreSQL). They use **Node.js** with `pg` and `sqlite3`, not the running app server.
 
 ---
 
