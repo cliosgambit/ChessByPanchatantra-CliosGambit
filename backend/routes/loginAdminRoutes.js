@@ -13,7 +13,7 @@ async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-router.use(authenticate, authorizeRoles('admin'));
+router.use('/admin', authenticate, authorizeRoles('admin'));
 
 router.post('/admin/login-users', async (req, res) => {
   const { Chess_com_ID, Player_Name, email, password, Role } = req.body;

@@ -1,11 +1,24 @@
 const express = require('express');
-const authController = require('../controllers/authController');
+const emailAuth = require('../controllers/authController');
+const chessAuth = require('../api/controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/auth/login', authController.login);
-router.post('/auth/logout', authenticate, authController.logout);
-router.get('/auth/me', authenticate, authController.me);
+// Chess.com ID flow (Login table)
+router.post('/auth/check-chess-id', chessAuth.checkChessId);
+router.post('/auth/send-otp', chessAuth.sendOtp);
+router.post('/auth/verify-set-password', chessAuth.verifyAndSetPassword);
+
+// Unified login: email/password (users table) or chess_com_id/password (Login table)
+router.post('/auth/login', (req, res) => {
+  if (req.body?.chess_com_id) {
+    return chessAuth.login(req, res);
+  }
+  return emailAuth.login(req, res);
+});
+
+router.post('/auth/logout', authenticate, emailAuth.logout);
+router.get('/auth/me', authenticate, emailAuth.me);
 
 module.exports = router;

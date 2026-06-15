@@ -59,6 +59,7 @@ function ChessComGameViewer({ game, profileUsername }) {
   const skipSoundRef = useRef(true);
 
   const history = useMemo(() => {
+    if (game?.moveHistory?.length) return game.moveHistory;
     if (!game?.pgn) return [];
     const chess = new Chess();
     try {
@@ -68,15 +69,18 @@ function ChessComGameViewer({ game, profileUsername }) {
       console.error('Failed to load PGN', err);
       return [];
     }
-  }, [game?.pgn]);
+  }, [game?.moveHistory, game?.pgn]);
 
   const fen = useMemo(() => {
+    if (moveIndex < 0) return new Chess().fen();
+    const stored = game?.moveHistory?.[moveIndex];
+    if (stored?.after) return stored.after;
     const chess = new Chess();
     history.slice(0, moveIndex + 1).forEach((move) => {
       chess.move(move.san);
     });
     return chess.fen();
-  }, [history, moveIndex]);
+  }, [history, moveIndex, game?.moveHistory]);
 
   const currentMove = history[moveIndex];
   const boardOrientation = game?.isWhite ? 'white' : 'black';

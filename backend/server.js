@@ -18,6 +18,10 @@ const { ensureChapterColumns } = require('./scripts/ensureChapterColumns');
 const accessRoutes = require('./api/routes/accessRoutes'); // <-- NEW: Import access routes
 const trackerRoutes = require('./api/routes/trackerRoutes');
 const automationRoutes = require('./api/routes/automationRoutes');
+const chessComRoutes = require('./api/routes/chessComRoutes');
+const { ensureChessComSchema } = require('./scripts/ensureChessComSchema');
+const { ensureChessComMovesTable } = require('./scripts/ensureChessComMovesTable');
+const { ensurePlayerChessComColumns } = require('./scripts/ensurePlayerChessComColumns');
 const { autoCompleteActivityTracker } = require('./api/controllers/automationController');
 
 
@@ -49,6 +53,7 @@ app.use('/api', accessRoutes); // <-- NEW: Add access control routes
 app.use('/api', courseRoutes); // Your existing course routes
 app.use(trackerRoutes);
 app.use(automationRoutes);
+app.use('/api', chessComRoutes);
 
 
 // --- Frontend Fallback Route ---
@@ -71,6 +76,9 @@ const startServerAndServices = async () => {
     await ensureChessPuzzleColumns();
     await ensureModuleColumns();
     await ensureChapterColumns();
+    await ensureChessComSchema();
+    await ensureChessComMovesTable();
+    await ensurePlayerChessComColumns();
 
     // console.log('Triggering initial data orchestration cycle...');
     // runDataUpdateCycle();

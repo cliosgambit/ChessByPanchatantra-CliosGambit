@@ -37,9 +37,16 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover }) {
     }
   };
 
-  const handleReviewClick = (event) => {
-    event.stopPropagation();
-    onSelect?.(game);
+  const handleRowClick = () => {
+    if (canReview) onSelect?.(game);
+  };
+
+  const handleRowKeyDown = (event) => {
+    if (!canReview) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect?.(game);
+    }
   };
 
   const content = (
@@ -94,13 +101,9 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover }) {
             <span>{game.blackAccuracy}</span>
           </div>
         ) : canReview ? (
-          <button
-            type="button"
-            className="chess-game-review-btn"
-            onClick={handleReviewClick}
-          >
+          <span className="chess-game-review-btn" aria-hidden="true">
             Review
-          </button>
+          </span>
         ) : (
           <span className="chess-game-accuracy-empty">—</span>
         )}
@@ -111,19 +114,20 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover }) {
     </>
   );
 
-  const rowInner =
-    canReview ? (
-      <button
-        type="button"
-        className="chess-game-row chess-game-row--clickable"
-        onClick={() => onSelect(game)}
-        aria-label={`View game: ${game.white} vs ${game.black}`}
-      >
-        {content}
-      </button>
-    ) : (
-      <div className="chess-game-row">{content}</div>
-    );
+  const rowInner = canReview ? (
+    <div
+      role="button"
+      tabIndex={0}
+      className="chess-game-row chess-game-row--clickable"
+      onClick={handleRowClick}
+      onKeyDown={handleRowKeyDown}
+      aria-label={`View game: ${game.white} vs ${game.black}`}
+    >
+      {content}
+    </div>
+  ) : (
+    <div className="chess-game-row">{content}</div>
+  );
 
   return (
     <div

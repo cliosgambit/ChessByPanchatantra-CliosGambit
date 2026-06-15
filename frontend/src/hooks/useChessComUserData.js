@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  fetchChessComArchives,
-  fetchChessComClubs,
-  fetchChessComMonthlyGames,
-  fetchChessComProfile,
-  fetchChessComRecentGames,
-  fetchChessComStats,
-} from '../services/chessComApiService';
+import { fetchChessComBundle, syncChessComPlayer } from '../services/chessComDbService';
 
 export function useChessComUserData(username) {
   const [profile, setProfile] = useState(null);
@@ -17,70 +10,87 @@ export function useChessComUserData(username) {
   const [totalGames, setTotalGames] = useState(0);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(
+    async ({ forceSync = false } = {}) => {
+      const safeUsername = decodeURIComponent(username || '').trim();
+      if (!safeUsername) {
+        setProfile(null);
+        setStats(null);
+        setArchives([]);
+        setMonthlyGames([]);
+        setRecentGames([]);
+        setTotalGames(0);
+        setClubs([]);
+        setError('Chess.com username is required.');
+        setLoading(false);
+        return;
+      }
+
+      if (forceSync) setSyncing(true);
+      else setLoading(true);
+      setError(null);
+
+      try {
+        const bundle = await fetchChessComBundle(safeUsername, { forceSync });
+
+        if (!bundle.linked) {
+          setProfile(null);
+          setStats(null);
+          setArchives([]);
+          setMonthlyGames([]);
+          setRecentGames([]);
+          setTotalGames(0);
+          setClubs([]);
+          setError(bundle.error || 'Player not found.');
+          return;
+        }
+
+        setProfile(bundle.profile);
+        setStats(bundle.stats);
+        setArchives(bundle.archives || []);
+        setMonthlyGames(bundle.monthlyGames || []);
+        setRecentGames(bundle.recentGames || []);
+        setTotalGames(bundle.totalGames || 0);
+        setClubs(bundle.clubs || []);
+        setLastSyncedAt(bundle.lastSyncedAt || null);
+        setError(bundle.error || null);
+      } catch (err) {
+        setProfile(null);
+        setStats(null);
+        setArchives([]);
+        setMonthlyGames([]);
+        setRecentGames([]);
+        setTotalGames(0);
+        setClubs([]);
+        setError(err.message || 'Failed to load Chess.com data from database.');
+      } finally {
+        setLoading(false);
+        setSyncing(false);
+      }
+    },
+    [username]
+  );
+
+  const syncFromChessCom = useCallback(async () => {
     const safeUsername = decodeURIComponent(username || '').trim();
-    if (!safeUsername) {
-      setProfile(null);
-      setStats(null);
-      setArchives([]);
-      setMonthlyGames([]);
-      setRecentGames([]);
-      setTotalGames(0);
-      setClubs([]);
-      setError('Chess.com username is required.');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+    if (!safeUsername) return;
+    setSyncing(true);
     setError(null);
-
     try {
-      const profileRes = await fetchChessComProfile(safeUsername);
-      const apiUsername = profileRes.profile?.username || safeUsername;
-
-      const [statsRes, archivesRes, monthsRes, gamesRes, clubsRes] = await Promise.all([
-        fetchChessComStats(apiUsername),
-        fetchChessComArchives(apiUsername),
-        fetchChessComMonthlyGames(apiUsername, 12),
-        fetchChessComRecentGames(apiUsername, 25),
-        fetchChessComClubs(apiUsername),
-      ]);
-
-      const errors = [
-        profileRes.error,
-        statsRes.error,
-        archivesRes.error,
-        monthsRes.error,
-        gamesRes.error,
-        clubsRes.error,
-      ].filter(Boolean);
-      setProfile(profileRes.profile);
-      setStats(statsRes.stats);
-      setArchives(archivesRes.archives);
-      setMonthlyGames(monthsRes.months);
-      setRecentGames(gamesRes.games);
-      setTotalGames(gamesRes.totalGames);
-      setClubs(clubsRes.clubs);
-      setError(errors[0] || null);
+      await syncChessComPlayer(safeUsername);
+      await load({ forceSync: false });
     } catch (err) {
-      setProfile(null);
-      setStats(null);
-      setArchives([]);
-      setMonthlyGames([]);
-      setRecentGames([]);
-      setTotalGames(0);
-      setClubs([]);
-      setError(err.message || 'Failed to load Chess.com data.');
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Sync failed.');
+      setSyncing(false);
     }
-  }, [username]);
+  }, [username, load]);
 
   useEffect(() => {
-    load();
+    load({ forceSync: false });
   }, [load]);
 
   return {
@@ -92,7 +102,10 @@ export function useChessComUserData(username) {
     totalGames,
     clubs,
     loading,
+    syncing,
     error,
-    refetch: load,
+    lastSyncedAt,
+    refetch: () => load({ forceSync: false }),
+    syncFromChessCom,
   };
 }

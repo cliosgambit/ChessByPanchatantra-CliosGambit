@@ -1,6 +1,5 @@
 // NEW IMPORT for JWT
-const jwt = require('jsonwebtoken');
-
+const { signToken } = require('../../utils/jwt');
 const { spawn } = require('child_process');
 const otpGenerator = require('otp-generator');
 const bcrypt = require('bcrypt');
@@ -203,28 +202,36 @@ exports.login = async (req, res) => {
 
         console.log(`Login successful for ID: ${id}, Role: ${user.Role}`);
 
-        // If credentials are correct, create a JWT payload
-        const payload = {
-            user: {
-                id: user.Chess_com_ID,
-                role: user.Role || 'student', // Default to 'student' if Role is null
-            },
+        if (user.email) {
+          const { rows: syncedRows } = await db.query(
+            `SELECT id, full_name, email, role, is_active
+             FROM users
+             WHERE LOWER(email) = LOWER($1)
+             LIMIT 1`,
+            [user.email]
+          );
+          const syncedUser = syncedRows[0];
+          if (syncedUser?.is_active) {
+            const safeUser = {
+              id: syncedUser.id,
+              full_name: syncedUser.full_name,
+              email: syncedUser.email,
+              role: (syncedUser.role || 'student').toLowerCase(),
+            };
+            const token = signToken(safeUser, false);
+            return res.json({ token, user: safeUser });
+          }
+        }
+
+        const safeUser = {
+          id: user.Chess_com_ID,
+          full_name: user.Player_Name || user.Chess_com_ID,
+          email: user.email || null,
+          role: (user.Role || 'student').toLowerCase(),
         };
 
-        // Sign the token and send it to the client
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }, // Token will be valid for 7 days
-            (err, token) => {
-                if (err) {
-                    console.error("JWT signing error:", err);
-                    return res.status(500).json({ message: "Token generation failed." });
-                }
-                console.log(`JWT token generated successfully for ID: ${id}`);
-                res.json({ token });
-            }
-        );
+        const token = signToken(safeUser, false);
+        return res.json({ token, user: safeUser });
 
     } catch (err) {
         console.error("Error in login controller:", err.message);

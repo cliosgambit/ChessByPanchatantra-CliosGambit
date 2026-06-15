@@ -15,6 +15,7 @@ import {
   FiLayers,
   FiMapPin,
   FiMinus,
+  FiRefreshCw,
   FiStar,
   FiTarget,
   FiTrendingUp,
@@ -357,7 +358,7 @@ function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const chessUsername = decodeURIComponent(userId || '');
-  const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, loading, error, refetch } =
+  const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, loading, syncing, error, refetch, syncFromChessCom, lastSyncedAt } =
     useChessComUserData(chessUsername);
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -376,10 +377,16 @@ function UserProfilePage() {
     [recentGames, activeTab]
   );
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <Box className="chess-profile-loading">
-        <LoadingPanel message={`Loading Chess.com profile for ${chessUsername}...`} />
+        <LoadingPanel
+          message={
+            syncing
+              ? `Syncing all games from Chess.com for ${chessUsername}…`
+              : `Loading profile for ${chessUsername}…`
+          }
+        />
       </Box>
     );
   }
@@ -403,6 +410,20 @@ function UserProfilePage() {
           Back to Users
         </button>
         <div className="chess-profile-top-actions">
+          <button
+            type="button"
+            className="chess-btn chess-btn-secondary"
+            onClick={syncFromChessCom}
+            disabled={syncing}
+          >
+            <FiRefreshCw className={`chess-icon chess-icon-md${syncing ? ' chess-icon-spin' : ''}`} aria-hidden="true" />
+            {syncing ? 'Syncing…' : 'Sync Games'}
+          </button>
+          {lastSyncedAt && (
+            <span className="chess-profile-sync-meta">
+              Synced {new Date(lastSyncedAt).toLocaleString()}
+            </span>
+          )}
           {profile?.profileUrl && (
             <a
               href={profile.profileUrl}
@@ -574,7 +595,7 @@ function UserProfilePage() {
         <div className="chess-profile-main">
           {error && (
             <Box mb={4}>
-              <ErrorPanel title="Chess.com API issue" message={error} onRetry={refetch} />
+              <ErrorPanel title="Database sync issue" message={error} onRetry={refetch} />
             </Box>
           )}
 

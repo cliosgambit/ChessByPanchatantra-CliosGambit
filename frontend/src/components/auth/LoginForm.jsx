@@ -70,8 +70,12 @@ function LoginForm() {
       const data = await login(email.trim(), password, rememberMe);
       navigate(getRoleHomePath(data.user.role), { replace: true });
     } catch (err) {
+      const status = err.response?.status;
       const message =
-        err.response?.data?.message || err.message || 'Login failed. Please try again.';
+        err.response?.data?.message ||
+        (status === 401
+          ? 'Invalid email or password. Use the email registered in the Login table, or contact your coach.'
+          : err.message || 'Login failed. Please try again.');
       setError(message);
     } finally {
       setIsLoading(false);

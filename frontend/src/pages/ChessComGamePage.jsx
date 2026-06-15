@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiExternalLink } from 'react-icons/fi';
 import ChessComGameViewer from '../components/userProfile/ChessComGameViewer';
+import { fetchChessComGameFromDb } from '../services/chessComDbService';
 import { loadChessComGame } from '../utils/chessComGameNavigation';
 import '../components/userProfile/ChessComGamePage.css';
 
@@ -19,14 +20,53 @@ function timeClassLabel(timeClass) {
 
 function ChessComGamePage() {
   const { userId, gameId } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
   const profileUsername = decodeURIComponent(userId || '');
+  const [game, setGame] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const game = useMemo(() => {
-    if (location.state?.game) return location.state.game;
-    return loadChessComGame(profileUsername, gameId);
-  }, [location.state, profileUsername, gameId]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGame() {
+      setLoading(true);
+      setError(null);
+      try {
+        const fromDb = await fetchChessComGameFromDb(profileUsername, gameId);
+        if (!cancelled && fromDb) {
+          setGame(fromDb);
+          return;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const cached = loadChessComGame(profileUsername, gameId);
+          if (cached) {
+            setGame(cached);
+            return;
+          }
+          setError(err.message || 'Game not found.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadGame();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileUsername, gameId]);
+
+  if (loading) {
+    return (
+      <div className="chess-game-page">
+        <div className="chess-game-page-inner">
+          <div className="chess-game-page-empty">Loading game…</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!game) {
     return (
@@ -43,7 +83,7 @@ function ChessComGamePage() {
             </button>
           </header>
           <div className="chess-game-page-empty">
-            Game data not found. Open a game from the player profile.
+            {error || 'Game data not found. Sync games from the player profile first.'}
           </div>
         </div>
       </div>
@@ -66,9 +106,7 @@ function ChessComGamePage() {
           </button>
 
           <div className="chess-game-page-meta">
-            {timeIcon && (
-              <img src={timeIcon} alt="" className="chess-game-page-meta-icon" />
-            )}
+            {timeIcon && <img src={timeIcon} alt="" className="chess-game-page-meta-icon" />}
             <span className="chess-game-page-meta-type">{timeClassLabel(game.timeClass)}</span>
             <span className="chess-game-page-meta-dot">·</span>
             <span>{game.timeControl}</span>

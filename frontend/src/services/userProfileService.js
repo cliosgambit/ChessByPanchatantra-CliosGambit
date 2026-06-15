@@ -170,13 +170,20 @@ export async function fetchPlatformUserProfile(chessComId, email) {
       chessComId ? queryPlayerByChessId(chessComId) : null,
       email ? queryUserByEmail(email) : null,
       chessComId
-        ? queryManyByChessId('players_activity', 'date, rapid_rating, blitz_rating', 'Chess_com_ID', chessComId)
+        ? queryManyByChessId('players_activity', 'date, rapid_rating, blitz_rating', 'Chess_com_ID', chessComId).catch(
+            () => []
+          )
         : [],
       chessComId
-        ? queryManyByChessId('player_games', 'game_id, game_date, white_player, black_player', 'chess_com_id', chessComId)
+        ? queryManyByChessId(
+            'player_games',
+            'game_id, game_date, white_player, black_player',
+            'chess_com_id',
+            chessComId
+          ).catch(() => [])
         : [],
       chessComId
-        ? queryManyByChessId('brilliant_moves', 'id', 'chess_com_id', chessComId)
+        ? queryManyByChessId('brilliant_moves', 'id', 'chess_com_id', chessComId).catch(() => [])
         : [],
       fetchTable('module', { select: 'module_id' }).catch(() => []),
       fetchTable('chapter', { select: 'chapter_id' }).catch(() => []),

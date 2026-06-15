@@ -55,6 +55,21 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.chess-profile-sync-meta {
+  font-size: 0.75rem;
+  color: var(--chess-text-soft);
+}
+
+.chess-icon-spin {
+  animation: chess-spin 0.9s linear infinite;
+}
+
+@keyframes chess-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .chess-btn {
@@ -503,6 +518,9 @@
 }
 
 .chess-games-panel-body .chess-see-more {
+  box-sizing: border-box;
+  width: auto;
+  max-width: calc(100% - 2rem);
   margin: 0.75rem 1rem 1rem;
 }
 
@@ -512,6 +530,7 @@
 
 .chess-games-table {
   width: 100%;
+  min-width: 0;
 }
 
 .chess-games-list {
@@ -787,6 +806,8 @@
 }
 
 .chess-game-review-btn {
+  display: inline-block;
+  pointer-events: none;
   padding: 0.35rem 0.85rem;
   border: 1px solid #4a4845;
   border-radius: 0.35rem;
@@ -1277,7 +1298,9 @@
 
 .chess-see-more {
   display: block;
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   margin-top: 0.75rem;
   text-align: center;
   background: transparent;
