@@ -44,22 +44,6 @@
   -webkit-text-fill-color: transparent;
 }
 
-.top-navbar-notification-pulse {
-  animation: top-navbar-pulse 2s ease-in-out infinite;
-}
-
-@keyframes top-navbar-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.85;
-  }
-}
-
 .top-navbar-mobile-link {
   display: flex;
   align-items: center;

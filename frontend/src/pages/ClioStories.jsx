@@ -53,7 +53,7 @@ function ClioStories() {
           bg="gold.500"
           color="navy.900"
           _hover={{ bg: 'gold.400' }}
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/curriculum')}
         >
           Browse Modules
         </Button>

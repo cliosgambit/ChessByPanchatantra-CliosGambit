@@ -13,13 +13,11 @@ import {
   MenuItem,
   MenuDivider,
   Avatar,
-  Badge,
   Button,
-  useColorMode,
   useColorModeValue,
   useBreakpointValue,
 } from '@chakra-ui/react';
-import { MoonIcon, SunIcon, HamburgerIcon, BellIcon } from '@chakra-ui/icons';
+import { HamburgerIcon } from '@chakra-ui/icons';
 import { FiLogOut } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { getRoleHomePath } from '../../services/authService';
@@ -31,12 +29,6 @@ import {
 import './TopNavbar.css';
 
 export { NAVBAR_HEIGHT };
-
-const NOTIFICATIONS = [
-  { id: 1, title: 'New student enrolled', time: '2m ago', unread: true },
-  { id: 2, title: 'Module MOD3 updated', time: '1h ago', unread: true },
-  { id: 3, title: 'Weekly report ready', time: 'Yesterday', unread: false },
-];
 
 function NavItem({ item }) {
   const inactiveColor = useColorModeValue('gray.600', 'gray.300');
@@ -103,7 +95,6 @@ function MobileNavLink({ item, onNavigate }) {
 }
 
 function TopNavbar() {
-  const { colorMode, toggleColorMode } = useColorMode();
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -123,7 +114,6 @@ function TopNavbar() {
 
   const visibleNavItems = useMemo(() => filterNavByRole(PRIMARY_NAV_ITEMS, user), [user]);
   const displayName = user?.full_name || user?.email?.split('@')[0] || 'Admin';
-  const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length;
 
   const handleLogout = async () => {
     await logout();
@@ -161,9 +151,6 @@ function TopNavbar() {
               <Text className="top-navbar-brand" fontSize={{ base: 'md', md: 'lg' }} fontWeight="800" lineHeight="1.1">
                 Chess By Panchatantra
               </Text>
-              <Text fontSize="xs" color={brandSubtext} display={{ base: 'none', sm: 'block' }}>
-                Admin Dashboard
-              </Text>
             </Box>
           </HStack>
 
@@ -174,8 +161,8 @@ function TopNavbar() {
               spacing={1}
               flex={1}
               justify="center"
-              overflowX="auto"
               mx={4}
+              overflow="hidden"
             >
               {visibleNavItems.map((item) => (
                 <NavItem key={`${item.path}-${item.label}`} item={item} />
@@ -184,61 +171,6 @@ function TopNavbar() {
           )}
 
           <HStack spacing={{ base: 1, md: 2 }} flexShrink={0}>
-            <Menu placement="bottom-end" isLazy>
-              <Box position="relative">
-                <MenuButton
-                  as={IconButton}
-                  aria-label={`Notifications, ${unreadCount} unread`}
-                  icon={<BellIcon />}
-                  variant="ghost"
-                  size="md"
-                  color={iconColor}
-                  borderRadius="lg"
-                  _hover={{ bg: iconHoverBg }}
-                />
-                {unreadCount > 0 && (
-                  <Badge
-                    className="top-navbar-notification-pulse"
-                    position="absolute"
-                    top="6px"
-                    right="6px"
-                    bg={gold}
-                    color="navy.900"
-                    borderRadius="full"
-                    fontSize="0.65rem"
-                    minW="1.1rem"
-                    h="1.1rem"
-                  >
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Box>
-              <MenuList bg={menuBg} borderColor={borderColor} boxShadow="xl" minW="280px" py={2}>
-                <Text px={4} py={2} fontSize="sm" fontWeight="700" color={iconColor}>
-                  Notifications
-                </Text>
-                <MenuDivider />
-                {NOTIFICATIONS.map((note) => (
-                  <MenuItem key={note.id} py={3} onClick={() => navigate('/activity-tracker')}>
-                    <Text fontSize="sm" fontWeight={note.unread ? '700' : '500'}>
-                      {note.title}
-                    </Text>
-                  </MenuItem>
-                ))}
-              </MenuList>
-            </Menu>
-
-            <IconButton
-              aria-label={colorMode === 'light' ? 'Enable dark mode' : 'Enable light mode'}
-              icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
-              variant="ghost"
-              size="md"
-              color={iconColor}
-              borderRadius="lg"
-              onClick={toggleColorMode}
-              _hover={{ bg: iconHoverBg }}
-            />
-
             {isAuthenticated && (
               <>
                 <Menu placement="bottom-end" isLazy>

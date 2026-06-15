@@ -8,7 +8,6 @@ import {
   Button,
   Spinner,
   HStack,
-  useColorModeValue,
   useDisclosure,
   useToast,
   AlertDialog,
@@ -20,7 +19,6 @@ import {
   UnorderedList,
   ListItem,
 } from '@chakra-ui/react';
-import { FiChevronRight } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import ModuleCard from '../components/curriculum/ModuleCard';
 import AddModuleModal from '../components/curriculum/AddModuleModal';
@@ -80,8 +78,6 @@ function Curriculum() {
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [nextModuleNumber, setNextModuleNumber] = useState(1);
-
-  const breadcrumbColor = useColorModeValue('gray.500', 'gray.400');
 
   const selectedModule = modules.find((m) => m.module_id === selectedEditModuleId);
   const selectedModuleIndex = modules.findIndex((m) => m.module_id === selectedEditModuleId);
@@ -336,20 +332,9 @@ function Curriculum() {
   return (
     <>
       <StickyAdminPageLayout
-        breadcrumbs={
-          <HStack spacing={2} fontSize="sm" color={breadcrumbColor} mb={2}>
-            <Text fontWeight="600">Admin</Text>
-            <FiChevronRight />
-            <Text color="gold.600" fontWeight="600">
-              Curriculum
-            </Text>
-          </HStack>
-        }
-        title="Curriculum"
-        subtitle="Modules from Supabase — realtime synced."
         headerExtra={
           modeHint ? (
-            <Text mt={2} fontSize="sm" color="orange.600" fontWeight="600">
+            <Text fontSize="sm" color="orange.600" fontWeight="600">
               {modeHint}
             </Text>
           ) : null

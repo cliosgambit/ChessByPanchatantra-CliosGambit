@@ -2,20 +2,20 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Box } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
+import { getRoleHomePath } from '../services/authService';
 import AdminLayout from '../components/layout/AdminLayout';
 import ProtectedRoute from './ProtectedRoute';
 import Stopwatch from '../components/Stopwatch';
 import Login from '../pages/Login';
-import Dashboard from '../pages/Dashboard';
 import StudentDashboard from '../pages/StudentDashboard';
 import CoachDashboard from '../pages/CoachDashboard';
-import Users from '../pages/Users';
-import UserProfilePage from '../pages/UserProfilePage';
-import PlayerDetails from '../pages/PlayerDetails';
+import Dashboard from '../pages/Dashboard';
 import Curriculum from '../pages/Curriculum';
 import Principles from '../pages/Principles';
 import PrincipleDetails from '../pages/PrincipleDetails';
-import ChessPuzzles from '../pages/ChessPuzzles';
+import Users from '../pages/Users';
+import UserProfilePage from '../pages/UserProfilePage';
+import ChessComGamePage from '../pages/ChessComGamePage';
 import ClioStories from '../pages/ClioStories';
 import ModuleAccess from '../pages/ModuleAccess';
 import ActivityTracker from '../pages/ActivityTracker';
@@ -25,6 +25,11 @@ import StoriesPage from '../pages/StoriesPage';
 import StoryDetails from '../pages/StoryDetails';
 import MappingDetails from '../pages/MappingDetails';
 import CatchAllRedirect from './CatchAllRedirect';
+
+function RoleHomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={getRoleHomePath(user?.role)} replace />;
+}
 
 function AppRoutesContent() {
   const { user } = useAuth();
@@ -38,13 +43,13 @@ function AppRoutesContent() {
       {showStopwatch && <Stopwatch />}
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<RoleHomeRedirect />} />
 
         <Route element={<ProtectedRoute requireAuth />}>
           <Route element={<AdminLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/student-dashboard" element={<StudentDashboard />} />
             <Route path="/coach-dashboard" element={<CoachDashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
 
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
               <Route path="/curriculum" element={<Curriculum />} />
@@ -59,28 +64,26 @@ function AppRoutesContent() {
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-              <Route path="/users" element={<Users />} />
-              <Route path="/users/:userId" element={<UserProfilePage />} />
               <Route path="/principles" element={<Principles />} />
               <Route path="/principles/:principleId" element={<PrincipleDetails />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/users/:userId" element={<UserProfilePage />} />
+              <Route path="/users/:userId/game/:gameId" element={<ChessComGamePage />} />
               <Route path="/module-access" element={<ModuleAccess />} />
               <Route path="/activity-tracker" element={<ActivityTracker />} />
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
-              <Route path="/player-details" element={<PlayerDetails />} />
               <Route path="/classes" element={<Classes />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['student', 'admin', 'coach']} />}>
-              <Route path="/chess-puzzles" element={<ChessPuzzles />} />
-            </Route>
-
+            <Route path="/chess-puzzles" element={<RoleHomeRedirect />} />
+            <Route path="/player-details" element={<RoleHomeRedirect />} />
             <Route path="/api/access-control" element={<Navigate to="/module-access" replace />} />
             <Route path="/api/activity-tracker" element={<Navigate to="/activity-tracker" replace />} />
-            <Route path="/api/chess" element={<Navigate to="/chess-puzzles" replace />} />
+            <Route path="/api/chess" element={<RoleHomeRedirect />} />
             <Route path="/admin/users" element={<Navigate to="/users" replace />} />
-            <Route path="/admin/player-details" element={<Navigate to="/player-details" replace />} />
+            <Route path="/admin/player-details" element={<RoleHomeRedirect />} />
             <Route path="/admin/principles" element={<Navigate to="/principles" replace />} />
             <Route path="/admin/classes" element={<Navigate to="/classes" replace />} />
           </Route>

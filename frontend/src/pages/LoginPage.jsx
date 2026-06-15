@@ -510,7 +510,7 @@ const LoginPage = () => {
                       Go to Login Page
                     </Button>
                   ) : (
-                    <Button mt={5} colorScheme="teal" onClick={() => navigate('/dashboard')}>
+                    <Button mt={5} colorScheme="teal" onClick={() => navigate('/curriculum')}>
                       Go to Modules
                     </Button>
                   )}

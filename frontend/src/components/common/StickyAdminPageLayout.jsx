@@ -7,7 +7,7 @@ import { NAVBAR_HEIGHT } from '../layout/TopNavbar';
  * Admin page shell: fixed header + scrollable content (single scrollbar).
  * @param {object} props
  * @param {React.ReactNode} [props.breadcrumbs]
- * @param {React.ReactNode} props.title
+ * @param {React.ReactNode} [props.title]
  * @param {React.ReactNode} [props.subtitle]
  * @param {React.ReactNode} [props.headerExtra]
  * @param {React.ReactNode} [props.actions]
@@ -45,6 +45,9 @@ function StickyAdminPageLayout({
       }
     : {};
 
+  const hasHeaderText = Boolean(breadcrumbs || title || subtitle || headerExtra);
+  const showHeader = hasHeaderText || Boolean(actions);
+
   return (
     <Box
       {...rootProps}
@@ -55,41 +58,47 @@ function StickyAdminPageLayout({
       flexDirection="column"
       overflow="hidden"
     >
-      <Box
-        flexShrink={0}
-        position="sticky"
-        top={0}
-        zIndex={10}
-        px={{ base: 4, md: 8, xl: 10 }}
-        pt={{ base: 6, md: 8 }}
-        pb={4}
-        bg={pageBg}
-        borderBottomWidth="1px"
-        borderColor={scrolled ? headerBorder : 'transparent'}
-        boxShadow={scrolled ? 'sm' : 'none'}
-        transition="box-shadow 0.2s ease, border-color 0.2s ease"
-      >
-        <Flex
-          justify="space-between"
-          align={{ base: 'flex-start', md: 'center' }}
-          direction={{ base: 'column', md: 'row' }}
-          gap={4}
+      {showHeader && (
+        <Box
+          flexShrink={0}
+          position="sticky"
+          top={0}
+          zIndex={10}
+          px={{ base: 4, md: 8, xl: 10 }}
+          pt={{ base: 6, md: 8 }}
+          pb={actions && !hasHeaderText ? 2 : 4}
+          bg={pageBg}
+          borderBottomWidth="1px"
+          borderColor={scrolled ? headerBorder : 'transparent'}
+          boxShadow={scrolled ? 'sm' : 'none'}
+          transition="box-shadow 0.2s ease, border-color 0.2s ease"
         >
-          <Box>
-            {breadcrumbs}
-            <Heading size={titleSize} color={headingColor} letterSpacing="-0.02em">
-              {title}
-            </Heading>
-            {subtitle && (
-              <Text mt={titleSize === 'lg' ? 2 : 1} color={subColor} fontSize={titleSize === 'lg' ? 'md' : 'sm'}>
-                {subtitle}
-              </Text>
+          <Flex
+            justify="space-between"
+            align={{ base: 'flex-start', md: 'center' }}
+            direction={{ base: 'column', md: 'row' }}
+            gap={4}
+          >
+            {hasHeaderText && (
+              <Box>
+                {breadcrumbs}
+                {title && (
+                  <Heading size={titleSize} color={headingColor} letterSpacing="-0.02em">
+                    {title}
+                  </Heading>
+                )}
+                {subtitle && (
+                  <Text mt={titleSize === 'lg' ? 2 : 1} color={subColor} fontSize={titleSize === 'lg' ? 'md' : 'sm'}>
+                    {subtitle}
+                  </Text>
+                )}
+                {headerExtra}
+              </Box>
             )}
-            {headerExtra}
-          </Box>
-          {actions && <Box flexShrink={0}>{actions}</Box>}
-        </Flex>
-      </Box>
+            {actions && <Box flexShrink={0}>{actions}</Box>}
+          </Flex>
+        </Box>
+      )}
 
       <Box
         ref={scrollRef}

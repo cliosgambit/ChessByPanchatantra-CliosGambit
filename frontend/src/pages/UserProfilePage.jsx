@@ -1,460 +1,723 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Box, Link } from '@chakra-ui/react';
 import {
-  Alert,
-  AlertIcon,
-  Avatar,
-  Box,
-  Button,
-  Flex,
-  Grid,
-  GridItem,
-  HStack,
-  SimpleGrid,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Th,
-  Thead,
-  Tr,
-  VStack,
-  useColorModeValue,
-  useDisclosure,
-  useToast,
-} from '@chakra-ui/react';
-import { FiArrowLeft, FiChevronRight, FiEdit2, FiPause, FiPlay, FiTrash2 } from 'react-icons/fi';
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { NAVBAR_HEIGHT } from '../components/layout/TopNavbar';
-import UserStatusBadge from '../components/users/UserStatusBadge';
-import EditUserModal from '../components/users/EditUserModal';
+  FiArrowLeft,
+  FiAward,
+  FiCalendar,
+  FiCheck,
+  FiCheckCircle,
+  FiChevronRight,
+  FiClock,
+  FiExternalLink,
+  FiFileText,
+  FiGrid,
+  FiLayers,
+  FiMapPin,
+  FiMinus,
+  FiStar,
+  FiTarget,
+  FiTrendingUp,
+  FiTwitch,
+  FiUsers,
+  FiVideo,
+  FiX,
+  FiZap,
+} from 'react-icons/fi';
 import ErrorPanel from '../components/common/ErrorPanel';
-import ProfileSection from '../components/userProfile/ProfileSection';
-import ProfileSkeleton from '../components/userProfile/ProfileSkeleton';
-import ProgressRow from '../components/userProfile/ProgressRow';
-import StatCard from '../components/userProfile/StatCard';
-import { useUserProfile } from '../hooks/useUserProfile';
-import { deleteLoginUser, pauseLoginUser } from '../services/usersService';
+import LoadingPanel from '../components/common/LoadingPanel';
+import { useChessComUserData } from '../hooks/useChessComUserData';
+import { openChessComGame } from '../utils/chessComGameNavigation';
+import GameHistoryList from '../components/userProfile/GameHistoryList';
+import '../components/userProfile/ChessComProfilePage.css';
 
-function DetailItem({ label, value }) {
-  const labelColor = useColorModeValue('gray.500', 'gray.400');
-  const valueColor = useColorModeValue('navy.800', 'white');
+const MAIN_TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'games', label: 'Games' },
+  { id: 'stats', label: 'Stats' },
+  { id: 'archives', label: 'Archives' },
+];
+
+const ICON_TABS = [
+  { id: 'notes', icon: FiFileText, label: 'Notes' },
+  { id: 'board', icon: FiGrid, label: 'Games' },
+  { id: 'trophies', icon: FiAward, label: 'Trophies' },
+];
+
+const QUICK_STAT_ITEMS = [
+  {
+    key: 'wins',
+    label: 'Wins',
+    icon: FiCheck,
+    variant: 'wins',
+    getValue: (stats) => stats.totals.wins,
+  },
+  {
+    key: 'losses',
+    label: 'Losses',
+    icon: FiX,
+    variant: 'losses',
+    getValue: (stats) => stats.totals.losses,
+  },
+  {
+    key: 'draws',
+    label: 'Draws',
+    icon: FiMinus,
+    variant: 'draws',
+    getValue: (stats) => stats.totals.draws,
+  },
+  {
+    key: 'winPct',
+    label: 'Win Rate',
+    icon: FiTrendingUp,
+    variant: 'winrate',
+    getValue: (stats) => `${stats.winPercentage}%`,
+  },
+];
+
+const STAT_OVERVIEW_ITEMS = [
+  ...QUICK_STAT_ITEMS,
+  {
+    key: 'totalGames',
+    label: 'Total Games',
+    icon: FiGrid,
+    variant: 'games',
+    getValue: (stats) => stats.totalGames,
+  },
+  {
+    key: 'puzzleRush',
+    label: 'Puzzle Rush',
+    icon: FiZap,
+    variant: 'puzzle',
+    getValue: (stats) => stats.puzzleRush,
+  },
+  {
+    key: 'puzzleScore',
+    label: 'Puzzle Score',
+    icon: FiTarget,
+    variant: 'puzzle-score',
+    getValue: (stats) => stats.puzzleScore,
+  },
+  {
+    key: 'bestRapid',
+    label: 'Best Rapid',
+    icon: FiTrendingUp,
+    variant: 'rapid',
+    getValue: (stats) => stats.achievements.highestRapid,
+  },
+  {
+    key: 'bestBlitz',
+    label: 'Best Blitz',
+    icon: FiClock,
+    variant: 'blitz',
+    getValue: (stats) => stats.achievements.highestBlitz,
+  },
+  {
+    key: 'bestBullet',
+    label: 'Best Bullet',
+    icon: FiZap,
+    variant: 'bullet',
+    getValue: (stats) => stats.achievements.highestBullet,
+  },
+];
+
+const CHESS_COM_TIME_ICONS = {
+  bullet: '/chess-icons/bullet.svg',
+  blitz: '/chess-icons/blitz.svg',
+  rapid: '/chess-icons/rapid.svg',
+  daily: '/chess-icons/daily.svg',
+};
+
+const RATING_CARDS = [
+  { key: 'bullet', label: 'Bullet', iconUrl: CHESS_COM_TIME_ICONS.bullet, className: 'chess-rating-card-bullet' },
+  { key: 'blitz', label: 'Blitz', iconUrl: CHESS_COM_TIME_ICONS.blitz, className: 'chess-rating-card-blitz' },
+  { key: 'rapid', label: 'Rapid', iconUrl: CHESS_COM_TIME_ICONS.rapid, className: 'chess-rating-card-rapid' },
+  { key: 'daily', label: 'Daily', iconUrl: CHESS_COM_TIME_ICONS.daily, className: 'chess-rating-card-daily' },
+];
+
+function resultClassName(resultType) {
+  if (resultType === 'win') return 'chess-result-win';
+  if (resultType === 'loss') return 'chess-result-loss';
+  if (resultType === 'draw') return 'chess-result-draw';
+  return 'chess-result-neutral';
+}
+
+function formatNumber(value) {
+  if (value == null) return '—';
+  return Number(value).toLocaleString();
+}
+
+function RatingCard({ label, iconUrl, className, current, best }) {
+  const hasRating = current != null;
 
   return (
-    <Box>
-      <Text fontSize="xs" fontWeight="700" letterSpacing="0.06em" textTransform="uppercase" color={labelColor}>
-        {label}
-      </Text>
-      <Text mt={1} fontSize="sm" fontWeight="500" color={valueColor}>
-        {value || '—'}
-      </Text>
-    </Box>
+    <div className={`chess-rating-card ${className}`}>
+      <div className="chess-rating-card-body">
+        <div className="chess-rating-card-text">
+          <div className="chess-rating-card-label">{label}</div>
+          <div className={`chess-rating-card-value ${hasRating ? '' : 'is-empty'}`}>
+            {current ?? '—'}
+          </div>
+          {best != null && <div className="chess-rating-card-best">Best {best}</div>}
+        </div>
+        <div className="chess-rating-card-icon-wrap">
+          <img src={iconUrl} alt="" className="chess-rating-card-icon-img" aria-hidden="true" />
+        </div>
+      </div>
+    </div>
   );
 }
 
-function RecordBlock({ label, record }) {
+function StatTile({ label, value, icon: Icon, variant = 'default', large = false }) {
   return (
-    <Box>
-      <Text fontSize="sm" fontWeight="700" mb={2}>
-        {label}
-      </Text>
-      <Text fontSize="sm">Wins: {record?.wins ?? 0}</Text>
-      <Text fontSize="sm">Losses: {record?.losses ?? 0}</Text>
-      <Text fontSize="sm">Draws: {record?.draws ?? 0}</Text>
-    </Box>
+    <div className={`chess-stat-tile chess-stat-tile--${variant} ${large ? 'chess-stat-tile--large' : ''}`}>
+      {Icon && (
+        <div className="chess-stat-tile-icon-wrap">
+          <Icon className="chess-stat-tile-icon" aria-hidden="true" />
+        </div>
+      )}
+      <div className="chess-stat-tile-label">{label}</div>
+      <div className="chess-stat-tile-value">{value ?? '—'}</div>
+    </div>
+  );
+}
+
+function GameResultsBar({ stats }) {
+  const wins = stats?.totals?.wins ?? 0;
+  const losses = stats?.totals?.losses ?? 0;
+  const draws = stats?.totals?.draws ?? 0;
+  const total = wins + losses + draws;
+  const winPct = total ? Math.round((wins / total) * 100) : 0;
+  const lossPct = total ? Math.round((losses / total) * 100) : 0;
+  const drawPct = total ? Math.max(0, 100 - winPct - lossPct) : 0;
+
+  return (
+    <div className="chess-results-bar-chart">
+      <div className="chess-results-bar-top">
+        <span className="chess-results-bar-title">Game Results</span>
+      </div>
+
+      <div
+        className="chess-results-bar-track"
+        role="img"
+        aria-label={`Wins ${wins}, Draws ${draws}, Losses ${losses}`}
+      >
+        {total > 0 ? (
+          <>
+            <div
+              className="chess-results-bar-segment chess-results-bar-segment--wins"
+              style={{ width: `${winPct}%` }}
+              title={`Wins: ${wins} (${winPct}%)`}
+            />
+            <div
+              className="chess-results-bar-segment chess-results-bar-segment--draws"
+              style={{ width: `${drawPct}%` }}
+              title={`Draws: ${draws} (${drawPct}%)`}
+            />
+            <div
+              className="chess-results-bar-segment chess-results-bar-segment--losses"
+              style={{ width: `${lossPct}%` }}
+              title={`Losses: ${losses} (${lossPct}%)`}
+            />
+          </>
+        ) : (
+          <div className="chess-results-bar-segment chess-results-bar-segment--empty" />
+        )}
+      </div>
+
+      <div className="chess-results-bar-legend">
+        <div className="chess-results-bar-legend-item chess-results-bar-legend-item--wins">
+          <FiCheck className="chess-icon chess-icon-sm" aria-hidden="true" />
+          <span>Wins</span>
+          <strong>{wins}</strong>
+        </div>
+        <div className="chess-results-bar-legend-item chess-results-bar-legend-item--draws">
+          <FiMinus className="chess-icon chess-icon-sm" aria-hidden="true" />
+          <span>Draws</span>
+          <strong>{draws}</strong>
+        </div>
+        <div className="chess-results-bar-legend-item chess-results-bar-legend-item--losses">
+          <FiX className="chess-icon chess-icon-sm" aria-hidden="true" />
+          <span>Losses</span>
+          <strong>{losses}</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatTileGrid({ items, stats, large = false, className = '' }) {
+  return (
+    <div className={`chess-stats-grid ${className}`.trim()}>
+      {items.map((item) => {
+        const ItemIcon = item.icon;
+        return (
+          <StatTile
+            key={item.key}
+            label={item.label}
+            value={item.getValue(stats)}
+            icon={ItemIcon}
+            variant={item.variant}
+            large={large}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function SidebarWidgets({ profile, stats, clubs, totalGames }) {
+  const awardTotal =
+    (stats?.totals?.wins ?? 0) + (stats?.puzzleRush ?? 0) + (stats?.puzzleScore ?? 0);
+
+  return (
+    <>
+      <div className="chess-sidebar-widget">
+        <h3>
+          <FiTrendingUp className="chess-icon chess-icon-md" aria-hidden="true" />
+          Activity Streak
+        </h3>
+        <p>Keep playing to build your streak on Chess.com.</p>
+      </div>
+
+      {profile?.statusLabel && (
+        <div className="chess-sidebar-widget">
+          <h3>
+            <FiStar className="chess-icon chess-icon-md" aria-hidden="true" />
+            Membership
+          </h3>
+          <p>
+            {profile.statusLabel}
+            {profile.joinedDate ? ` since ${profile.joinedDate}` : ''}
+          </p>
+        </div>
+      )}
+
+      {profile?.league && (
+        <div className="chess-sidebar-widget">
+          <h3>
+            <FiAward className="chess-icon chess-icon-md" aria-hidden="true" />
+            {profile.league} League
+          </h3>
+          <p>
+            {profile.username} competes in the {profile.league} league on Chess.com.
+          </p>
+        </div>
+      )}
+
+      <div className="chess-sidebar-widget">
+        <h3>
+          <FiLayers className="chess-icon chess-icon-md" aria-hidden="true" />
+          Game History
+        </h3>
+        <p>{formatNumber(totalGames)} games tracked across archives.</p>
+      </div>
+
+      {clubs.length > 0 && (
+        <div className="chess-profile-panel">
+          <div className="chess-profile-panel-header">
+            Clubs <span>{clubs.length}</span>
+          </div>
+          <div className="chess-profile-panel-body">
+            {clubs.slice(0, 5).map((club) => (
+              <a
+                key={club.url}
+                href={club.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chess-club-item"
+                style={{ textDecoration: 'none', color: 'inherit' }}
+              >
+                {club.icon ? (
+                  <img src={club.icon} alt="" className="chess-club-icon" />
+                ) : (
+                  <div className="chess-club-icon chess-club-icon-fallback">
+                    <FiUsers className="chess-icon chess-icon-sm" aria-hidden="true" />
+                  </div>
+                )}
+                <div className="chess-club-name">{club.name}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="chess-sidebar-widget">
+        <h3>
+          <FiAward className="chess-icon chess-icon-md" aria-hidden="true" />
+          Awards
+        </h3>
+        <p>{formatNumber(awardTotal)} combined wins and puzzle achievements.</p>
+      </div>
+    </>
   );
 }
 
 function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const toast = useToast();
-  const { data, loading, error, refetch } = useUserProfile(userId);
-  const [editUser, setEditUser] = useState(null);
-  const { isOpen: editOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const chessUsername = decodeURIComponent(userId || '');
+  const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, loading, error, refetch } =
+    useChessComUserData(chessUsername);
 
-  const pageBg = useColorModeValue('#f4f1e8', 'navy.900');
-  const headingColor = useColorModeValue('navy.800', 'white');
-  const subColor = useColorModeValue('gray.600', 'gray.400');
-  const breadcrumbColor = useColorModeValue('gray.500', 'gray.400');
-  const chartGrid = useColorModeValue('#e8e4da', '#2d3a5c');
-  const rowBorder = useColorModeValue('gray.100', 'whiteAlpha.100');
-  const headerCardBg = useColorModeValue('white', 'navy.800');
-  const headerBorder = useColorModeValue('gray.100', 'whiteAlpha.200');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [iconTab, setIconTab] = useState('board');
 
-  const pageHeight = `calc(100vh - ${NAVBAR_HEIGHT}px)`;
-
-  const handleEdit = (user) => {
-    setEditUser(user);
-    onEditOpen();
+  const handleGameSelect = (game) => {
+    openChessComGame(navigate, chessUsername, game);
   };
 
-  const handlePauseToggle = async (user) => {
-    const paused = user.status !== 'PAUSED';
-    try {
-      await pauseLoginUser(user.chessComId || user.id, paused);
-      toast({
-        title: paused ? 'User paused' : 'User resumed',
-        status: 'success',
-        duration: 2000,
-      });
-      refetch();
-    } catch (err) {
-      toast({ title: err.message, status: 'error', duration: 3000 });
-    }
-  };
+  const flagUrl = profile?.countryCode
+    ? `https://flagcdn.com/w40/${profile.countryCode.toLowerCase()}.png`
+    : null;
 
-  const handleDelete = async (user) => {
-    if (!window.confirm(`Delete ${user.name}? This cannot be undone.`)) return;
-    try {
-      await deleteLoginUser(user.chessComId || user.id);
-      toast({ title: 'User deleted', status: 'success', duration: 2000 });
-      navigate('/users');
-    } catch (err) {
-      toast({ title: err.message, status: 'error', duration: 3000 });
-    }
-  };
+  const visibleGames = useMemo(
+    () => (activeTab === 'games' ? recentGames : recentGames.slice(0, 12)),
+    [recentGames, activeTab]
+  );
 
   if (loading) {
     return (
-      <Box bg={pageBg} minH={pageHeight} px={{ base: 4, md: 8, xl: 10 }} py={6}>
-        <ProfileSkeleton />
+      <Box className="chess-profile-loading">
+        <LoadingPanel message={`Loading Chess.com profile for ${chessUsername}...`} />
       </Box>
     );
   }
 
-  if (error || !data?.user) {
-    return (
-      <Box bg={pageBg} minH={pageHeight} px={{ base: 4, md: 8, xl: 10 }} py={6}>
-        <Button leftIcon={<FiArrowLeft />} variant="ghost" mb={4} onClick={() => navigate('/users')}>
-          Back to Users
-        </Button>
-        <ErrorPanel title="Unable to load user profile" message={error || 'User not found.'} onRetry={refetch} />
-      </Box>
-    );
-  }
-
-  const { user, platform, chessCom } = data;
-  const chessUsername = user.chessComId || user.id;
-  const chessProfile = chessCom.profile;
-  const chessStats = chessCom.stats;
-  const hasChessLink = Boolean(chessUsername);
-  const showChessSections = hasChessLink && chessCom.linked !== false;
-  const ratingHistory = platform.ratingHistory || [];
+  const handleIconTab = (tabId) => {
+    setIconTab(tabId);
+    if (tabId === 'board') setActiveTab('games');
+    if (tabId === 'trophies') setActiveTab('stats');
+    if (tabId === 'notes') setActiveTab('overview');
+  };
 
   return (
-    <Box bg={pageBg} minH={pageHeight} overflowY="auto" sx={{ WebkitOverflowScrolling: 'touch' }}>
-      <Box px={{ base: 4, md: 8, xl: 10 }} py={{ base: 4, md: 6 }} pb={10}>
-        <HStack spacing={2} fontSize="xs" color={breadcrumbColor} mb={4}>
-          <Text fontWeight="600" cursor="pointer" onClick={() => navigate('/users')}>
-            Admin
-          </Text>
-          <Box as={FiChevronRight} />
-          <Text fontWeight="600" cursor="pointer" onClick={() => navigate('/users')}>
-            Users
-          </Text>
-          <Box as={FiChevronRight} />
-          <Text color="gold.600" fontWeight="600">
-            {user.name}
-          </Text>
-        </HStack>
-
-        {chessCom.apiError && (
-          <Alert status="warning" borderRadius="lg" mb={4}>
-            <AlertIcon />
-            Chess.com data could not be loaded. Showing platform profile data. ({chessCom.apiError})
-          </Alert>
-        )}
-
-        {!hasChessLink && (
-          <Alert status="info" borderRadius="lg" mb={4}>
-            <AlertIcon />
-            No Chess.com account linked.
-          </Alert>
-        )}
-
-        {hasChessLink && chessCom.linked === false && !chessCom.apiError && (
-          <Alert status="info" borderRadius="lg" mb={4}>
-            <AlertIcon />
-            No Chess.com profile found for @{chessUsername}.
-          </Alert>
-        )}
-
-        <Box
-          bg={headerCardBg}
-          borderRadius="2xl"
-          borderWidth="1px"
-          borderColor={headerBorder}
-          boxShadow="lg"
-          p={{ base: 5, md: 6 }}
-          mb={6}
+    <Box className="chess-profile-page">
+      <div className="chess-profile-topbar">
+        <button
+          type="button"
+          className="chess-btn chess-btn-secondary"
+          onClick={() => navigate('/users')}
         >
-          <Flex direction={{ base: 'column', lg: 'row' }} gap={6} justify="space-between" align={{ base: 'stretch', lg: 'center' }}>
-            <HStack align="start" spacing={5}>
-              <Avatar
-                size="xl"
-                name={user.name}
-                src={chessProfile?.avatar || undefined}
-                bg="gold.500"
-                color="navy.900"
-              />
-              <VStack align="start" spacing={1}>
-                <Text fontSize="2xl" fontWeight="800" color={headingColor} letterSpacing="-0.03em">
-                  {user.name}
-                </Text>
-                <Text fontSize="md" color={subColor} fontWeight="600">
-                  @{chessUsername || '—'}
-                </Text>
-                <Text fontSize="sm" color={subColor}>
-                  {user.email}
-                </Text>
-                <HStack spacing={3} pt={2} flexWrap="wrap">
-                  <Text fontSize="sm" fontWeight="700" color={headingColor}>
-                    {user.role}
-                  </Text>
-                  <UserStatusBadge status={user.status} />
-                  {chessProfile?.title && (
-                    <Text fontSize="sm" fontWeight="800" color="gold.600">
-                      {chessProfile.title}
-                    </Text>
-                  )}
-                </HStack>
-              </VStack>
-            </HStack>
+          <FiArrowLeft className="chess-icon chess-icon-md" aria-hidden="true" />
+          Back to Users
+        </button>
+        <div className="chess-profile-top-actions">
+          {profile?.profileUrl && (
+            <a
+              href={profile.profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chess-btn chess-btn-primary"
+            >
+              View on Chess.com
+              <FiExternalLink className="chess-icon chess-icon-md" aria-hidden="true" />
+            </a>
+          )}
+          {profile?.twitchUrl && (
+            <a
+              href={profile.twitchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chess-btn chess-btn-secondary"
+            >
+              <FiTwitch className="chess-icon chess-icon-md" aria-hidden="true" />
+              Twitch
+            </a>
+          )}
+        </div>
+      </div>
 
-            <HStack spacing={3} flexWrap="wrap" justify={{ base: 'flex-start', lg: 'flex-end' }}>
-              <Button leftIcon={<FiEdit2 />} size="sm" onClick={() => handleEdit(user)}>
-                Edit User
-              </Button>
-              <Button
-                leftIcon={user.status === 'PAUSED' ? <FiPlay /> : <FiPause />}
-                size="sm"
-                variant="outline"
-                onClick={() => handlePauseToggle(user)}
-              >
-                {user.status === 'PAUSED' ? 'Resume User' : 'Pause User'}
-              </Button>
-              <Button leftIcon={<FiTrash2 />} size="sm" colorScheme="red" variant="outline" onClick={() => handleDelete(user)}>
-                Delete User
-              </Button>
-            </HStack>
-          </Flex>
-        </Box>
-
-        <Grid templateColumns={{ base: '1fr', xl: '1fr 1fr' }} gap={6}>
-          <GridItem>
-            <VStack align="stretch" spacing={6}>
-              <ProfileSection title="Account Details">
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                  <DetailItem label="User Name" value={user.name} />
-                  <DetailItem label="Email" value={user.email} />
-                  <DetailItem label="Chess.com ID" value={chessUsername} />
-                  <DetailItem label="Role" value={user.role} />
-                  <DetailItem label="Status" value={user.status === 'PAUSED' ? 'Paused' : 'Active'} />
-                  <DetailItem label="Created Date" value={platform.account.createdAt} />
-                  <DetailItem label="Last Login" value={platform.account.lastLogin} />
-                  <DetailItem label="Phone Number" value={platform.account.phone} />
-                  <DetailItem label="Country" value={chessProfile?.country || platform.account.country} />
-                  <DetailItem label="Timezone" value={platform.account.timezone} />
-                </SimpleGrid>
-              </ProfileSection>
-
-              <ProfileSection title="Curriculum Progress" description="Platform totals; per-user completion is tracked where available.">
-                <VStack align="stretch" spacing={4}>
-                  <ProgressRow label="Modules" completed={platform.curriculum.modulesCompleted} total={platform.curriculum.modulesTotal} />
-                  <ProgressRow label="Chapters" completed={platform.curriculum.chaptersCompleted} total={platform.curriculum.chaptersTotal} />
-                  <ProgressRow label="Stories" completed={platform.curriculum.storiesCompleted} total={platform.curriculum.storiesTotal} />
-                  <ProgressRow label="Principles" completed={platform.curriculum.principlesCompleted} total={platform.curriculum.principlesTotal} />
-                  <ProgressRow label="Puzzles Solved" completed={platform.curriculum.puzzlesSolved} total={platform.curriculum.puzzlesTotal} />
-                </VStack>
-              </ProfileSection>
-
-              <ProfileSection title="Puzzle Performance">
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                  <StatCard label="Puzzles Attempted" value={platform.puzzles.attempted} />
-                  <StatCard label="Puzzles Solved" value={platform.puzzles.tacticsHighest || platform.puzzles.solved} />
-                  <StatCard label="Success Rate" value={platform.puzzles.successRate != null ? `${platform.puzzles.successRate}%` : '—'} />
-                  <StatCard label="Avg Solve Time" value={platform.puzzles.averageSolveTime} />
-                  <StatCard label="Puzzle Rush Best" value={platform.puzzles.puzzleRushBest || chessStats?.puzzleRush} />
-                  <StatCard label="Tactics Highest" value={platform.puzzles.tacticsHighest || chessStats?.puzzleScore} />
-                </SimpleGrid>
-              </ProfileSection>
-
-              <ProfileSection title="Learning Analytics">
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                  <DetailItem label="Most Active Module" value={platform.learning.mostActiveModule} />
-                  <DetailItem label="Most Active Chapter" value={platform.learning.mostActiveChapter} />
-                  <DetailItem label="Most Active Time Control" value={platform.learning.mostSolvedCategory} />
-                  <DetailItem label="Brilliant Moves Found" value={platform.activity.brilliantMoves} />
-                </SimpleGrid>
-              </ProfileSection>
-            </VStack>
-          </GridItem>
-
-          <GridItem>
-            <VStack align="stretch" spacing={6}>
-              {showChessSections ? (
-                <>
-                  <ProfileSection title="Chess.com Profile">
-                    {!chessProfile ? (
-                      <Text fontSize="sm" color={subColor}>
-                        No Chess.com account linked.
-                      </Text>
-                    ) : (
-                      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                        <DetailItem label="Username" value={chessProfile.username} />
-                        <DetailItem label="Display Name" value={chessProfile.name} />
-                        <DetailItem label="Country" value={chessProfile.country} />
-                        <DetailItem label="Joined Date" value={chessProfile.joinedDate} />
-                        <DetailItem label="Followers" value={chessProfile.followers} />
-                        <DetailItem label="League" value={chessProfile.league} />
-                        <DetailItem label="Title" value={chessProfile.title} />
-                        <DetailItem label="Profile URL" value={chessProfile.profileUrl} />
-                      </SimpleGrid>
-                    )}
-                  </ProfileSection>
-
-                  <ProfileSection title="Ratings">
-                    {chessStats ? (
-                      <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4}>
-                        <StatCard label="Rapid" value={chessStats.rapid?.current} subValue={chessStats.rapid?.best ? `Best ${chessStats.rapid.best}` : null} />
-                        <StatCard label="Blitz" value={chessStats.blitz?.current} subValue={chessStats.blitz?.best ? `Best ${chessStats.blitz.best}` : null} />
-                        <StatCard label="Bullet" value={chessStats.bullet?.current} subValue={chessStats.bullet?.best ? `Best ${chessStats.bullet.best}` : null} />
-                        <StatCard label="Daily" value={chessStats.daily?.current} subValue={chessStats.daily?.best ? `Best ${chessStats.daily.best}` : null} />
-                        <StatCard label="Puzzle Rush" value={chessStats.puzzleRush} />
-                        <StatCard label="Puzzle Score" value={chessStats.puzzleScore} />
-                      </SimpleGrid>
-                    ) : (
-                      <Text fontSize="sm" color={subColor}>
-                        Ratings unavailable.
-                      </Text>
-                    )}
-                  </ProfileSection>
-
-                  <ProfileSection title="Game Statistics">
-                    {chessStats ? (
-                      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-                        <StatCard label="Wins" value={chessStats.totals.wins} />
-                        <StatCard label="Losses" value={chessStats.totals.losses} />
-                        <StatCard label="Draws" value={chessStats.totals.draws} />
-                        <StatCard label="Total Games" value={chessStats.totalGames} />
-                        <StatCard label="Win %" value={`${chessStats.winPercentage}%`} />
-                      </SimpleGrid>
-                    ) : (
-                      <Text fontSize="sm" color={subColor}>
-                        Game statistics unavailable.
-                      </Text>
-                    )}
-                  </ProfileSection>
-
-                  <ProfileSection title="Recent Performance">
-                    {chessStats ? (
-                      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                        <RecordBlock label="Rapid" record={chessStats.records.rapid} />
-                        <RecordBlock label="Blitz" record={chessStats.records.blitz} />
-                        <RecordBlock label="Bullet" record={chessStats.records.bullet} />
-                      </SimpleGrid>
-                    ) : (
-                      <Text fontSize="sm" color={subColor}>
-                        Performance records unavailable.
-                      </Text>
-                    )}
-                  </ProfileSection>
-
-                  {ratingHistory.length > 1 && (
-                    <ProfileSection title="Rating History">
-                      <Box h="280px">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={ratingHistory}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
-                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
-                            <Tooltip />
-                            <Legend />
-                            <Line type="monotone" dataKey="rapid" stroke="#0f1729" strokeWidth={2} dot={false} name="Rapid" />
-                            <Line type="monotone" dataKey="blitz" stroke="#c9a227" strokeWidth={2} dot={false} name="Blitz" />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </ProfileSection>
-                  )}
-
-                  <ProfileSection title="Activity">
-                    <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                      <DetailItem label="Last Online" value={chessProfile?.lastOnline} />
-                      <DetailItem label="Games This Month" value={platform.activity.gamesThisMonth} />
-                      <DetailItem label="Stored Platform Games" value={platform.activity.storedGames} />
-                      <DetailItem label="Recently Played" value={chessCom.recentGames?.[0] ? `${chessCom.recentGames[0].opponent} (${chessCom.recentGames[0].result})` : '—'} />
-                    </SimpleGrid>
-                  </ProfileSection>
-
-                  <ProfileSection title="Recent Games" description="Last 10 games from Chess.com.">
-                    {chessCom.recentGames?.length ? (
-                      <Box overflowX="auto">
-                        <Table size="sm" variant="simple">
-                          <Thead>
-                            <Tr borderColor={rowBorder}>
-                              <Th>Opponent</Th>
-                              <Th>Result</Th>
-                              <Th>Date</Th>
-                              <Th>Time Control</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {chessCom.recentGames.map((game, index) => (
-                              <Tr key={`${game.opponent}-${index}`} borderColor={rowBorder}>
-                                <Td>{game.opponent}</Td>
-                                <Td>{game.result}</Td>
-                                <Td>{game.date}</Td>
-                                <Td>{game.timeControl}</Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </Box>
-                    ) : (
-                      <Text fontSize="sm" color={subColor}>
-                        No recent games found.
-                      </Text>
-                    )}
-                  </ProfileSection>
-
-                  <ProfileSection title="Achievements">
-                    {chessStats ? (
-                      <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
-                        <StatCard label="Highest Rapid" value={chessStats.achievements.highestRapid} />
-                        <StatCard label="Highest Blitz" value={chessStats.achievements.highestBlitz} />
-                        <StatCard label="Highest Puzzle" value={chessStats.achievements.highestPuzzle} />
-                      </SimpleGrid>
-                    ) : (
-                      <Text fontSize="sm" color={subColor}>
-                        Achievements unavailable.
-                      </Text>
-                    )}
-                  </ProfileSection>
-                </>
+      <div className="chess-profile-header-wrap">
+        <div className="chess-profile-header-card">
+          <div className="chess-profile-header-main">
+            <div className="chess-profile-avatar-wrap">
+              {profile?.avatar ? (
+                <img
+                  src={profile.avatar}
+                  alt={profile.username || chessUsername}
+                  className="chess-profile-avatar"
+                />
               ) : (
-                <ProfileSection title="Chess.com Data">
-                  <Text fontSize="sm" color={subColor}>
-                    No Chess.com account linked. Chess.com analytics are hidden.
-                  </Text>
-                </ProfileSection>
+                <div className="chess-profile-avatar-fallback">
+                  {(profile?.username || chessUsername).charAt(0).toUpperCase()}
+                </div>
               )}
-            </VStack>
-          </GridItem>
-        </Grid>
-      </Box>
+            </div>
 
-      <EditUserModal isOpen={editOpen} onClose={onEditClose} user={editUser} onSuccess={refetch} />
+            <div className="chess-profile-identity">
+              <div className="chess-profile-name-row">
+                {profile?.title && <span className="chess-profile-title">{profile.title}</span>}
+                <h1 className="chess-profile-username">{profile?.username || chessUsername}</h1>
+              </div>
+
+              {profile?.name && profile.name !== profile?.username && (
+                <div className="chess-profile-display-name">{profile.name}</div>
+              )}
+
+              <div className="chess-profile-status-row">
+                <span className={`chess-profile-pill ${profile?.isOnline ? 'chess-profile-pill-online' : ''}`}>
+                  <span className={`chess-status-dot ${profile?.isOnline ? 'online' : ''}`} />
+                  {profile?.isOnline ? 'Online now' : 'Offline'}
+                </span>
+                {profile?.verified && (
+                  <span className="chess-profile-pill">
+                    <FiCheckCircle className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    Verified
+                  </span>
+                )}
+                {profile?.isStreamer && (
+                  <span className="chess-profile-pill">
+                    <FiVideo className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    Streamer
+                  </span>
+                )}
+                {profile?.statusLabel && (
+                  <span className="chess-profile-pill">{profile.statusLabel}</span>
+                )}
+              </div>
+
+              <div className="chess-profile-meta-grid">
+                {profile?.location && (
+                  <div className="chess-profile-meta-item">
+                    <FiMapPin className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    <span className="chess-profile-meta-value">{profile.location}</span>
+                  </div>
+                )}
+                {flagUrl && (
+                  <div className="chess-profile-meta-item">
+                    <img src={flagUrl} alt={profile.countryCode} className="chess-profile-flag" />
+                    <span className="chess-profile-meta-value">{profile.countryCode}</span>
+                  </div>
+                )}
+                {profile?.joinedDate && (
+                  <div className="chess-profile-meta-item">
+                    <FiCalendar className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    <span>
+                      Joined <span className="chess-profile-meta-value">{profile.joinedDate}</span>
+                    </span>
+                  </div>
+                )}
+                {profile?.followers != null && (
+                  <div className="chess-profile-meta-item">
+                    <FiUsers className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    <span className="chess-profile-meta-value">{formatNumber(profile.followers)}</span>
+                    <span>followers</span>
+                  </div>
+                )}
+                {profile?.lastOnline && !profile.isOnline && (
+                  <div className="chess-profile-meta-item">
+                    <FiClock className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    <span>Last online {profile.lastOnline}</span>
+                  </div>
+                )}
+                {profile?.league && (
+                  <div className="chess-profile-meta-item">
+                    <FiAward className="chess-icon chess-icon-sm" aria-hidden="true" />
+                    <span className="chess-profile-meta-value">{profile.league}</span>
+                    <span>League</span>
+                  </div>
+                )}
+              </div>
+
+              {stats && (
+                <div className="chess-profile-ratings-row">
+                  {RATING_CARDS.map((card) => (
+                    <RatingCard
+                      key={card.key}
+                      label={card.label}
+                      iconUrl={card.iconUrl}
+                      className={card.className}
+                      current={stats[card.key]?.current}
+                      best={stats[card.key]?.best}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="chess-profile-icon-tabs">
+                {ICON_TABS.map((tab) => {
+                  const TabIcon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`chess-profile-icon-tab ${iconTab === tab.id ? 'active' : ''}`}
+                      title={tab.label}
+                      aria-label={tab.label}
+                      onClick={() => handleIconTab(tab.id)}
+                    >
+                      <TabIcon className="chess-icon chess-icon-md" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav className="chess-profile-nav" aria-label="Profile sections">
+        {MAIN_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`chess-profile-nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="chess-profile-layout">
+        <div className="chess-profile-main">
+          {error && (
+            <Box mb={4}>
+              <ErrorPanel title="Chess.com API issue" message={error} onRetry={refetch} />
+            </Box>
+          )}
+
+          {activeTab === 'overview' && iconTab === 'notes' && (
+            <div className="chess-profile-panel" style={{ marginBottom: '1rem' }}>
+              <div className="chess-profile-panel-header">Profile Notes</div>
+              <div className="chess-profile-panel-body">
+                <div className="chess-profile-empty">
+                  Notes are only visible on Chess.com profiles. Open the profile there to view messages.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(activeTab === 'overview' || activeTab === 'games') && (
+            <div className="chess-profile-panel chess-games-panel">
+              <div className="chess-profile-panel-header">
+                Game History <span>{formatNumber(totalGames)}</span>
+              </div>
+              <div className="chess-profile-panel-body chess-games-panel-body">
+                {visibleGames.length ? (
+                  <>
+                    <GameHistoryList games={visibleGames} onSelect={handleGameSelect} />
+                    {recentGames.length > visibleGames.length && (
+                      <button type="button" className="chess-see-more" onClick={() => setActiveTab('games')}>
+                        See more games
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="chess-profile-empty">No recent games found.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'games' && monthlyGames.length > 0 && (
+            <div className="chess-profile-panel" style={{ marginTop: '1rem' }}>
+              <div className="chess-profile-panel-header">Games by Month</div>
+              <div className="chess-profile-panel-body">
+                {monthlyGames.map((month) => (
+                  <div key={month.month} className="chess-month-block">
+                    <div className="chess-month-title">
+                      <h4>{month.label}</h4>
+                      <span>
+                        {month.gameCount} game{month.gameCount === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    {month.games.length ? (
+                      <GameHistoryList
+                        games={month.games.slice(0, 8)}
+                        onSelect={handleGameSelect}
+                      />
+                    ) : (
+                      <div className="chess-profile-empty">No games this month.</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'stats' && (
+            <div className="chess-profile-panel">
+              <div className="chess-profile-panel-header">Stats Overview</div>
+              <div className="chess-profile-panel-body">
+                {stats ? (
+                  <>
+                    <StatTileGrid items={STAT_OVERVIEW_ITEMS} stats={stats} />
+
+                    <div style={{ marginTop: '1rem' }}>
+                      <div className="chess-record-row">
+                        <span className="chess-record-row-label">Rapid Record</span>
+                        <span className="chess-record-row-value">
+                          {stats.records.rapid.wins}W / {stats.records.rapid.losses}L /{' '}
+                          {stats.records.rapid.draws}D
+                        </span>
+                      </div>
+                      <div className="chess-record-row">
+                        <span className="chess-record-row-label">Blitz Record</span>
+                        <span className="chess-record-row-value">
+                          {stats.records.blitz.wins}W / {stats.records.blitz.losses}L /{' '}
+                          {stats.records.blitz.draws}D
+                        </span>
+                      </div>
+                      <div className="chess-record-row">
+                        <span className="chess-record-row-label">Bullet Record</span>
+                        <span className="chess-record-row-value">
+                          {stats.records.bullet.wins}W / {stats.records.bullet.losses}L /{' '}
+                          {stats.records.bullet.draws}D
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="chess-profile-empty">No stats available.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'archives' && (
+            <div className="chess-profile-panel">
+              <div className="chess-profile-panel-header">Monthly Archives</div>
+              <div className="chess-profile-panel-body">
+                {archives.length ? (
+                  <div className="chess-archive-list">
+                    {[...archives].reverse().map((archive) => (
+                      <Link
+                        key={archive.url}
+                        href={archive.url}
+                        isExternal
+                        className="chess-archive-item"
+                      >
+                        <span>{archive.label}</span>
+                        <FiChevronRight className="chess-icon chess-icon-sm" aria-hidden="true" />
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="chess-profile-empty">No archives found.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'overview' && stats && (
+            <div className="chess-profile-panel chess-quick-stats-panel" style={{ marginTop: '1rem' }}>
+              <div className="chess-profile-panel-header chess-quick-stats-header">
+                Quick Stats
+              </div>
+              <div className="chess-profile-panel-body">
+                <GameResultsBar stats={stats} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <aside className="chess-profile-sidebar">
+          <SidebarWidgets profile={profile} stats={stats} clubs={clubs} totalGames={totalGames} />
+        </aside>
+      </div>
+
     </Box>
   );
 }
