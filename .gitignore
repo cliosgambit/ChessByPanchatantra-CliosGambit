@@ -1,15 +1,87 @@
-# Dependencies
+# --- Dependencies ---
 node_modules/
-**/node_modules/
 
-# Secrets
+# --- Environment & secrets ---
 .env
 .env.*
+!.env.example
+!.env.*.example
+
+# --- Frontend (Vite / React) ---
+frontend/build/
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/.cache/
+frontend/node_modules/.vite/
+frontend/node_modules/src/
+frontend/public/story_images/
+
+# --- Backend (Node / Express) ---
 backend/.env
 
-# Local database artifacts
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Test / coverage ---
+coverage/
+.nyc_output/
+
+# --- Local databases & exports ---
+*.db
+*.sqlite
+*.sqlite3
 database_backup/*.db
 database_backup/supabase_export.json
+database_backup/*_log.txt
+database_backup/migration_log.txt
+database_backup/import_log.txt
+database_backup/export_log.txt
+database_backup/create_sqlite_log.txt
+database_backup/verification_summary.json
 
-# Production build
-frontend/build/
+# --- Migration tooling outputs (keep scripts, ignore generated artifacts) ---
+migration_output/*_log.txt
+migration_output/*_logs.txt
+migration_output/verification_report.json
+migration_output/verification_summary.json
+migration_output/failure_report.json
+migration_output/sqlite_metadata.json
+migration_output/data_import.sql
+
+# --- Python (backend email helper) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Editors / IDEs ---
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# --- Misc ---
+*.tsbuildinfo
+.cache/
+.turbo/
+*.local

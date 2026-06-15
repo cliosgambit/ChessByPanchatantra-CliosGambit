@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { env } from './env';
 import { isSupabaseDirectEnabled } from './supabase/config';
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL?.trim();
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY?.trim();
+const supabaseUrl = env('SUPABASE_URL')?.trim();
+const supabaseAnonKey = env('SUPABASE_ANON_KEY')?.trim();
 
-/** Only created when REACT_APP_USE_SUPABASE_DIRECT=true and anon key is valid. */
+/** Only created when VITE_USE_SUPABASE_DIRECT=true and anon key is valid. */
 export const supabase =
   isSupabaseDirectEnabled() && supabaseUrl
     ? createClient(supabaseUrl, supabaseAnonKey, {

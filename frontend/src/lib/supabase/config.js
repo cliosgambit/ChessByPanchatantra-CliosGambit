@@ -1,3 +1,5 @@
+import { env } from '../env';
+
 const PLACEHOLDER_PATTERNS = [
   'PASTE_YOUR_ANON_KEY_HERE',
   'your-anon-public-key',
@@ -18,8 +20,8 @@ export function isValidSupabaseAnonKey(key) {
 /** Direct Supabase JS client is opt-in only. */
 export function isSupabaseDirectEnabled() {
   return (
-    process.env.REACT_APP_USE_SUPABASE_DIRECT === 'true' &&
-    isValidSupabaseAnonKey(process.env.REACT_APP_SUPABASE_ANON_KEY)
+    env('USE_SUPABASE_DIRECT') === 'true' &&
+    isValidSupabaseAnonKey(env('SUPABASE_ANON_KEY'))
   );
 }
 
@@ -27,26 +29,26 @@ export function getSupabaseConfigError() {
   if (!isSupabaseDirectEnabled()) {
     return null;
   }
-  const url = process.env.REACT_APP_SUPABASE_URL;
-  const key = process.env.REACT_APP_SUPABASE_ANON_KEY;
+  const url = env('SUPABASE_URL');
+  const key = env('SUPABASE_ANON_KEY');
   if (!url || !key) {
-    return 'REACT_APP_USE_SUPABASE_DIRECT=true but URL or anon key is missing.';
+    return 'VITE_USE_SUPABASE_DIRECT=true but URL or anon key is missing.';
   }
   if (!isValidSupabaseAnonKey(key)) {
-    return 'REACT_APP_USE_SUPABASE_DIRECT=true but anon key is invalid.';
+    return 'VITE_USE_SUPABASE_DIRECT=true but anon key is invalid.';
   }
   return null;
 }
 
 /**
  * Admin app uses backend /api/data by default (same Postgres as Supabase).
- * Set REACT_APP_USE_SUPABASE_DIRECT=true + valid anon key to use Supabase JS client.
+ * Set VITE_USE_SUPABASE_DIRECT=true + valid anon key to use Supabase JS client.
  */
 export function isBackendDataProxyEnabled() {
   const useProxy = !isSupabaseDirectEnabled();
   if (useProxy && !isBackendDataProxyEnabled._logged) {
     console.info(
-      '[Data] Using backend /api/data proxy. Set REACT_APP_USE_SUPABASE_DIRECT=true with a valid anon key for direct Supabase.'
+      '[Data] Using backend /api/data proxy. Set VITE_USE_SUPABASE_DIRECT=true with a valid anon key for direct Supabase.'
     );
     isBackendDataProxyEnabled._logged = true;
   }
