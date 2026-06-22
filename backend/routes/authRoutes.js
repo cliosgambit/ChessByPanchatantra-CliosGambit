@@ -10,7 +10,7 @@ router.post('/auth/check-chess-id', chessAuth.checkChessId);
 router.post('/auth/send-otp', chessAuth.sendOtp);
 router.post('/auth/verify-set-password', chessAuth.verifyAndSetPassword);
 
-// Unified login: email/password (users table) or chess_com_id/password (Login table)
+// Unified login: email/password or chess_com_id/password (both use Login table)
 router.post('/auth/login', (req, res) => {
   if (req.body?.chess_com_id) {
     return chessAuth.login(req, res);

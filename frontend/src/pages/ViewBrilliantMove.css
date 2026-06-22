@@ -1,0 +1,407 @@
+.view-brilliant-move-page-header {
+  margin-top: 1rem;
+  padding: 0.85rem 1.25rem !important;
+}
+
+.view-brilliant-move-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.view-brilliant-move-panel {
+  overflow: visible;
+}
+
+.view-brilliant-move-body {
+  min-height: 36rem;
+  padding: 1.25rem;
+}
+
+.view-brilliant-move-body .loading-panel,
+.view-brilliant-move-body .error-panel {
+  margin: 2rem auto;
+}
+
+.view-brilliant-move-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(320px, 1fr) minmax(220px, 280px);
+  gap: 1rem;
+  align-items: stretch;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.view-brilliant-move-side-box {
+  background: var(--chess-panel-2, #353230);
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.view-brilliant-move-side-header {
+  padding: 0.8rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chess-text-muted, #a8a6a3);
+  border-bottom: 1px solid var(--chess-border, #3a3835);
+  background: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0;
+}
+
+.view-brilliant-move-info-list {
+  padding: 0.35rem 0;
+  flex: 1;
+}
+
+.view-brilliant-move-info-row {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 0.65rem;
+  padding: 0.62rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  align-items: start;
+}
+
+.view-brilliant-move-info-row:last-child {
+  border-bottom: none;
+}
+
+.view-brilliant-move-info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--chess-text-muted, #a8a6a3);
+}
+
+.view-brilliant-move-info-value {
+  font-size: 0.9rem;
+  color: var(--chess-text, #f3f2f1);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.view-brilliant-move-info-value--move {
+  color: var(--chess-accent, #6b9b4d);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.view-brilliant-move-game-link {
+  display: block;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--chess-border, #3a3835);
+  color: var(--chess-accent, #6b9b4d);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.view-brilliant-move-game-link:hover {
+  text-decoration: underline;
+}
+
+.view-brilliant-move-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--chess-panel-2, #353230);
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.view-brilliant-move-player-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.95rem;
+  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid var(--chess-border, #3a3835);
+}
+
+.view-brilliant-move-player-bar--bottom {
+  border-bottom: none;
+  border-top: 1px solid var(--chess-border, #3a3835);
+}
+
+.view-brilliant-move-player-bar-main {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.view-brilliant-move-player-piece {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.view-brilliant-move-player-piece--white {
+  background: #f0f0f0;
+  color: #1a1917;
+}
+
+.view-brilliant-move-player-piece--black {
+  background: #2a2a2a;
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.view-brilliant-move-player-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.view-brilliant-move-player-primary {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--chess-text, #f3f2f1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view-brilliant-move-player-secondary {
+  font-size: 0.76rem;
+  color: var(--chess-text-muted, #a8a6a3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view-brilliant-move-player-rating {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--chess-text-muted, #a8a6a3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.view-brilliant-move-bar-meta {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--chess-text-muted, #a8a6a3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.view-brilliant-move-board-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 22rem;
+  padding: 0.75rem;
+  background: #1a1917;
+}
+
+.view-brilliant-move-board-wrap {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  line-height: 0;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+}
+
+.view-brilliant-move-board-wrap .chess-game-hover-preview-board {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.view-brilliant-move-no-fen {
+  margin: 2rem 1rem;
+  text-align: center;
+  color: var(--chess-text-muted, #a8a6a3);
+}
+
+.view-brilliant-move-side-box--history {
+  min-height: 28rem;
+}
+
+.view-brilliant-move-history-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.view-brilliant-move-history-panel {
+  flex: 1;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.view-brilliant-move-history-scroll {
+  max-height: none;
+  height: 100%;
+  min-height: 0;
+  padding: 0.65rem 0.75rem 0.75rem;
+}
+
+.view-brilliant-move-history-san {
+  min-width: 2.75rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--cg-text, #f3f2f1);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.view-brilliant-move-history-san:hover:not(:disabled):not(.chess-game-move-btn--active) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.view-brilliant-move-history-san--brilliant:not(.chess-game-move-btn--active) {
+  box-shadow: inset 0 0 0 1px rgba(212, 167, 44, 0.55);
+  color: #e8c96a;
+}
+
+.view-brilliant-move-history-san.chess-game-move-btn--active {
+  background: var(--chess-accent, #6b9b4d);
+  color: #fff;
+  font-weight: 700;
+}
+
+.view-brilliant-move-history-san--brilliant.chess-game-move-btn--active {
+  background: linear-gradient(180deg, #d4a72c 0%, #9a7420 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.view-brilliant-move-controls {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0.65rem 0.5rem;
+  border: none;
+  border-top: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--chess-panel, #2b2927);
+}
+
+.view-brilliant-move-control-status {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.view-brilliant-move-game-nav {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0.65rem 0.85rem;
+  border-top: 1px solid var(--chess-border, #3a3835);
+  background: var(--chess-panel-2, #353230);
+}
+
+.view-brilliant-move-game-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.35rem;
+  background: var(--chess-panel, #2b2927);
+  color: var(--chess-text, #f3f2f1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.view-brilliant-move-game-nav-btn:first-child {
+  justify-self: start;
+}
+
+.view-brilliant-move-game-nav-btn:last-child {
+  justify-self: end;
+}
+
+.view-brilliant-move-game-nav-btn:hover:not(:disabled) {
+  background: #403d3a;
+  border-color: #4a4744;
+}
+
+.view-brilliant-move-game-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.view-brilliant-move-game-nav-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--chess-text-muted, #a8a6a3);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.view-brilliant-move-history-san--empty {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 980px) {
+  .view-brilliant-move-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .view-brilliant-move-side-box--history {
+    order: 3;
+  }
+
+  .view-brilliant-move-history-scroll {
+    max-height: 14rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .view-brilliant-move-body {
+    padding: 0.75rem;
+  }
+
+  .view-brilliant-move-player-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .view-brilliant-move-bar-meta {
+    align-self: flex-end;
+  }
+
+  .view-brilliant-move-info-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}

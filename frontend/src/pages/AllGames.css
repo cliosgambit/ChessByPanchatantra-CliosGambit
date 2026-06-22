@@ -1,0 +1,111 @@
+.all-games-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.all-games-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.2rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 999px;
+  background: var(--chess-panel, #2b2927);
+  color: var(--chess-text-muted, #a8a6a3);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.all-games-filter-btn:hover:not(.all-games-filter-btn--active) {
+  background: #403d3a;
+  color: var(--chess-text, #f3f2f1);
+}
+
+.all-games-filter-btn--active {
+  background: var(--chess-accent, #6b9b4d);
+  border-color: var(--chess-accent, #6b9b4d);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .all-games-filters {
+    flex-direction: column;
+  }
+
+  .all-games-filter-btn {
+    width: 100%;
+  }
+}
+
+.all-games-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--chess-border, #3a3835);
+}
+
+.all-games-pagination-summary {
+  font-size: 0.82rem;
+  color: var(--chess-text-muted, #a8a6a3);
+}
+
+.all-games-pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.all-games-pagination-status {
+  min-width: 6.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--chess-text, #f3f2f1);
+}
+
+.all-games-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.35rem;
+  background: var(--chess-panel, #2b2927);
+  color: var(--chess-text, #f3f2f1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.all-games-pagination-btn:hover:not(:disabled) {
+  background: #403d3a;
+  border-color: #4a4744;
+}
+
+.all-games-pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .all-games-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .all-games-pagination-controls {
+    justify-content: center;
+  }
+}

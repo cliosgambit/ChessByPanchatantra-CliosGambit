@@ -26,8 +26,8 @@ export const DASHBOARD_SECTIONS = [
   },
   {
     id: 'users',
-    label: 'Users',
-    path: '/users',
+    label: 'Players',
+    path: '/players',
     bgColor: '#BAE6FD',
     bgColorDark: '#0369A1',
     textColor: '#0C4A6E',

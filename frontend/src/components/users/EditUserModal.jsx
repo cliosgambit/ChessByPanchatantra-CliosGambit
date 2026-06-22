@@ -52,11 +52,18 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
     e.preventDefault();
     if (!user) return;
     setError('');
+
+    const trimmedName = playerName.trim();
+    if (!trimmedName) {
+      setError('Player name is required.');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
-        Player_Name: playerName.trim(),
-        email: email.trim(),
+        Player_Name: trimmedName,
+        email: email.trim().toLowerCase(),
         Role: resolveLoginRole(role, status),
       };
       if (password.trim()) payload.password = password.trim();
@@ -74,7 +81,7 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
       <ModalOverlay />
       <ModalContent as="form" onSubmit={handleSubmit}>
-        <ModalHeader>Edit User</ModalHeader>
+        <ModalHeader>Edit Player</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4} align="stretch">

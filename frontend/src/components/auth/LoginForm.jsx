@@ -74,7 +74,7 @@ function LoginForm() {
       const message =
         err.response?.data?.message ||
         (status === 401
-          ? 'Invalid email or password. Use the email registered in the Login table, or contact your coach.'
+          ? 'Invalid email or password. Use the email registered for your player account, or contact your coach.'
           : err.message || 'Login failed. Please try again.');
       setError(message);
     } finally {

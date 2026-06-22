@@ -11,7 +11,7 @@ const courseRoutes = require('./api/routes/courseRoutes');
 const authRoutes = require('./routes/authRoutes');
 const loginAdminRoutes = require('./routes/loginAdminRoutes');
 const dataRoutes = require('./routes/dataRoutes');
-const { ensureUsersTable } = require('./scripts/ensureUsersTable');
+const { migrateUsersToLogin } = require('./scripts/migrateUsersToLogin');
 const { ensureChessPuzzleColumns } = require('./scripts/ensureChessPuzzleColumns');
 const { ensureModuleColumns } = require('./scripts/ensureModuleColumns');
 const { ensureChapterColumns } = require('./scripts/ensureChapterColumns');
@@ -19,9 +19,12 @@ const accessRoutes = require('./api/routes/accessRoutes'); // <-- NEW: Import ac
 const trackerRoutes = require('./api/routes/trackerRoutes');
 const automationRoutes = require('./api/routes/automationRoutes');
 const chessComRoutes = require('./api/routes/chessComRoutes');
+const stockfishRoutes = require('./api/routes/stockfishRoutes');
+const { mountBrillianceRoutes } = require('./brilliance');
 const { ensureChessComSchema } = require('./scripts/ensureChessComSchema');
 const { ensureChessComMovesTable } = require('./scripts/ensureChessComMovesTable');
 const { ensurePlayerChessComColumns } = require('./scripts/ensurePlayerChessComColumns');
+const { ensureBrilliantMovePuzzlesTable } = require('./scripts/ensureBrilliantMovePuzzlesTable');
 const { autoCompleteActivityTracker } = require('./api/controllers/automationController');
 
 
@@ -54,6 +57,8 @@ app.use('/api', courseRoutes); // Your existing course routes
 app.use(trackerRoutes);
 app.use(automationRoutes);
 app.use('/api', chessComRoutes);
+app.use('/api', stockfishRoutes);
+mountBrillianceRoutes(app);
 
 
 // --- Frontend Fallback Route ---
@@ -72,13 +77,14 @@ const startServerAndServices = async () => {
     console.log('Attempting to connect to the database...');
     await db.query('SELECT NOW()');
     console.log('✅ Database connection successful.');
-    await ensureUsersTable();
+    await migrateUsersToLogin();
     await ensureChessPuzzleColumns();
     await ensureModuleColumns();
     await ensureChapterColumns();
     await ensureChessComSchema();
     await ensureChessComMovesTable();
     await ensurePlayerChessComColumns();
+    await ensureBrilliantMovePuzzlesTable();
 
     // console.log('Triggering initial data orchestration cycle...');
     // runDataUpdateCycle();
@@ -92,16 +98,39 @@ const startServerAndServices = async () => {
     process.exit(1);
   }
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Server is live at http://localhost:${PORT}`);
-    // Never auto-open browser tabs — nodemon restarts were spawning a new tab on every reload.
-    // Use frontend dev server (npm start in /frontend → :3000) for daily development.
-    // Set OPEN_BROWSER=true only if you explicitly want one tab opened on backend start.
-    if (process.env.OPEN_BROWSER === 'true') {
-      const openCommand = process.platform === 'win32' ? 'start' : 'xdg-open';
-      exec(`${openCommand} http://localhost:${PORT}`);
+  const listen = () =>
+    new Promise((resolve, reject) => {
+      const server = app.listen(PORT, () => resolve(server));
+      server.on('error', reject);
+    });
+
+  try {
+    await listen();
+  } catch (err) {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`⚠️ Port ${PORT} in use — clearing and retrying...`);
+      await killProcessOnPort(PORT);
+      await new Promise((r) => setTimeout(r, 1000));
+      try {
+        await listen();
+      } catch (retryErr) {
+        console.error(`❌ Could not bind to port ${PORT}:`, retryErr.message);
+        process.exit(1);
+      }
+    } else {
+      console.error('❌ Server failed to start:', err.message);
+      process.exit(1);
     }
-  });
+  }
+
+  console.log(`🚀 Server is live at http://localhost:${PORT}`);
+  // Never auto-open browser tabs — nodemon restarts were spawning a new tab on every reload.
+  // Use frontend dev server (npm start in /frontend → :3000) for daily development.
+  // Set OPEN_BROWSER=true only if you explicitly want one tab opened on backend start.
+  if (process.env.OPEN_BROWSER === 'true') {
+    const openCommand = process.platform === 'win32' ? 'start' : 'xdg-open';
+    exec(`${openCommand} http://localhost:${PORT}`);
+  }
 
   // Call automation controller immediately on startup
   console.log('⏰ Running autoCompleteActivityTracker (startup)...');
@@ -125,6 +154,17 @@ const startServerAndServices = async () => {
     );
   }, 10 * 60 * 1000);
 };
+
+// --- Process error handlers (nodemon restarts on exit) ---
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Unhandled rejection:', reason);
+  process.exit(1);
+});
 
 // --- Main Execution ---
 killProcessOnPort(PORT).then(startServerAndServices).catch(err => {

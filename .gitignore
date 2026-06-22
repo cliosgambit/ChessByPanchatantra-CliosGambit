@@ -35,6 +35,8 @@ coverage/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
 
 # --- Python (backend email helper) ---
 __pycache__/
@@ -68,3 +70,16 @@ Desktop.ini
 .cache/
 .turbo/
 *.local
+
+# --- Stockfish engine (download locally; binaries exceed GitHub's 100 MB limit) ---
+stockfish/*
+!stockfish/README.md
+
+# --- Brilliance pipeline runtime data (SQLite + uploaded PGNs) ---
+backend/brilliance/data/*
+!backend/brilliance/data/.gitkeep
+
+# --- Local reference project (not part of CLIO) ---
+Last Shot/
+
+

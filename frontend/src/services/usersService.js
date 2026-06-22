@@ -81,8 +81,8 @@ export async function fetchUserProfileDetails(chessComId, email) {
       if (email) {
         requests.push(
           supabase
-            .from('users')
-            .select('created_at, is_active')
+            .from('Login')
+            .select('created_at, Role')
             .ilike('email', email)
             .maybeSingle()
             .then((res) => res)
@@ -92,24 +92,24 @@ export async function fetchUserProfileDetails(chessComId, email) {
         requests.push(Promise.resolve({ data: null }));
       }
 
-      const [playerRes, userRes] = await Promise.all(requests);
+      const [playerRes, loginRes] = await Promise.all(requests);
       playerRow = playerRes.data;
-      userRow = userRes.data;
+      userRow = loginRes.data;
     } else {
       const players = chessComId ? await fetchTable('players').catch(() => []) : [];
-      let users = [];
+      let loginRows = [];
       if (email) {
         try {
-          users = await fetchTable('users');
+          loginRows = await fetchTable('Login');
         } catch {
-          users = [];
+          loginRows = [];
         }
       }
 
       playerRow = (players || []).find((row) =>
         String(col(row, 'Chess_com_ID', 'chess_com_id')).toLowerCase() === String(chessComId).toLowerCase()
       );
-      userRow = (users || []).find(
+      userRow = (loginRows || []).find(
         (row) => String(col(row, 'email')).toLowerCase() === String(email).toLowerCase()
       );
     }

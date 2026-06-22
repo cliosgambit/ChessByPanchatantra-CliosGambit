@@ -14,6 +14,7 @@ import {
   Select,
   FormErrorMessage,
   VStack,
+  Text,
 } from '@chakra-ui/react';
 import { createLoginUser } from '../../services/usersService';
 
@@ -44,17 +45,28 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!chessComId.trim() || !email.trim() || !password.trim()) {
-      setError('Chess.com ID, email, and password are required.');
+
+    const normalizedChessId = chessComId.trim().toLowerCase();
+    const normalizedName = playerName.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedChessId || !normalizedName || !normalizedEmail || !password.trim()) {
+      setError('Chess.com ID, player name, email, and password are required.');
       return;
     }
+
+    if (password.trim().length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
     setLoading(true);
     try {
       await createLoginUser({
-        Chess_com_ID: chessComId.trim(),
-        Player_Name: playerName.trim() || chessComId.trim(),
-        email: email.trim(),
-        password,
+        Chess_com_ID: normalizedChessId,
+        Player_Name: normalizedName,
+        email: normalizedEmail,
+        password: password.trim(),
         Role: role,
       });
       onSuccess?.();
@@ -71,25 +83,43 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
       <ModalOverlay />
       <ModalContent as="form" onSubmit={handleSubmit}>
-        <ModalHeader>Add User</ModalHeader>
+        <ModalHeader>Add Player</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <VStack spacing={4} align="stretch">
-            <FormControl isRequired isInvalid={!!error}>
+            <FormControl isRequired>
               <FormLabel fontSize="sm">Chess.com ID</FormLabel>
-              <Input value={chessComId} onChange={(e) => setChessComId(e.target.value)} placeholder="username" />
+              <Input
+                value={chessComId}
+                onChange={(e) => setChessComId(e.target.value)}
+                placeholder="e.g. raghavendra_k"
+                autoComplete="off"
+              />
+              <Text fontSize="xs" color="gray.500" mt={1}>
+                Exact Chess.com username — stored separately from the display name.
+              </Text>
             </FormControl>
-            <FormControl>
+            <FormControl isRequired>
               <FormLabel fontSize="sm">Player Name</FormLabel>
-              <Input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Display name" />
+              <Input
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="Full name shown in CLIO"
+              />
             </FormControl>
             <FormControl isRequired>
               <FormLabel fontSize="sm">Email</FormLabel>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" />
             </FormControl>
             <FormControl isRequired>
               <FormLabel fontSize="sm">Password</FormLabel>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                autoComplete="new-password"
+              />
             </FormControl>
             <FormControl>
               <FormLabel fontSize="sm">Role</FormLabel>
@@ -101,7 +131,11 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
                 ))}
               </Select>
             </FormControl>
-            {error && <FormErrorMessage>{error}</FormErrorMessage>}
+            {error && (
+              <FormControl isInvalid>
+                <FormErrorMessage>{error}</FormErrorMessage>
+              </FormControl>
+            )}
           </VStack>
         </ModalBody>
         <ModalFooter>
@@ -109,7 +143,7 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
             Cancel
           </Button>
           <Button type="submit" bg="gold.500" color="navy.900" _hover={{ bg: 'gold.400' }} isLoading={loading}>
-            Create User
+            Create Player
           </Button>
         </ModalFooter>
       </ModalContent>

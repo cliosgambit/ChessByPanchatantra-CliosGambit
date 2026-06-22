@@ -294,6 +294,8 @@ function mapDbGameRow(row) {
   const isWhite = row.self_color === 'white';
   return {
     uuid: row.chess_com_uuid,
+    chessComId: row.chess_com_id,
+    playedAt: row.played_at ? new Date(row.played_at).toISOString() : null,
     opponent: row.opponent_username,
     opponentRating: isWhite ? row.black_rating : row.white_rating,
     selfRating: isWhite ? row.white_rating : row.black_rating,

@@ -99,7 +99,7 @@ function UsersTable({
                 letterSpacing="0.08em"
                 textTransform="uppercase"
               >
-                User
+                Player
               </Th>
               <Th
                 py={3.5}

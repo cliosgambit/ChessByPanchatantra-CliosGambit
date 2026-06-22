@@ -128,20 +128,27 @@ async function queryUserByEmail(email) {
   try {
     if (isSupabaseConfigured() && supabase) {
       const { data, error } = await supabase
-        .from('users')
-        .select('created_at, is_active, role')
+        .from('Login')
+        .select('created_at, Role, email')
         .ilike('email', email)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return data
+        ? {
+            created_at: data.created_at,
+            is_active: (data.Role || '').toLowerCase() !== 'paused',
+            role: data.Role,
+            email: data.email,
+          }
+        : null;
     }
 
-    const rows = await fetchTable('users', { select: 'created_at, is_active, role, email' });
+    const rows = await fetchTable('Login', { select: 'created_at, Role, email' });
     return (rows || []).find(
       (row) => String(col(row, 'email')).toLowerCase() === String(email).toLowerCase()
     );
   } catch (err) {
-    console.warn('[userProfileService] users table lookup skipped:', err.message);
+    console.warn('[userProfileService] Login lookup skipped:', err.message);
     return null;
   }
 }

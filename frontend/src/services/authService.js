@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { BACKEND_UNAVAILABLE_MSG } from '../utils/apiFetch';
 
 const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
@@ -8,6 +9,23 @@ const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const data = error.response?.data;
+    if (!error.response) {
+      error.message = BACKEND_UNAVAILABLE_MSG;
+    } else if (error.response.status === 503 && data?.code === 'BACKEND_UNAVAILABLE') {
+      error.message = data.error || BACKEND_UNAVAILABLE_MSG;
+    } else if (data?.error) {
+      error.message = data.error;
+    } else if (data?.message) {
+      error.message = data.message;
+    }
+    return Promise.reject(error);
+  }
+);
 
 export function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY);

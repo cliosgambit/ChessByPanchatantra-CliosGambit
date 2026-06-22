@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { getChessComGameId } from '../../utils/chessComGameNavigation';
 
 const TIME_CLASS_ICONS = {
   bullet: '/chess-icons/bullet.svg',
@@ -25,14 +26,15 @@ function PlayerLine({ username, rating, color, isSelf, countryCode }) {
   );
 }
 
-function GameHistoryRow({ game, onSelect, isHovered, onRowHover }) {
+function GameHistoryRow({ game, onSelect, isHovered, onRowHover, extraColumn }) {
   const rowRef = useRef(null);
   const timeIcon = game.timeClass ? TIME_CLASS_ICONS[game.timeClass] : null;
   const showAccuracy = game.hasAccuracy;
-  const canReview = Boolean(game.pgn && onSelect);
+  const gameId = getChessComGameId(game);
+  const canReview = Boolean(gameId && onSelect);
 
   const handleMouseEnter = () => {
-    if (game.pgn && onRowHover) {
+    if (onRowHover && gameId) {
       onRowHover(game, rowRef.current);
     }
   };
@@ -110,6 +112,7 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover }) {
       </div>
 
       <div className="chess-game-col chess-game-col-moves">{game.moves ?? '—'}</div>
+      {extraColumn ? <div className="chess-game-col chess-game-col-extra">{extraColumn(game)}</div> : null}
       <div className="chess-game-col chess-game-col-date">{game.date}</div>
     </>
   );
@@ -140,7 +143,7 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover }) {
   );
 }
 
-export function GamesTableHeader() {
+export function GamesTableHeader({ extraColumnLabel = null, dateColumnLabel = 'Date' }) {
   return (
     <div className="chess-games-table-head">
       <span className="chess-games-col-type" aria-hidden="true" />
@@ -148,7 +151,8 @@ export function GamesTableHeader() {
       <span>Result</span>
       <span>Accuracy</span>
       <span>Moves</span>
-      <span>Date</span>
+      {extraColumnLabel ? <span>{extraColumnLabel}</span> : null}
+      <span>{dateColumnLabel}</span>
     </div>
   );
 }

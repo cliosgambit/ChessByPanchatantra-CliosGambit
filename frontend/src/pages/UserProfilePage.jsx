@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Link } from '@chakra-ui/react';
 import {
@@ -10,7 +10,6 @@ import {
   FiChevronRight,
   FiClock,
   FiExternalLink,
-  FiFileText,
   FiGrid,
   FiLayers,
   FiMapPin,
@@ -26,10 +25,11 @@ import {
   FiZap,
 } from 'react-icons/fi';
 import ErrorPanel from '../components/common/ErrorPanel';
-import LoadingPanel from '../components/common/LoadingPanel';
 import { useChessComUserData } from '../hooks/useChessComUserData';
 import { openChessComGame } from '../utils/chessComGameNavigation';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
+import PlayerWinStreakReport from '../components/userProfile/PlayerWinStreakReport';
+import YesterdayGamesChart from '../components/userProfile/YesterdayGamesChart';
 import '../components/userProfile/ChessComProfilePage.css';
 
 const MAIN_TABS = [
@@ -37,12 +37,7 @@ const MAIN_TABS = [
   { id: 'games', label: 'Games' },
   { id: 'stats', label: 'Stats' },
   { id: 'archives', label: 'Archives' },
-];
-
-const ICON_TABS = [
-  { id: 'notes', icon: FiFileText, label: 'Notes' },
-  { id: 'board', icon: FiGrid, label: 'Games' },
-  { id: 'trophies', icon: FiAward, label: 'Trophies' },
+  { id: 'report', label: 'Report' },
 ];
 
 const QUICK_STAT_ITEMS = [
@@ -358,11 +353,16 @@ function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const chessUsername = decodeURIComponent(userId || '');
-  const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, loading, syncing, error, refetch, syncFromChessCom, lastSyncedAt } =
+  const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, profileLoading, gamesLoading, syncing, monthlyLoading, backgroundSync, pending, error, refetch, syncFromChessCom, loadMonthlyGames, lastSyncedAt } =
     useChessComUserData(chessUsername);
 
   const [activeTab, setActiveTab] = useState('overview');
-  const [iconTab, setIconTab] = useState('board');
+
+  useEffect(() => {
+    if (activeTab === 'games') {
+      loadMonthlyGames();
+    }
+  }, [activeTab, loadMonthlyGames]);
 
   const handleGameSelect = (game) => {
     openChessComGame(navigate, chessUsername, game);
@@ -377,26 +377,7 @@ function UserProfilePage() {
     [recentGames, activeTab]
   );
 
-  if (loading && !profile) {
-    return (
-      <Box className="chess-profile-loading">
-        <LoadingPanel
-          message={
-            syncing
-              ? `Syncing all games from Chess.com for ${chessUsername}…`
-              : `Loading profile for ${chessUsername}…`
-          }
-        />
-      </Box>
-    );
-  }
-
-  const handleIconTab = (tabId) => {
-    setIconTab(tabId);
-    if (tabId === 'board') setActiveTab('games');
-    if (tabId === 'trophies') setActiveTab('stats');
-    if (tabId === 'notes') setActiveTab('overview');
-  };
+  const displayName = profile?.username || chessUsername;
 
   return (
     <Box className="chess-profile-page">
@@ -404,10 +385,10 @@ function UserProfilePage() {
         <button
           type="button"
           className="chess-btn chess-btn-secondary"
-          onClick={() => navigate('/users')}
+          onClick={() => navigate('/players')}
         >
           <FiArrowLeft className="chess-icon chess-icon-md" aria-hidden="true" />
-          Back to Users
+          Back to Players
         </button>
         <div className="chess-profile-top-actions">
           <button
@@ -422,6 +403,16 @@ function UserProfilePage() {
           {lastSyncedAt && (
             <span className="chess-profile-sync-meta">
               Synced {new Date(lastSyncedAt).toLocaleString()}
+            </span>
+          )}
+          {pending && !profile && (
+            <span className="chess-profile-sync-meta chess-profile-sync-meta--live">
+              Loading profile from Chess.com…
+            </span>
+          )}
+          {backgroundSync && !syncing && !pending && (
+            <span className="chess-profile-sync-meta chess-profile-sync-meta--live">
+              Updating games in background…
             </span>
           )}
           {profile?.profileUrl && (
@@ -450,18 +441,18 @@ function UserProfilePage() {
       </div>
 
       <div className="chess-profile-header-wrap">
-        <div className="chess-profile-header-card">
+        <div className={`chess-profile-header-card${profileLoading && !profile ? ' chess-profile-header-card--loading' : ''}`}>
           <div className="chess-profile-header-main">
             <div className="chess-profile-avatar-wrap">
               {profile?.avatar ? (
                 <img
                   src={profile.avatar}
-                  alt={profile.username || chessUsername}
+                  alt={displayName}
                   className="chess-profile-avatar"
                 />
               ) : (
                 <div className="chess-profile-avatar-fallback">
-                  {(profile?.username || chessUsername).charAt(0).toUpperCase()}
+                  {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
@@ -469,9 +460,16 @@ function UserProfilePage() {
             <div className="chess-profile-identity">
               <div className="chess-profile-name-row">
                 {profile?.title && <span className="chess-profile-title">{profile.title}</span>}
-                <h1 className="chess-profile-username">{profile?.username || chessUsername}</h1>
+                <h1 className="chess-profile-username">{displayName}</h1>
               </div>
 
+              {profileLoading && !profile ? (
+                <div className="chess-profile-section-skeleton">
+                  <div className="chess-profile-skeleton-line chess-profile-skeleton-line--wide" />
+                  <div className="chess-profile-skeleton-line chess-profile-skeleton-line--medium" />
+                </div>
+              ) : (
+                <>
               {profile?.name && profile.name !== profile?.username && (
                 <div className="chess-profile-display-name">{profile.name}</div>
               )}
@@ -556,23 +554,8 @@ function UserProfilePage() {
                 </div>
               )}
 
-              <div className="chess-profile-icon-tabs">
-                {ICON_TABS.map((tab) => {
-                  const TabIcon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      className={`chess-profile-icon-tab ${iconTab === tab.id ? 'active' : ''}`}
-                      title={tab.label}
-                      aria-label={tab.label}
-                      onClick={() => handleIconTab(tab.id)}
-                    >
-                      <TabIcon className="chess-icon chess-icon-md" aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -599,26 +582,21 @@ function UserProfilePage() {
             </Box>
           )}
 
-          {activeTab === 'overview' && iconTab === 'notes' && (
-            <div className="chess-profile-panel" style={{ marginBottom: '1rem' }}>
-              <div className="chess-profile-panel-header">Profile Notes</div>
-              <div className="chess-profile-panel-body">
-                <div className="chess-profile-empty">
-                  Notes are only visible on Chess.com profiles. Open the profile there to view messages.
-                </div>
-              </div>
-            </div>
-          )}
-
           {(activeTab === 'overview' || activeTab === 'games') && (
             <div className="chess-profile-panel chess-games-panel">
               <div className="chess-profile-panel-header">
                 Game History <span>{formatNumber(totalGames)}</span>
               </div>
               <div className="chess-profile-panel-body chess-games-panel-body">
-                {visibleGames.length ? (
+                {gamesLoading ? (
+                  <div className="chess-profile-section-skeleton chess-profile-section-skeleton--games">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="chess-profile-skeleton-line chess-profile-skeleton-line--game" />
+                    ))}
+                  </div>
+                ) : visibleGames.length ? (
                   <>
-                    <GameHistoryList games={visibleGames} onSelect={handleGameSelect} />
+                    <GameHistoryList games={visibleGames} onSelect={handleGameSelect} profileUsername={chessUsername} />
                     {recentGames.length > visibleGames.length && (
                       <button type="button" className="chess-see-more" onClick={() => setActiveTab('games')}>
                         See more games
@@ -626,34 +604,43 @@ function UserProfilePage() {
                     )}
                   </>
                 ) : (
-                  <div className="chess-profile-empty">No recent games found.</div>
+                  <div className="chess-profile-empty">
+                    {pending || backgroundSync ? 'Games will appear after sync completes.' : 'No recent games found.'}
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {activeTab === 'games' && monthlyGames.length > 0 && (
-            <div className="chess-profile-panel" style={{ marginTop: '1rem' }}>
+          {activeTab === 'games' && (
+            <div className="chess-profile-panel" style={{ marginTop: monthlyGames.length ? '1rem' : 0 }}>
               <div className="chess-profile-panel-header">Games by Month</div>
               <div className="chess-profile-panel-body">
-                {monthlyGames.map((month) => (
-                  <div key={month.month} className="chess-month-block">
-                    <div className="chess-month-title">
-                      <h4>{month.label}</h4>
-                      <span>
-                        {month.gameCount} game{month.gameCount === 1 ? '' : 's'}
-                      </span>
+                {monthlyLoading ? (
+                  <div className="chess-profile-empty">Loading monthly games…</div>
+                ) : monthlyGames.length > 0 ? (
+                  monthlyGames.map((month) => (
+                    <div key={month.month} className="chess-month-block">
+                      <div className="chess-month-title">
+                        <h4>{month.label}</h4>
+                        <span>
+                          {month.gameCount} game{month.gameCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      {month.games.length ? (
+                        <GameHistoryList
+                          games={month.games}
+                          onSelect={handleGameSelect}
+                          profileUsername={chessUsername}
+                        />
+                      ) : (
+                        <div className="chess-profile-empty">No games this month.</div>
+                      )}
                     </div>
-                    {month.games.length ? (
-                      <GameHistoryList
-                        games={month.games.slice(0, 8)}
-                        onSelect={handleGameSelect}
-                      />
-                    ) : (
-                      <div className="chess-profile-empty">No games this month.</div>
-                    )}
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="chess-profile-empty">No monthly games loaded yet.</div>
+                )}
               </div>
             </div>
           )}
@@ -716,8 +703,31 @@ function UserProfilePage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="chess-profile-empty">No archives found.</div>
+                  <div className="chess-profile-empty">
+                    {pending || backgroundSync
+                      ? 'Archives will appear after sync completes.'
+                      : profile && lastSyncedAt && totalGames === 0
+                        ? `Chess.com has no game archives for ${profile.username}. Sync completed successfully — this account has no live games on Chess.com yet.`
+                        : 'No archives found. Try Sync Games if this player has recent games on Chess.com.'}
+                  </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'report' && (
+            <div className="chess-profile-report">
+              <div className="chess-profile-panel">
+                <div className="chess-profile-panel-header">Player Report</div>
+                <div className="chess-profile-panel-body chess-profile-report-body">
+                  <PlayerWinStreakReport username={chessUsername} />
+                </div>
+              </div>
+
+              <div className="chess-profile-panel chess-profile-report-chart-panel">
+                <div className="chess-profile-panel-body">
+                  <YesterdayGamesChart username={chessUsername} />
+                </div>
               </div>
             </div>
           )}

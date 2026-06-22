@@ -33,5 +33,5 @@ export function loadChessComGame(userId, gameId) {
 export function openChessComGame(navigate, userId, game) {
   const profileUsername = decodeURIComponent(userId || '');
   const gameId = saveChessComGame(profileUsername, game);
-  navigate(`/users/${encodeURIComponent(profileUsername)}/game/${gameId}`, { state: { game } });
+  navigate(`/players/${encodeURIComponent(profileUsername)}/game/${gameId}`, { state: { game } });
 }

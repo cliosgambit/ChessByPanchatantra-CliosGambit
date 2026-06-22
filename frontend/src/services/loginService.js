@@ -5,7 +5,7 @@ import api from './authService';
 
 export const LOGIN_TABLE = 'Login';
 
-const LOGIN_SELECT = 'Chess_com_ID, Player_Name, email, Role';
+const LOGIN_SELECT = 'Chess_com_ID, Player_Name, email, Role, created_at';
 
 const LOGIN_KEY_MAP = {
   Chess_com_ID: ['Chess_com_ID', 'chess_com_id'],
@@ -32,7 +32,7 @@ export function normalizeLoginRow(row) {
   return normalizeKeys(row, LOGIN_KEY_MAP);
 }
 
-/** Maps Login table row → Users page shape. */
+/** Maps Login table row → Players page shape. */
 export function mapLoginToAppUser(row) {
   const n = normalizeLoginRow(row);
   if (!n?.Chess_com_ID) return null;

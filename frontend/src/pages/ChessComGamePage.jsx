@@ -76,7 +76,7 @@ function ChessComGamePage() {
             <button
               type="button"
               className="chess-game-topbar-btn"
-              onClick={() => navigate(`/users/${encodeURIComponent(profileUsername)}`)}
+              onClick={() => navigate(`/players/${encodeURIComponent(profileUsername)}`)}
             >
               <FiArrowLeft />
               <span>Back to Profile</span>

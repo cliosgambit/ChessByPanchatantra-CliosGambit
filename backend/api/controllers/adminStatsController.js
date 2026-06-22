@@ -2,6 +2,8 @@ const db = require('../config/database');
 
 exports.getDashboardStats = async (_req, res) => {
   try {
+    const activeLoginFilter = `LOWER(COALESCE("Role", 'student')) != 'paused'`;
+
     const [
       totalUsersRes,
       usersByRoleRes,
@@ -12,11 +14,12 @@ exports.getDashboardStats = async (_req, res) => {
       principlesRes,
       growthRes,
     ] = await Promise.all([
-      db.query('SELECT COUNT(*)::int AS count FROM users WHERE is_active = true'),
+      db.query(`SELECT COUNT(*)::int AS count FROM "Login" WHERE ${activeLoginFilter}`),
       db.query(
-        `SELECT LOWER(role) AS role, COUNT(*)::int AS count
-         FROM users WHERE is_active = true
-         GROUP BY LOWER(role)`
+        `SELECT LOWER("Role") AS role, COUNT(*)::int AS count
+         FROM "Login"
+         WHERE ${activeLoginFilter}
+         GROUP BY LOWER("Role")`
       ),
       db.query('SELECT COUNT(*)::int AS count FROM module'),
       db.query('SELECT COUNT(*)::int AS count FROM story'),
@@ -26,8 +29,9 @@ exports.getDashboardStats = async (_req, res) => {
       db.query(
         `SELECT TO_CHAR(created_at, 'Mon') AS month,
                 COUNT(*)::int AS users
-         FROM users
+         FROM "Login"
          WHERE created_at >= NOW() - INTERVAL '6 months'
+           AND ${activeLoginFilter}
          GROUP BY DATE_TRUNC('month', created_at), TO_CHAR(created_at, 'Mon')
          ORDER BY DATE_TRUNC('month', created_at)`
       ),
@@ -68,7 +72,7 @@ exports.getDashboardStats = async (_req, res) => {
           ];
 
     const recentActivity = [
-      { id: 1, type: 'student', title: 'Student registered', detail: 'New learner joined the academy', time: '2m ago' },
+      { id: 1, type: 'student', title: 'Player registered', detail: 'New learner joined the academy', time: '2m ago' },
       { id: 2, type: 'story', title: 'Story published', detail: 'A new Clio story is now live', time: '45m ago' },
       { id: 3, type: 'puzzle', title: 'Puzzle added', detail: 'Chess puzzle added to curriculum', time: '1h ago' },
       { id: 4, type: 'achievement', title: 'Achievement unlocked', detail: 'Students completed a milestone', time: '3h ago' },

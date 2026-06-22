@@ -1,0 +1,203 @@
+.view-puzzle-layout {
+  max-width: 960px;
+}
+
+.view-puzzle-layout--play {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  align-items: stretch;
+}
+
+.view-puzzle-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: min(78vh, 44rem);
+}
+
+.view-puzzle-main .view-puzzle-top-bar,
+.view-puzzle-main .view-brilliant-move-player-bar--bottom,
+.view-puzzle-main .view-puzzle-controls {
+  align-self: stretch;
+  width: 100%;
+}
+
+.view-puzzle-board-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin: 0 auto;
+  padding: 0 !important;
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.view-puzzle-layout .view-brilliant-move-board-stage.view-puzzle-board-stage {
+  padding: 0 !important;
+  background: transparent !important;
+  min-height: 0;
+}
+
+.view-puzzle-board-wrap {
+  flex-shrink: 0;
+  line-height: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.view-puzzle-top-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.view-puzzle-top-bar-status {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--chess-text-muted, #a8a6a3);
+  white-space: nowrap;
+  text-align: center;
+  justify-self: center;
+}
+
+.view-puzzle-opponent-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.2rem;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.22);
+  gap: 0.2rem;
+  justify-self: end;
+}
+
+.view-puzzle-opponent-toggle-btn {
+  min-height: 1.75rem;
+  padding: 0.28rem 0.62rem;
+  border: none;
+  border-radius: 0.28rem;
+  background: transparent;
+  color: var(--chess-text-muted, #a8a6a3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view-puzzle-opponent-toggle-btn:hover {
+  color: var(--chess-text, #f3f2f1);
+}
+
+.view-puzzle-opponent-toggle-btn--active {
+  background: var(--chess-accent, #6b9b4d);
+  color: #fff;
+}
+
+.view-puzzle-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 0.95rem;
+  border-top: 1px solid var(--chess-border, #3a3835);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.view-puzzle-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.35rem;
+  background: var(--chess-panel, #2b2927);
+  color: var(--chess-text, #f3f2f1);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.view-puzzle-control-btn:hover {
+  background: #403d3a;
+  border-color: #4a4744;
+}
+
+.view-puzzle-control-btn--primary {
+  background: var(--chess-accent, #6b9b4d);
+  border-color: #5a8740;
+  color: #fff;
+}
+
+.view-puzzle-control-btn--primary:hover {
+  background: #5a8740;
+  border-color: #4d7436;
+}
+
+.view-puzzle-answer {
+  font-size: 0.88rem;
+  color: var(--chess-text, #f3f2f1);
+}
+
+.view-puzzle-answer strong {
+  color: #e8c96a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1rem;
+}
+
+.view-puzzle-history-box {
+  min-height: 28rem;
+}
+
+.view-puzzle-history-san {
+  min-width: 2.75rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--cg-text, #f3f2f1);
+}
+
+.view-puzzle-game-nav {
+  border-top: none;
+  padding: 0;
+  background: transparent;
+}
+
+.view-puzzle-brilliant-link {
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+@media (max-width: 980px) {
+  .view-puzzle-layout--play {
+    grid-template-columns: 1fr;
+  }
+
+  .view-puzzle-history-box {
+    order: 2;
+  }
+
+  .view-puzzle-main {
+    min-height: min(72vh, 40rem);
+  }
+}
+
+@media (max-width: 520px) {
+  .view-puzzle-top-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+  }
+
+  .view-puzzle-top-bar-status {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}

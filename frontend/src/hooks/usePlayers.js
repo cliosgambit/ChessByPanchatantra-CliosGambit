@@ -1,52 +1,66 @@
-import { useMemo } from 'react';
-import { mapDbPlayerToAppPlayer } from '../services/playersService';
+import { useCallback, useMemo } from 'react';
+import { mapLoginToAppUser } from '../services/loginService';
 import { useSupabaseTable } from './useSupabaseTable';
 import { useDebouncedValue, filterBySearch } from '../utils/debounce';
 import { useClientPagination } from '../utils/pagination';
 
-const PLAYERS_SELECT =
-  'Chess_com_ID, Player_Name, Joining_Date, rapid_rating, rapid_best, blitz_rating, blitz_best, bullet_rating, bullet_best, current_elo, chess_last_synced_at, puzzle_rush_best, tactics_highest, activity_tracker';
-
 /**
- * Loads players from Supabase with realtime, debounced search, sorting, pagination.
+ * Loads Login table players with realtime sync, debounced search, role filter, pagination.
  */
-export function usePlayers({ search = '', pageSize = 25, sortKey = 'name' } = {}) {
+export function usePlayers({ pageSize = 25, roleFilter = 'all', search = '' } = {}) {
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { items, loading, error, refetch } = useSupabaseTable({
-    table: 'players',
-    select: PLAYERS_SELECT,
+  const { items, loading, error, refetch, setItems } = useSupabaseTable({
+    table: 'Login',
+    select: 'Chess_com_ID, Player_Name, email, Role, created_at',
     orderBy: 'Player_Name',
-    channelName: 'public:players-admin',
-    mapRow: mapDbPlayerToAppPlayer,
-    getRowId: (p) => p.id,
+    channelName: 'public:login-admin',
+    mapRow: mapLoginToAppUser,
+    getRowId: (u) => u.id,
     getDeleteId: (old) => old?.Chess_com_ID ?? old?.chess_com_id,
   });
 
-  const sorted = useMemo(() => {
-    const list = [...items];
-    if (sortKey === 'maxElo') {
-      return list.sort((a, b) => Number(b.maxElo || 0) - Number(a.maxElo || 0));
+  const filtered = useMemo(() => {
+    let list = items;
+    if (roleFilter !== 'all') {
+      list = list.filter(
+        (u) => u.roleRaw === roleFilter.toLowerCase() || u.role.toLowerCase() === roleFilter.toLowerCase()
+      );
     }
-    if (sortKey === 'joined') {
-      return list.sort((a, b) => String(b.joined).localeCompare(String(a.joined)));
-    }
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [items, sortKey]);
-
-  const filtered = useMemo(
-    () => filterBySearch(sorted, debouncedSearch, ['chessId', 'name', 'maxElo']),
-    [sorted, debouncedSearch]
-  );
+    return filterBySearch(list, debouncedSearch, ['name', 'email', 'chessComId', 'role']);
+  }, [items, roleFilter, debouncedSearch]);
 
   const pagination = useClientPagination(filtered, pageSize);
 
+  const upsertLocal = useCallback(
+    (user) => {
+      if (!user) return;
+      setItems((prev) => {
+        const exists = prev.some((u) => u.id === user.id);
+        if (exists) return prev.map((u) => (u.id === user.id ? user : u));
+        return [...prev, user].sort((a, b) => a.name.localeCompare(b.name));
+      });
+    },
+    [setItems]
+  );
+
+  const removeLocal = useCallback(
+    (id) => setItems((prev) => prev.filter((u) => u.id !== id)),
+    [setItems]
+  );
+
   return {
     players: pagination.paginatedItems,
+    allPlayers: items,
     filteredCount: filtered.length,
     loading,
     error,
     refetch,
+    upsertLocal,
+    removeLocal,
     pagination,
   };
 }
+
+/** @deprecated Use usePlayers */
+export const useUsers = usePlayers;

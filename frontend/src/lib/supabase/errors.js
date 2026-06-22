@@ -14,7 +14,9 @@ export function isNonRetryableError(error) {
     msg.includes('not configured') ||
     msg.includes('jwt') ||
     msg.includes('unauthorized') ||
-    msg.includes('401')
+    msg.includes('401') ||
+    msg.includes('backend server unavailable') ||
+    msg.includes('cannot reach backend')
   );
 }
 

@@ -202,27 +202,6 @@ exports.login = async (req, res) => {
 
         console.log(`Login successful for ID: ${id}, Role: ${user.Role}`);
 
-        if (user.email) {
-          const { rows: syncedRows } = await db.query(
-            `SELECT id, full_name, email, role, is_active
-             FROM users
-             WHERE LOWER(email) = LOWER($1)
-             LIMIT 1`,
-            [user.email]
-          );
-          const syncedUser = syncedRows[0];
-          if (syncedUser?.is_active) {
-            const safeUser = {
-              id: syncedUser.id,
-              full_name: syncedUser.full_name,
-              email: syncedUser.email,
-              role: (syncedUser.role || 'student').toLowerCase(),
-            };
-            const token = signToken(safeUser, false);
-            return res.json({ token, user: safeUser });
-          }
-        }
-
         const safeUser = {
           id: user.Chess_com_ID,
           full_name: user.Player_Name || user.Chess_com_ID,

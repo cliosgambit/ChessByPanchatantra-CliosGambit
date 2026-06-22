@@ -15,6 +15,28 @@ const CHESS_API = 'https://api.chess.com';
 const ARCHIVE_DELAY_MS = 250;
 const GAME_UPSERT_CHUNK = 20;
 const MOVE_UPSERT_CHUNK = 40;
+const QUICK_SYNC_RECENT_ARCHIVES = 3;
+const PREVIEW_PGN_LIMIT = 12;
+const DEFAULT_YESTERDAY_TZ = 'Asia/Kolkata';
+const SYNC_CONCURRENCY = 4;
+
+/** chessComId -> in-flight background sync promise */
+const backgroundSyncs = new Map();
+let yesterdaysSyncTask = null;
+
+const GAME_LIST_COLUMNS = `
+  chess_com_uuid, chess_com_id, game_url, played_at, time_class, time_control, time_control_label,
+  rated, white_username, black_username, white_rating, black_rating,
+  white_result, black_result, white_accuracy, black_accuracy,
+  white_country_code, black_country_code, white_score, black_score,
+  self_color, self_result, self_result_type, result_notation, opponent_username, move_count
+`.replace(/\s+/g, ' ');
+
+function gameListColumns(alias) {
+  return GAME_LIST_COLUMNS.split(',')
+    .map((col) => `${alias}.${col.trim()}`)
+    .join(', ');
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -252,15 +274,21 @@ async function upsertGamesBatch(chessComId, parsedGames) {
       params
     );
     upserted += chunk.length;
-    await saveMovesForGames(chessComId, chunk);
   }
 
   return upserted;
 }
 
-async function replaceMovesForGame(chessComUuid, chessComId, pgn) {
+async function getStoredMoveCount(chessComUuid) {
+  const { rows } = await db.query(
+    'SELECT COUNT(*)::int AS count FROM chess_com_moves WHERE chess_com_uuid = $1',
+    [chessComUuid]
+  );
+  return rows[0]?.count || 0;
+}
+
+async function insertMovesForGame(chessComUuid, chessComId, pgn) {
   const moves = parsePgnToMoves(pgn);
-  await db.query('DELETE FROM chess_com_moves WHERE chess_com_uuid = $1', [chessComUuid]);
   if (!moves.length) return 0;
 
   let saved = 0;
@@ -296,33 +324,50 @@ async function replaceMovesForGame(chessComUuid, chessComId, pgn) {
       );
     }
 
-    await db.query(
+    const { rowCount } = await db.query(
       `INSERT INTO chess_com_moves (
         chess_com_uuid, chess_com_id, ply, move_number, color, san,
         from_square, to_square, piece, captured, promotion,
         fen_before, fen_after, is_check, is_mate, is_capture,
         is_castle, is_en_passant, is_promotion
-      ) VALUES ${valueRows.join(', ')}`,
+      ) VALUES ${valueRows.join(', ')}
+      ON CONFLICT (chess_com_uuid, ply) DO NOTHING`,
       params
     );
-    saved += chunk.length;
+    saved += rowCount || 0;
   }
 
   return saved;
 }
 
-async function saveMovesForGames(chessComId, parsedGames) {
-  let total = 0;
-  for (const game of parsedGames) {
-    if (!game.chess_com_uuid || !game.pgn) continue;
-    total += await replaceMovesForGame(game.chess_com_uuid, chessComId, game.pgn);
+/** Skip parse/insert when this game UUID already has moves (keyed by chess_com_uuid + ply). */
+async function ensureMovesForGame(chessComUuid, chessComId, pgn, expectedMoveCount = 0) {
+  const stored = await getStoredMoveCount(chessComUuid);
+  if (stored > 0 && (expectedMoveCount <= 0 || stored >= expectedMoveCount)) {
+    return 0;
   }
-  return total;
+  return insertMovesForGame(chessComUuid, chessComId, pgn);
+}
+
+async function lazyParseAndStoreMoves(chessComId, uuid) {
+  const { rows } = await db.query(
+    `SELECT pgn, move_count FROM chess_com_games
+     WHERE chess_com_id = $1 AND chess_com_uuid = $2
+     LIMIT 1`,
+    [chessComId.toLowerCase(), uuid]
+  );
+  if (!rows[0]?.pgn) return 0;
+  return ensureMovesForGame(
+    uuid,
+    chessComId.toLowerCase(),
+    rows[0].pgn,
+    rows[0].move_count || 0
+  );
 }
 
 async function backfillMissingMoves(chessComId, limit = 100) {
   const { rows } = await db.query(
-    `SELECT g.chess_com_uuid, g.pgn
+    `SELECT g.chess_com_uuid, g.pgn, g.move_count
      FROM chess_com_games g
      WHERE g.chess_com_id = $1
        AND NOT EXISTS (
@@ -335,11 +380,17 @@ async function backfillMissingMoves(chessComId, limit = 100) {
 
   if (!rows.length) return 0;
 
-  const games = rows.map((row) => ({
-    chess_com_uuid: row.chess_com_uuid,
-    pgn: row.pgn,
-  }));
-  return saveMovesForGames(chessComId, games);
+  let total = 0;
+  for (const row of rows) {
+    if (!row.pgn) continue;
+    total += await ensureMovesForGame(
+      row.chess_com_uuid,
+      chessComId.toLowerCase(),
+      row.pgn,
+      row.move_count || 0
+    );
+  }
+  return total;
 }
 
 async function upsertGame(chessComId, parsed) {
@@ -375,7 +426,33 @@ async function upsertClubs(chessComId, clubs) {
   }
 }
 
-async function syncPlayerFromChessCom(username, { forceFull = false } = {}) {
+function scheduleBackgroundSync(username) {
+  const chessComId = username.trim().toLowerCase();
+  if (backgroundSyncs.has(chessComId)) return backgroundSyncs.get(chessComId);
+
+  const task = (async () => {
+    const existing = await getProfileRow(chessComId);
+    if (!existing) {
+      await quickSyncPlayer(username);
+      return;
+    }
+    await syncPlayerFromChessCom(username, { forceFull: false });
+  })()
+    .catch((err) => console.error(`[chess-com bg sync] ${username}:`, err.message))
+    .finally(() => backgroundSyncs.delete(chessComId));
+
+  backgroundSyncs.set(chessComId, task);
+  return task;
+}
+
+async function quickSyncPlayer(username) {
+  return syncPlayerFromChessCom(username, {
+    forceFull: false,
+    maxRecentArchives: QUICK_SYNC_RECENT_ARCHIVES,
+  });
+}
+
+async function syncPlayerFromChessCom(username, { forceFull = false, maxRecentArchives = null } = {}) {
   const safeName = username.trim();
   const profileRaw = await fetchChessJson(`/pub/player/${encodeURIComponent(safeName)}`);
   if (profileRaw?.notFound) {
@@ -405,7 +482,11 @@ async function syncPlayerFromChessCom(username, { forceFull = false } = {}) {
   }));
   await upsertClubs(chessComId, clubs);
 
-  const archiveUrls = archivesRaw?.archives || [];
+  const allArchiveUrls = archivesRaw?.archives || [];
+  const archiveUrls =
+    maxRecentArchives != null && !forceFull
+      ? allArchiveUrls.slice(-maxRecentArchives)
+      : allArchiveUrls;
   let gamesUpserted = 0;
   let archivesFetched = 0;
   let archivesSkipped = 0;
@@ -413,7 +494,10 @@ async function syncPlayerFromChessCom(username, { forceFull = false } = {}) {
   for (const archiveUrl of archiveUrls) {
     const meta = archiveMetaFromUrl(archiveUrl);
 
-    if (!shouldFetchArchiveMonth(meta, syncedArchives, { forceFull })) {
+    if (
+      maxRecentArchives == null &&
+      !shouldFetchArchiveMonth(meta, syncedArchives, { forceFull })
+    ) {
       archivesSkipped += 1;
       continue;
     }
@@ -450,22 +534,18 @@ async function syncPlayerFromChessCom(username, { forceFull = false } = {}) {
   );
 
   console.log(
-    `[chess-com sync] ${apiUsername}: fetched ${archivesFetched} month(s), skipped ${archivesSkipped}, upserted ${gamesUpserted} game(s)`
+    `[chess-com sync] ${apiUsername}: fetched ${archivesFetched} month(s), skipped ${archivesSkipped}, upserted ${gamesUpserted} game(s) (PGN only; moves parsed on game open)`
   );
-
-  const movesBackfilled = await backfillMissingMoves(chessComId);
-  if (movesBackfilled > 0) {
-    console.log(`[chess-com sync] ${apiUsername}: backfilled ${movesBackfilled} move(s) from existing games`);
-  }
 
   return {
     chessComId,
     username: apiUsername,
-    incremental: !forceFull,
+    incremental: !forceFull && maxRecentArchives == null,
+    quickSync: maxRecentArchives != null,
     archivesProcessed: archivesFetched,
     archivesSkipped,
     gamesUpserted,
-    movesBackfilled,
+    movesBackfilled: 0,
     totalGamesInDb: countRows[0].count,
   };
 }
@@ -491,62 +571,151 @@ async function needsSync(chessComId, maxAgeHours = 24) {
   );
 }
 
+async function getProfileSummary(username) {
+  const chessComId = username.trim().toLowerCase();
+  const profileRow = await getProfileRow(chessComId);
+
+  if (!profileRow) {
+    scheduleBackgroundSync(username);
+    return {
+      linked: false,
+      pending: true,
+      username: username.trim(),
+      profile: null,
+      stats: null,
+      totalGames: 0,
+      backgroundSync: true,
+      error: null,
+    };
+  }
+
+  let backgroundSync = false;
+  if (await needsSync(chessComId)) {
+    scheduleBackgroundSync(username);
+    backgroundSync = true;
+  }
+
+  const mapped = mapDbProfileRow(profileRow);
+  return {
+    linked: true,
+    pending: false,
+    profile: mapped.profile,
+    stats: mapped.stats,
+    totalGames: profileRow.total_games_estimate || 0,
+    lastSyncedAt: profileRow.last_synced_at,
+    syncStatus: profileRow.sync_status,
+    backgroundSync,
+    error: profileRow.sync_error,
+  };
+}
+
 async function getBundle(username, { forceSync = false } = {}) {
   const chessComId = username.trim().toLowerCase();
 
-  if (forceSync || (await needsSync(chessComId))) {
+  if (forceSync) {
     try {
-      await syncPlayerFromChessCom(username);
+      await syncPlayerFromChessCom(username, { forceFull: true });
     } catch (err) {
       const existing = await getProfileRow(chessComId);
       if (!existing) throw err;
     }
   }
 
-  const profileRow = await getProfileRow(chessComId);
-  if (!profileRow) {
-    return { linked: false, profile: null, error: 'Player not synced. Try syncing again.' };
+  const summary = await getProfileSummary(username);
+  if (!summary.linked) {
+    return {
+      ...summary,
+      recentGames: [],
+      archives: [],
+      clubs: [],
+    };
   }
 
-  const mapped = mapDbProfileRow(profileRow);
-  const [gamesRes, archivesRes, clubsRes, monthsRes] = await Promise.all([
-    getRecentGames(chessComId, 25),
+  const [gamesRes, archivesRes, clubsRes] = await Promise.all([
+    getRecentGames(chessComId, 25, { includeTotal: false }),
     getArchives(chessComId),
     getClubs(chessComId),
-    getMonthlyGames(chessComId, 12),
   ]);
 
   return {
-    linked: true,
-    profile: mapped.profile,
-    stats: mapped.stats,
+    ...summary,
     recentGames: gamesRes.games,
-    totalGames: profileRow.total_games_estimate || gamesRes.total,
+    totalGames: summary.totalGames || gamesRes.total,
     archives: archivesRes,
-    monthlyGames: monthsRes,
     clubs: clubsRes,
-    lastSyncedAt: profileRow.last_synced_at,
-    syncStatus: profileRow.sync_status,
-    error: profileRow.sync_error,
   };
 }
 
-async function getRecentGames(chessComId, limit = 25) {
+async function attachPreviewPgnsByUuids(games, previewLimit = PREVIEW_PGN_LIMIT) {
+  const slice =
+    previewLimit == null || previewLimit === Infinity
+      ? games
+      : games.slice(0, previewLimit);
+  const uuids = slice.map((g) => g.uuid).filter(Boolean);
+  if (!uuids.length) return games;
+
   const { rows } = await db.query(
-    `SELECT * FROM chess_com_games
+    `SELECT chess_com_uuid, pgn FROM chess_com_games
+     WHERE chess_com_uuid = ANY($1)`,
+    [uuids]
+  );
+  const pgnByUuid = new Map(rows.map((row) => [row.chess_com_uuid, row.pgn]));
+  return games.map((game) =>
+    pgnByUuid.has(game.uuid) ? { ...game, pgn: pgnByUuid.get(game.uuid) } : game
+  );
+}
+
+async function attachPreviewPgns(chessComId, games, previewLimit = PREVIEW_PGN_LIMIT) {
+  const slice =
+    previewLimit == null || previewLimit === Infinity
+      ? games
+      : games.slice(0, previewLimit);
+  const uuids = slice.map((g) => g.uuid).filter(Boolean);
+  if (!uuids.length) return games;
+
+  const { rows } = await db.query(
+    `SELECT chess_com_uuid, pgn FROM chess_com_games
+     WHERE chess_com_id = $1 AND chess_com_uuid = ANY($2)`,
+    [chessComId.toLowerCase(), uuids]
+  );
+  const pgnByUuid = new Map(rows.map((row) => [row.chess_com_uuid, row.pgn]));
+  return games.map((game) =>
+    pgnByUuid.has(game.uuid) ? { ...game, pgn: pgnByUuid.get(game.uuid) } : game
+  );
+}
+
+async function getRecentGames(chessComId, limit = 25, { attachPreviewPgn = false, includeTotal = true } = {}) {
+  const id = chessComId.toLowerCase();
+  const { rows } = await db.query(
+    `SELECT ${GAME_LIST_COLUMNS} FROM chess_com_games
      WHERE chess_com_id = $1
      ORDER BY played_at DESC NULLS LAST
      LIMIT $2`,
-    [chessComId.toLowerCase(), limit]
+    [id, limit]
   );
-  const { rows: countRows } = await db.query(
-    'SELECT COUNT(*)::int AS count FROM chess_com_games WHERE chess_com_id = $1',
-    [chessComId.toLowerCase()]
+  let games = rows.map(mapDbGameRow);
+  if (attachPreviewPgn) {
+    games = await attachPreviewPgns(id, games, games.length);
+  }
+
+  let total = games.length;
+  if (includeTotal) {
+    const { rows: countRows } = await db.query(
+      'SELECT COUNT(*)::int AS count FROM chess_com_games WHERE chess_com_id = $1',
+      [id]
+    );
+    total = countRows[0]?.count || 0;
+  }
+
+  return { games, total };
+}
+
+async function getGamePgn(chessComId, uuid) {
+  const { rows } = await db.query(
+    'SELECT pgn FROM chess_com_games WHERE chess_com_id = $1 AND chess_com_uuid = $2 LIMIT 1',
+    [chessComId.toLowerCase(), uuid]
   );
-  return {
-    games: rows.map(mapDbGameRow),
-    total: countRows[0]?.count || 0,
-  };
+  return rows[0]?.pgn || null;
 }
 
 async function getGameByUuid(chessComId, uuid) {
@@ -558,11 +727,18 @@ async function getGameByUuid(chessComId, uuid) {
 }
 
 async function getMovesForGame(chessComId, uuid) {
+  const id = chessComId.toLowerCase();
+
+  const stored = await getStoredMoveCount(uuid);
+  if (stored === 0) {
+    await lazyParseAndStoreMoves(id, uuid);
+  }
+
   const { rows } = await db.query(
     `SELECT * FROM chess_com_moves
      WHERE chess_com_id = $1 AND chess_com_uuid = $2
      ORDER BY ply ASC`,
-    [chessComId.toLowerCase(), uuid]
+    [id, uuid]
   );
   return rows.map(mapDbMoveRow);
 }
@@ -589,39 +765,81 @@ async function getArchives(chessComId) {
   });
 }
 
-async function getMonthlyGames(chessComId, maxMonths = 12) {
+async function getMonthlyGames(
+  chessComId,
+  maxMonths = 12,
+  perMonth = 8,
+  { attachPreviewPgn = false } = {}
+) {
+  const id = chessComId.toLowerCase();
   const { rows: archiveRows } = await db.query(
     `SELECT archive_year, archive_month, archive_url, game_count
      FROM chess_com_archives
      WHERE chess_com_id = $1
      ORDER BY archive_year DESC, archive_month DESC
      LIMIT $2`,
-    [chessComId.toLowerCase(), maxMonths]
+    [id, maxMonths]
   );
 
-  const months = [];
-  for (const archive of archiveRows) {
-    const monthKey = `${archive.archive_year}-${String(archive.archive_month).padStart(2, '0')}`;
-    const { rows: gameRows } = await db.query(
-      `SELECT * FROM chess_com_games
-       WHERE chess_com_id = $1
-         AND EXTRACT(YEAR FROM played_at) = $2
-         AND EXTRACT(MONTH FROM played_at) = $3
-       ORDER BY played_at DESC`,
-      [chessComId.toLowerCase(), archive.archive_year, archive.archive_month]
-    );
+  if (!archiveRows.length) return [];
 
+  const { rows: gameRows } = await db.query(
+    `SELECT ${GAME_LIST_COLUMNS}, archive_year, archive_month FROM (
+       SELECT ${gameListColumns('g')},
+         a.archive_year,
+         a.archive_month,
+         ROW_NUMBER() OVER (
+           PARTITION BY a.archive_year, a.archive_month
+           ORDER BY g.played_at DESC NULLS LAST
+         ) AS rn
+       FROM chess_com_archives a
+       JOIN chess_com_games g ON g.chess_com_id = a.chess_com_id
+         AND EXTRACT(YEAR FROM g.played_at) = a.archive_year
+         AND EXTRACT(MONTH FROM g.played_at) = a.archive_month
+       WHERE a.chess_com_id = $1
+     ) ranked
+     WHERE rn <= $2
+     ORDER BY archive_year DESC, archive_month DESC, played_at DESC NULLS LAST`,
+    [id, perMonth]
+  );
+
+  const grouped = new Map();
+
+  for (const row of gameRows) {
+    const monthKey = `${row.archive_year}-${String(row.archive_month).padStart(2, '0')}`;
+    if (!grouped.has(monthKey)) grouped.set(monthKey, []);
+    grouped.get(monthKey).push(mapDbGameRow(row));
+  }
+
+  let months = archiveRows.map((archive) => {
+    const monthKey = `${archive.archive_year}-${String(archive.archive_month).padStart(2, '0')}`;
     const monthIndex = archive.archive_month - 1;
-    months.push({
+    return {
       month: monthKey,
       label: new Date(archive.archive_year, monthIndex, 1).toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric',
       }),
       archiveUrl: archive.archive_url,
-      gameCount: archive.game_count || gameRows.length,
-      games: gameRows.map(mapDbGameRow),
-    });
+      gameCount: archive.game_count || grouped.get(monthKey)?.length || 0,
+      games: grouped.get(monthKey) || [],
+    };
+  });
+
+  if (attachPreviewPgn) {
+    const flatGames = months.flatMap((month) => month.games);
+    if (flatGames.length) {
+      const withPgn = await attachPreviewPgns(id, flatGames, flatGames.length);
+      const pgnByUuid = new Map(
+        withPgn.filter((game) => game.pgn).map((game) => [game.uuid, game.pgn])
+      );
+      months = months.map((month) => ({
+        ...month,
+        games: month.games.map((game) =>
+          pgnByUuid.has(game.uuid) ? { ...game, pgn: pgnByUuid.get(game.uuid) } : game
+        ),
+      }));
+    }
   }
 
   return months;
@@ -640,15 +858,347 @@ async function getClubs(chessComId) {
   }));
 }
 
+async function getTrackedPlayerIds() {
+  const { rows } = await db.query(
+    `SELECT DISTINCT LOWER(TRIM("Chess_com_ID")) AS chess_com_id
+     FROM "Login"
+     WHERE "Chess_com_ID" IS NOT NULL AND TRIM("Chess_com_ID") <> ''`
+  );
+  return rows.map((row) => row.chess_com_id).filter(Boolean);
+}
+
+function formatDayLabelInTz(timeZone = DEFAULT_YESTERDAY_TZ, daysAgo = 0) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(new Date());
+  const get = (type) => Number(parts.find((p) => p.type === type)?.value);
+  const local = new Date(get('year'), get('month') - 1, get('day') - daysAgo);
+  return local.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatGamePlayedAt(iso, timeZone = DEFAULT_YESTERDAY_TZ) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', {
+    timeZone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function buildDayFilterLabels(timeZone = DEFAULT_YESTERDAY_TZ) {
+  return {
+    today: formatDayLabelInTz(timeZone, 0),
+    yesterday: formatDayLabelInTz(timeZone, 1),
+    day_before: formatDayLabelInTz(timeZone, 2),
+    all: 'All Days',
+  };
+}
+
+function normalizeDayFilter(dayFilter) {
+  const value = String(dayFilter || 'all').toLowerCase();
+  if (value === 'today') return 'today';
+  if (value === 'yesterday') return 'yesterday';
+  if (value === 'day_before' || value === 'day-before' || value === 'daybefore') {
+    return 'day_before';
+  }
+  return 'all';
+}
+
+function dayFilterToDaysAgo(dayFilter) {
+  if (dayFilter === 'today') return 0;
+  if (dayFilter === 'yesterday') return 1;
+  if (dayFilter === 'day_before') return 2;
+  return null;
+}
+
+function formatYesterdayLabel(timeZone = DEFAULT_YESTERDAY_TZ) {
+  return formatDayLabelInTz(timeZone, 1);
+}
+
+async function getTrackedGamesByDay({
+  dayFilter = 'all',
+  timeZone = DEFAULT_YESTERDAY_TZ,
+  attachPreviewPgn = true,
+} = {}) {
+  const filter = normalizeDayFilter(dayFilter);
+  const daysAgo = dayFilterToDaysAgo(filter);
+  const filterLabels = buildDayFilterLabels(timeZone);
+  const playerIds = await getTrackedPlayerIds();
+
+  if (!playerIds.length) {
+    return {
+      games: [],
+      date: filter === 'all' ? filterLabels.all : filterLabels[filter],
+      dayFilter: filter,
+      filterLabels,
+      playersCount: 0,
+      timeZone,
+    };
+  }
+
+  const params = [playerIds];
+  let dateClause = '';
+
+  if (daysAgo != null) {
+    params.push(timeZone);
+    dateClause = `AND (g.played_at AT TIME ZONE $2)::date =
+           ((NOW() AT TIME ZONE $2)::date - INTERVAL '${daysAgo} day')`;
+  }
+
+  const { rows } = await db.query(
+    `SELECT ${GAME_LIST_COLUMNS}
+     FROM chess_com_games g
+     WHERE g.chess_com_id = ANY($1::text[])
+       AND g.played_at IS NOT NULL
+       ${dateClause}
+     ORDER BY g.played_at DESC`,
+    params
+  );
+
+  let games = rows.map((row) => {
+    const game = mapDbGameRow(row);
+    game.date = formatGamePlayedAt(game.playedAt, timeZone);
+    return game;
+  });
+
+  if (attachPreviewPgn && games.length) {
+    games = await attachPreviewPgnsByUuids(games, games.length);
+  }
+
+  return {
+    games,
+    date: filter === 'all' ? filterLabels.all : filterLabels[filter],
+    dayFilter: filter,
+    filterLabels,
+    playersCount: playerIds.length,
+    timeZone,
+  };
+}
+
+async function getYesterdaysGames(options = {}) {
+  return getTrackedGamesByDay({ ...options, dayFilter: 'yesterday' });
+}
+
+async function syncTrackedPlayersRecent({ concurrency = SYNC_CONCURRENCY } = {}) {
+  const playerIds = await getTrackedPlayerIds();
+  const results = { synced: 0, failed: 0, total: playerIds.length, errors: [] };
+
+  for (let offset = 0; offset < playerIds.length; offset += concurrency) {
+    const batch = playerIds.slice(offset, offset + concurrency);
+    await Promise.all(
+      batch.map(async (playerId) => {
+        try {
+          await syncPlayerFromChessCom(playerId, {
+            forceFull: false,
+            maxRecentArchives: 2,
+          });
+          results.synced += 1;
+        } catch (err) {
+          results.failed += 1;
+          if (results.errors.length < 20) {
+            results.errors.push({ username: playerId, error: err.message });
+          }
+        }
+      })
+    );
+  }
+
+  return results;
+}
+
+function isYesterdaysSyncInProgress() {
+  return Boolean(yesterdaysSyncTask);
+}
+
+function startYesterdaysSyncInBackground() {
+  if (yesterdaysSyncTask) return yesterdaysSyncTask;
+
+  yesterdaysSyncTask = syncTrackedPlayersRecent()
+    .then((result) => {
+      console.log('[chess-com yesterdays sync] complete:', result);
+      return result;
+    })
+    .catch((err) => {
+      console.error('[chess-com yesterdays sync] failed:', err.message);
+      throw err;
+    })
+    .finally(() => {
+      yesterdaysSyncTask = null;
+    });
+
+  return yesterdaysSyncTask;
+}
+
+async function getRatingHistory(chessComId, months = 3) {
+  const id = chessComId.toLowerCase();
+  const safeMonths = Math.min(Math.max(Number(months) || 3, 1), 12);
+  const since = new Date();
+  since.setMonth(since.getMonth() - safeMonths);
+
+  const { rows } = await db.query(
+    `SELECT played_at, time_class, white_rating, black_rating, self_color, rated
+     FROM chess_com_games
+     WHERE chess_com_id = $1
+       AND played_at >= $2
+       AND rated = TRUE
+     ORDER BY played_at ASC NULLS LAST`,
+    [id, since.toISOString()]
+  );
+
+  const games = rows
+    .map((row) => {
+      const isWhite = row.self_color === 'white';
+      const selfRating = isWhite ? row.white_rating : row.black_rating;
+      return {
+        timeClass: row.time_class,
+        selfRating,
+        playedAt: row.played_at ? new Date(row.played_at).toISOString() : null,
+        date: row.played_at
+          ? new Date(row.played_at).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : null,
+      };
+    })
+    .filter((game) => game.timeClass && game.selfRating != null);
+
+  return {
+    months: safeMonths,
+    since: since.toISOString(),
+    games,
+  };
+}
+
+function highestWinStreakFromResults(resultTypes) {
+  let max = 0;
+  let current = 0;
+
+  for (const resultType of resultTypes) {
+    if (resultType === 'win') {
+      current += 1;
+      if (current > max) max = current;
+    } else {
+      current = 0;
+    }
+  }
+
+  return max;
+}
+
+async function getPlayerWinStreaks(chessComId, timeZone = DEFAULT_YESTERDAY_TZ) {
+  const id = chessComId.toLowerCase();
+
+  const { rows: allRows } = await db.query(
+    `SELECT self_result_type
+     FROM chess_com_games
+     WHERE chess_com_id = $1 AND played_at IS NOT NULL
+     ORDER BY played_at ASC`,
+    [id]
+  );
+
+  const { rows: yesterdayRows } = await db.query(
+    `SELECT self_result_type
+     FROM chess_com_games
+     WHERE chess_com_id = $1
+       AND played_at IS NOT NULL
+       AND (played_at AT TIME ZONE $2)::date =
+           ((NOW() AT TIME ZONE $2)::date - INTERVAL '1 day')
+     ORDER BY played_at ASC`,
+    [id, timeZone]
+  );
+
+  return {
+    timeZone,
+    yesterday: {
+      label: formatDayLabelInTz(timeZone, 1),
+      gameCount: yesterdayRows.length,
+      highestWinStreak: highestWinStreakFromResults(
+        yesterdayRows.map((row) => row.self_result_type)
+      ),
+    },
+    allTime: {
+      gameCount: allRows.length,
+      highestWinStreak: highestWinStreakFromResults(allRows.map((row) => row.self_result_type)),
+    },
+  };
+}
+
+async function getPlayerGamesByDay(
+  chessComId,
+  { dayFilter = 'yesterday', timeZone = DEFAULT_YESTERDAY_TZ } = {}
+) {
+  const id = chessComId.toLowerCase();
+  const filter = normalizeDayFilter(dayFilter);
+  const daysAgo = dayFilterToDaysAgo(filter);
+
+  if (daysAgo == null) {
+    return {
+      games: [],
+      dayFilter: filter,
+      label: buildDayFilterLabels(timeZone).all,
+      timeZone,
+    };
+  }
+
+  const { rows } = await db.query(
+    `SELECT ${GAME_LIST_COLUMNS}
+     FROM chess_com_games g
+     WHERE g.chess_com_id = $1
+       AND g.played_at IS NOT NULL
+       AND (g.played_at AT TIME ZONE $2)::date =
+           ((NOW() AT TIME ZONE $2)::date - INTERVAL '${daysAgo} day')
+     ORDER BY g.played_at ASC`,
+    [id, timeZone]
+  );
+
+  const games = rows.map((row) => {
+    const game = mapDbGameRow(row);
+    game.playedAtLabel = formatGamePlayedAt(game.playedAt, timeZone);
+    return game;
+  });
+
+  return {
+    games,
+    dayFilter: filter,
+    label: formatDayLabelInTz(timeZone, daysAgo),
+    timeZone,
+  };
+}
+
 module.exports = {
   syncPlayerFromChessCom,
+  quickSyncPlayer,
+  scheduleBackgroundSync,
+  getProfileSummary,
   getBundle,
   getRecentGames,
   getGameByUuid,
+  getGamePgn,
   getMovesForGame,
   getArchives,
   getMonthlyGames,
+  getRatingHistory,
   getClubs,
+  getPlayerWinStreaks,
+  getPlayerGamesByDay,
+  getYesterdaysGames,
+  getTrackedGamesByDay,
+  syncTrackedPlayersRecent,
+  startYesterdaysSyncInBackground,
+  isYesterdaysSyncInProgress,
   needsSync,
   backfillMissingMoves,
 };

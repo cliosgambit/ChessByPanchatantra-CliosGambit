@@ -13,38 +13,64 @@ async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
+function normalizeChessComId(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizePlayerName(value) {
+  return String(value || '').trim();
+}
+
 router.use('/admin', authenticate, authorizeRoles('admin'));
 
 router.post('/admin/login-users', async (req, res) => {
   const { Chess_com_ID, Player_Name, email, password, Role } = req.body;
 
-  if (!Chess_com_ID || !email || !password) {
-    return res.status(400).json({ message: 'Chess_com_ID, email, and password are required.' });
+  const chessComId = normalizeChessComId(Chess_com_ID);
+  const playerName = normalizePlayerName(Player_Name);
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+
+  if (!chessComId || !normalizedEmail || !password) {
+    return res.status(400).json({ message: 'Chess.com ID, email, and password are required.' });
+  }
+
+  if (!playerName) {
+    return res.status(400).json({ message: 'Player name is required.' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
   }
 
   try {
     const passwordHash = await hashPassword(password);
     const { rows } = await db.query(
-      `INSERT INTO "Login" ("Chess_com_ID", "Player_Name", email, password, "Role")
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO "Login" ("Chess_com_ID", "Player_Name", email, password, "Role", created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING "Chess_com_ID", "Player_Name", email, "Role"`,
-      [Chess_com_ID.trim(), Player_Name || Chess_com_ID.trim(), email.trim().toLowerCase(), passwordHash, Role || 'student']
+      [chessComId, playerName, normalizedEmail, passwordHash, Role || 'student']
     );
 
-    await syncUsersTableRow(rows[0], passwordHash);
+    await syncPlayersTableRow(rows[0]);
+
     return res.status(201).json({ user: rows[0] });
   } catch (err) {
     console.error('Create login user error:', err.message);
     if (err.code === '23505') {
-      return res.status(409).json({ message: 'A user with this Chess.com ID or email already exists.' });
+      return res.status(409).json({ message: 'A player with this Chess.com ID or email already exists.' });
     }
-    return res.status(500).json({ message: 'Failed to create user.' });
+    return res.status(500).json({ message: 'Failed to create player.' });
   }
 });
 
 router.put('/admin/login-users/:chessComId', async (req, res) => {
-  const { chessComId } = req.params;
+  const chessComId = normalizeChessComId(req.params.chessComId);
   const { Player_Name, email, password, Role } = req.body;
+
+  const playerName = Player_Name != null ? normalizePlayerName(Player_Name) : null;
+  if (Player_Name != null && !playerName) {
+    return res.status(400).json({ message: 'Player name cannot be empty.' });
+  }
 
   try {
     const passwordHash = password ? await hashPassword(password) : null;
@@ -55,53 +81,63 @@ router.put('/admin/login-users/:chessComId', async (req, res) => {
            email = COALESCE($3, email),
            password = COALESCE($4, password),
            "Role" = COALESCE($5, "Role")
-       WHERE "Chess_com_ID" = $1
+       WHERE LOWER("Chess_com_ID") = LOWER($1)
        RETURNING "Chess_com_ID", "Player_Name", email, "Role", password`,
-      [chessComId, Player_Name || null, email ? email.trim().toLowerCase() : null, passwordHash, Role || null]
+      [
+        chessComId,
+        playerName || null,
+        email ? String(email).trim().toLowerCase() : null,
+        passwordHash,
+        Role || null,
+      ]
     );
 
     if (!rows[0]) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ message: 'Player not found.' });
     }
 
-    await syncUsersTableRow(rows[0], rows[0].password);
+    await syncPlayersTableRow(rows[0]);
     return res.json({ user: rows[0] });
   } catch (err) {
     console.error('Update login user error:', err.message);
-    return res.status(500).json({ message: 'Failed to update user.' });
+    if (err.code === '23505') {
+      return res.status(409).json({ message: 'A player with this email already exists.' });
+    }
+    return res.status(500).json({ message: 'Failed to update player.' });
   }
 });
 
 router.delete('/admin/login-users/:chessComId', async (req, res) => {
-  const { chessComId } = req.params;
+  const chessComId = normalizeChessComId(req.params.chessComId);
   try {
-    const loginRes = await db.query(`DELETE FROM "Login" WHERE "Chess_com_ID" = $1 RETURNING email`, [chessComId]);
+    const loginRes = await db.query(
+      `DELETE FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1) RETURNING "Chess_com_ID"`,
+      [chessComId]
+    );
     if (!loginRes.rows[0]) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ message: 'Player not found.' });
     }
-    if (loginRes.rows[0].email) {
-      await db.query('DELETE FROM users WHERE LOWER(email) = LOWER($1)', [loginRes.rows[0].email]);
-    }
-    return res.json({ message: 'User deleted.' });
+    await db.query('DELETE FROM players WHERE LOWER("Chess_com_ID") = LOWER($1)', [
+      loginRes.rows[0].Chess_com_ID,
+    ]);
+    return res.json({ message: 'Player deleted.' });
   } catch (err) {
     console.error('Delete login user error:', err.message);
-    return res.status(500).json({ message: 'Failed to delete user.' });
+    return res.status(500).json({ message: 'Failed to delete player.' });
   }
 });
 
-async function syncUsersTableRow(row, passwordHash) {
-  if (!row?.email) return;
-  const role = (row.Role || 'student').toLowerCase();
-  const isPaused = role === 'paused';
+async function syncPlayersTableRow(row) {
+  const chessComId = normalizeChessComId(row?.Chess_com_ID);
+  const playerName = normalizePlayerName(row?.Player_Name);
+  if (!chessComId || !playerName) return;
+
   await db.query(
-    `INSERT INTO users (full_name, email, password_hash, role, is_active)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (email) DO UPDATE SET
-       full_name = EXCLUDED.full_name,
-       password_hash = EXCLUDED.password_hash,
-       role = EXCLUDED.role,
-       is_active = EXCLUDED.is_active`,
-    [row.Chess_com_ID || row.Player_Name, row.email, passwordHash, isPaused ? 'student' : role, !isPaused]
+    `INSERT INTO players ("Chess_com_ID", "Player_Name")
+     VALUES ($1, $2)
+     ON CONFLICT ("Chess_com_ID") DO UPDATE SET
+       "Player_Name" = EXCLUDED."Player_Name"`,
+    [chessComId, playerName]
   );
 }
 
