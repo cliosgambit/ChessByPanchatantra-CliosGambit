@@ -15,16 +15,29 @@ from brilliance_stage0 import (
     PIECE_VALUES,
     analyze_piece_vulnerability,
     expectation_violation,
+    game_phase,
     is_sacrifice_candidate,
     king_safety,
+    phase_material,
     piece_harmony,
     quiet_brilliant_detector,
     see,
     tactical_multiplexing,
 )
 
-HARD_DISQUALIFIERS = frozenset({"winning_capture_not_sacrifice"})
+HARD_DISQUALIFIERS = frozenset({
+    "winning_capture_not_sacrifice",
+    "opening_gambit_pawn_sacrifice",
+    "pawn_sacrifice_insufficient_justification",
+})
 SACRIFICE_UNCERTAINTY_CAP = 25.0
+
+# Gambit / early pawn sacrifice gates (see EARLY_GAME_BRILLIANCE_FIX.md)
+GAMBIT_MOVE_NUMBER_LIMIT = 15
+GAMBIT_PHASE_THRESHOLD = 4500
+PAWN_SAC_MIN_MOVE_NUMBER = 20
+PAWN_SAC_KING_SAFETY_BYPASS = -60
+PAWN_SAC_TM_BYPASS = 6
 
 
 def _variance(values):
@@ -100,7 +113,64 @@ def _infer_sac_type(board, move, color, see_value, is_pseudo, cap_val, if_val, m
     return "tactical_sacrifice"
 
 
-def classify_sacrifice_type(board, move, color, see_value=0):
+def _full_move_number(ply_index):
+    if ply_index is None:
+        return 99
+    return (ply_index // 2) + 1
+
+
+def is_gambit_pattern(
+    board,
+    move,
+    full_move_number,
+    phase_mat,
+    tm_score,
+    is_check_after,
+    king_safety_delta,
+):
+    """
+    C3: structural opening gambit — pawn offer without immediate tactical payoff.
+    """
+    moving_piece = board.piece_at(move.from_square)
+    if not moving_piece:
+        return False, ""
+
+    is_capture = board.is_capture(move)
+
+    if is_capture:
+        captured = board.piece_at(move.to_square)
+        if not captured or moving_piece.piece_type != chess.PAWN:
+            return False, ""
+
+    if full_move_number > GAMBIT_MOVE_NUMBER_LIMIT:
+        return False, ""
+
+    if phase_mat < GAMBIT_PHASE_THRESHOLD:
+        return False, ""
+
+    if moving_piece.piece_type != chess.PAWN:
+        return False, ""
+
+    if is_check_after:
+        return False, ""
+    if (tm_score or 0) >= 6:
+        return False, ""
+    if (king_safety_delta or 0) <= -80:
+        return False, ""
+
+    return True, "opening_gambit_pawn_sacrifice"
+
+
+def classify_sacrifice_type(
+    board,
+    move,
+    color,
+    see_value=0,
+    ply_index=None,
+    game_phase_val=None,
+    phase_mat=None,
+    ctx=None,
+):
     to_sq = move.to_square
     from_sq = move.from_square
     moving_piece = board.piece_at(from_sq)
@@ -159,6 +229,38 @@ def classify_sacrifice_type(board, move, color, see_value=0):
         disqualifiers.append(
             vuln.get("disqualify_reason") or "piece_already_lost_before_move"
         )
+
+    ctx = ctx or {}
+    full_move_number = _full_move_number(ply_index)
+    phase_mat = phase_mat if phase_mat is not None else phase_material(board)
+    game_phase_val = game_phase_val or game_phase(board)
+
+    is_gambit, gambit_reason = is_gambit_pattern(
+        board,
+        move,
+        full_move_number,
+        phase_mat,
+        ctx.get("multiplexing_score"),
+        ctx.get("move_gives_check"),
+        ctx.get("opp_king_safety_delta"),
+    )
+    if is_gambit:
+        disqualifiers.append(gambit_reason)
+
+    # C4: pawn-only sacrifice minimum value gate (early game)
+    is_pawn_sacrifice = 100 <= abs(see_value) <= 200
+    if (
+        is_pawn_sacrifice
+        and game_phase_val in ("opening", "middlegame")
+        and full_move_number <= PAWN_SAC_MIN_MOVE_NUMBER
+    ):
+        passes_bypass = (
+            (ctx.get("opp_king_safety_delta") or 0) <= PAWN_SAC_KING_SAFETY_BYPASS
+            or (ctx.get("multiplexing_score") or 0) >= PAWN_SAC_TM_BYPASS
+            or game_phase_val == "endgame"
+        )
+        if not passes_bypass:
+            disqualifiers.append("pawn_sacrifice_insufficient_justification")
 
     scenarios = [see_value if board.is_capture(move) else cap_val - if_val]
     for rc in recaptures[:5]:
@@ -224,14 +326,21 @@ def _should_proceed_to_stage2(stage0, sac_class, forced, ctx):
 
 def analyze_stage1_move(board, move, ply_index):
     color = board.turn
-    stage0 = is_sacrifice_candidate(board, move, color)
+    stage0 = is_sacrifice_candidate(board, move, color, ply_index=ply_index)
 
     if not stage0["is_sacrifice_candidate"]:
         return None
 
     ctx = _move_context(board, move, color)
     sac_class = classify_sacrifice_type(
-        board, move, color, see_value=stage0.get("see_value") or 0
+        board,
+        move,
+        color,
+        see_value=stage0.get("see_value") or 0,
+        ply_index=ply_index,
+        game_phase_val=game_phase(board),
+        phase_mat=phase_material(board),
+        ctx=ctx,
     )
     forced = is_forced_move(board, move)
 

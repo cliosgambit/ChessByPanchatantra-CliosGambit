@@ -57,6 +57,53 @@ def game_phase_code(phase):
     return {"opening": 0, "middlegame": 1, "endgame": 2}.get(phase, 1)
 
 
+def phase_material(board):
+    """Total non-pawn piece material on board (same basis as game_phase)."""
+    return sum(
+        PIECE_VALUES.get(pt, 0) * len(board.pieces(pt, c))
+        for pt in [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT]
+        for c in [chess.WHITE, chess.BLACK]
+    )
+
+
+def compute_novelty_score(ply_index, game_phase, sac_type=None):
+    """
+    Novelty multiplier [0.0, 1.0] — opening theory moves score near zero.
+    Used in Stage 0 telemetry and Stage 4 brilliance scaling.
+    """
+    ply = ply_index if ply_index is not None else 999
+
+    if ply <= 10:
+        raw_score = 0.0
+    elif ply <= 40:
+        raw_score = (ply - 10) / 30.0
+    else:
+        raw_score = 1.0
+
+    if game_phase == "opening":
+        raw_score *= 0.6
+
+    if sac_type == "positional_piece_placement" and game_phase == "opening":
+        raw_score *= 0.5
+
+    return min(1.0, max(0.0, round(raw_score, 3)))
+
+
+def _infer_novelty_sac_type(board, move, see_val, moving_piece):
+    """Rough sacrifice type for novelty scoring before Stage 1 classification."""
+    if not moving_piece:
+        return "unknown"
+    if moving_piece.piece_type == chess.QUEEN:
+        return "queen_sacrifice"
+    if moving_piece.piece_type == chess.ROOK:
+        return "exchange_sacrifice"
+    if not board.is_capture(move):
+        return "positional_piece_placement"
+    if see_val < -300:
+        return "real_sacrifice"
+    return "tactical_sacrifice"
+
+
 def see(board, move):
     to_sq = move.to_square
     from_sq = move.from_square
@@ -101,6 +148,14 @@ def see(board, move):
 SACRIFICE_MIN_PIECE_VALUE = 300
 OPP_PROFITABLE_SEE_THRESHOLD = 50
 OPP_SEE_EN_PRISE_THRESHOLD = 0
+
+# Early-game / opening gambit suppression (see EARLY_GAME_BRILLIANCE_FIX.md)
+EARLY_GAME_PLY_CUTOFF = 10
+OPENING_PHASE_THRESHOLD = 5800
+PAWN_SACRIFICE_SEE_LIMIT = 200
+OPENING_TM_BYPASS_THRESHOLD = 8
+OPENING_KING_SAFETY_BYPASS = -100
+PAWN_OPENING_OPP_SEE_THRESHOLD = 150
 
 
 def _cheapest_piece_value(board, squares, color):
@@ -377,7 +432,7 @@ def analyze_sacrifice_exposure(board, move, color):
     return best
 
 
-def is_sacrifice_candidate(board, move, color):
+def is_sacrifice_candidate(board, move, color, ply_index=None):
     to_sq = move.to_square
     from_sq = move.from_square
     moving_piece = board.piece_at(from_sq)
@@ -385,15 +440,42 @@ def is_sacrifice_candidate(board, move, color):
     opp = not color
     is_capture = board.is_capture(move)
 
+    phase_mat = phase_material(board)
+    phase_name = game_phase(board)
+    is_opening_phase = phase_mat > OPENING_PHASE_THRESHOLD
+
+    # C1: absolute early-game block — opening theory zone
+    if ply_index is not None and ply_index < EARLY_GAME_PLY_CUTOFF:
+        return {
+            "is_capture": is_capture,
+            "see_value": see(board, move) if is_capture else 0,
+            "is_sacrifice_candidate": False,
+            "proceed_to_stage1": False,
+            "early_game_blocked": True,
+            "early_game_reason": "opening_theory_zone",
+            "suppression_reason": None,
+            "moving_piece_type": PIECE_NAMES.get(moving_piece.piece_type) if moving_piece else None,
+            "moving_piece_value": PIECE_VALUES.get(moving_piece.piece_type, 0) if moving_piece else 0,
+            "captured_value": PIECE_VALUES.get(captured.piece_type, 0) if captured else 0,
+            "dest_attackers": 0,
+            "dest_defenders": 0,
+            "positional_risk": False,
+            "negative_see_sacrifice": False,
+            "newly_exposed_sacrifice": False,
+            "hanging_sacrifice": False,
+            **_sacrifice_exposure_empty(),
+        }
+
     see_val = see(board, move) if is_capture else 0
 
     dest_attackers = len(board.attackers(opp, to_sq))
     dest_defenders = len(board.attackers(color, to_sq))
 
     positional_risk = False
+    board_after = board.copy()
+    board_after.push(move)
+
     if not is_capture and dest_attackers > 0 and moving_piece is not None:
-        board_after = board.copy()
-        board_after.push(move)
         min_opp_atk = float("inf")
         best_opp_cap = None
         for atk_sq in board_after.attackers(opp, to_sq):
@@ -405,7 +487,14 @@ def is_sacrifice_candidate(board, move, color):
                     best_opp_cap = chess.Move(atk_sq, to_sq)
         if best_opp_cap and board_after.is_legal(best_opp_cap):
             opp_see = see(board_after, best_opp_cap)
-            positional_risk = opp_see > OPP_PROFITABLE_SEE_THRESHOLD
+            # C7: stricter threshold for pawn pushes in the opening
+            risk_threshold = OPP_PROFITABLE_SEE_THRESHOLD
+            if (
+                moving_piece.piece_type == chess.PAWN
+                and is_opening_phase
+            ):
+                risk_threshold = PAWN_OPENING_OPP_SEE_THRESHOLD
+            positional_risk = opp_see > risk_threshold
 
     exposure = analyze_sacrifice_exposure(board, move, color)
     negative_see_sacrifice = see_val < -100
@@ -432,10 +521,40 @@ def is_sacrifice_candidate(board, move, color):
         or hanging_sacrifice
     )
 
+    suppression_reason = None
+
+    # C2: opening phase pawn sacrifice suppression
+    if is_sac and is_opening_phase:
+        is_pawn_level_sac = (
+            abs(see_val) <= PAWN_SACRIFICE_SEE_LIMIT
+            or (
+                not is_capture
+                and positional_risk
+                and moving_piece is not None
+                and moving_piece.piece_type == chess.PAWN
+            )
+        )
+        if is_pawn_level_sac:
+            ks_before = king_safety(board, not color)
+            ks_after = king_safety(board_after, not color)
+            opp_king_safety_delta = ks_after["total_safety"] - ks_before["total_safety"]
+            tm = tactical_multiplexing(board, board_after, color)
+            extraordinary = (
+                opp_king_safety_delta <= OPENING_KING_SAFETY_BYPASS
+                or tm["multiplexing_score"] >= OPENING_TM_BYPASS_THRESHOLD
+            )
+            if not extraordinary:
+                is_sac = False
+                suppression_reason = "opening_pawn_sacrifice_no_extraordinary_justification"
+
     return {
         "is_capture": is_capture,
         "see_value": see_val,
         "is_sacrifice_candidate": is_sac,
+        "proceed_to_stage1": is_sac,
+        "early_game_blocked": False,
+        "early_game_reason": None,
+        "suppression_reason": suppression_reason,
         "moving_piece_type": PIECE_NAMES.get(moving_piece.piece_type) if moving_piece else None,
         "moving_piece_value": PIECE_VALUES.get(moving_piece.piece_type, 0) if moving_piece else 0,
         "captured_value": PIECE_VALUES.get(captured.piece_type, 0) if captured else 0,
@@ -1022,7 +1141,7 @@ def analyze_move(board, move, ply_index):
     board_after.push(move)
 
     phase = game_phase(board)
-    sac = is_sacrifice_candidate(board, move, color)
+    sac = is_sacrifice_candidate(board, move, color, ply_index=ply_index)
     vuln = analyze_piece_vulnerability(board, move.from_square, color)
 
     king_s_before_opp = king_safety(board, not color)
@@ -1038,6 +1157,12 @@ def analyze_move(board, move, ply_index):
     mat_before = material_balance(board, color)
     mat_after = material_balance(board_after, color)
 
+    moving_piece = board.piece_at(move.from_square)
+    novelty_sac_type = _infer_novelty_sac_type(
+        board, move, sac.get("see_value") or 0, moving_piece
+    )
+    novelty_score = compute_novelty_score(ply_index, phase, novelty_sac_type)
+
     from brilliance_gates import compute_engine_candidacy
 
     candidacy = compute_engine_candidacy(board, move, ply_index)
@@ -1051,6 +1176,7 @@ def analyze_move(board, move, ply_index):
         "setup": {
             "game_phase": phase,
             "game_phase_code": game_phase_code(phase),
+            "phase_material": phase_material(board),
             "material_balance_before": mat_before,
             "material_balance_after": mat_after,
             "material_delta": mat_after - mat_before,
@@ -1068,6 +1194,10 @@ def analyze_move(board, move, ply_index):
         "piece_harmony": harmony,
         "quiet_brilliance": quiet,
         "defensive_context": def_ctx,
+        "novelty_score": novelty_score,
+        "early_game_blocked": sac.get("early_game_blocked", False),
+        "early_game_reason": sac.get("early_game_reason"),
+        "suppression_reason": sac.get("suppression_reason"),
         "is_sacrifice_candidate": sac["is_sacrifice_candidate"],
         "proceed_to_stage1": sac["is_sacrifice_candidate"],
         "proceed_to_engine": candidacy["proceed_to_engine"],

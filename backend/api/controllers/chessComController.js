@@ -47,7 +47,7 @@ exports.syncPlayer = async (req, res) => {
     if (!username?.trim()) {
       return res.status(400).json({ error: 'Username is required.' });
     }
-    const forceFull = req.query.full !== 'false';
+    const forceFull = req.query.full === 'true';
     const result = await syncService.syncPlayerFromChessCom(username, { forceFull });
     res.json({ ok: true, ...result });
   } catch (err) {
@@ -207,6 +207,23 @@ exports.getPlayerGamesByDay = async (req, res) => {
   }
 };
 
+exports.getBrilliance = async (req, res) => {
+  try {
+    const { username, uuid } = req.params;
+    const game = await syncService.getGameByUuid(username, uuid);
+    if (!game) {
+      return res.status(404).json({ error: 'Game not found.' });
+    }
+
+    const brillianceService = require('../services/chessComBrillianceService');
+    const result = await brillianceService.getBrillianceForChessComGame(uuid);
+    res.json(result);
+  } catch (err) {
+    console.error('Chess.com brilliance load error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load brilliance analysis.' });
+  }
+};
+
 exports.runBrilliance = async (req, res) => {
   try {
     const { username, uuid } = req.params;
@@ -239,6 +256,18 @@ exports.getBrilliantMoves = async (req, res) => {
   } catch (err) {
     console.error('Chess.com brilliant moves error:', err);
     res.status(500).json({ error: err.message || 'Failed to load brilliant moves.' });
+  }
+};
+
+exports.getBrilliancePipelineStats = async (req, res) => {
+  try {
+    const timeZone = req.query.tz || 'Asia/Kolkata';
+    const dayFilter = req.query.day || 'all';
+    const stats = await syncService.getBrilliancePipelineStats({ dayFilter, timeZone });
+    res.json(stats);
+  } catch (err) {
+    console.error('Chess.com brilliance pipeline stats error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load pipeline stats.' });
   }
 };
 

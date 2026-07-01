@@ -11,25 +11,15 @@ import {
   FormControl,
   FormLabel,
   Textarea,
-  Select,
   FormErrorMessage,
   VStack,
   useToast,
 } from '@chakra-ui/react';
 import { createPuzzle } from '../../services/puzzleService';
 
-const DIFFICULTY_OPTIONS = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Hard' },
-  { value: 'expert', label: 'Expert' },
-];
-
 function PuzzleModal({ isOpen, onClose, principleId, onSuccess }) {
   const [fen, setFen] = useState('');
   const [solution, setSolution] = useState('');
-  const [difficulty, setDifficulty] = useState('');
-  const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const toast = useToast();
@@ -37,8 +27,6 @@ function PuzzleModal({ isOpen, onClose, principleId, onSuccess }) {
   const reset = () => {
     setFen('');
     setSolution('');
-    setDifficulty('');
-    setNotes('');
     setError('');
   };
 
@@ -57,7 +45,7 @@ function PuzzleModal({ isOpen, onClose, principleId, onSuccess }) {
     setLoading(true);
 
     try {
-      const saved = await createPuzzle({ principleId, fen, solution, difficulty, notes });
+      const saved = await createPuzzle({ principleId, fen, solution });
       toast({ title: 'Puzzle added', status: 'success', duration: 2000 });
       onSuccess?.(saved);
       handleClose();
@@ -96,32 +84,6 @@ function PuzzleModal({ isOpen, onClose, principleId, onSuccess }) {
                 onChange={(e) => setSolution(e.target.value)}
                 placeholder="e.g. 1. Ne8+ Qxe5 2. Rf8#"
                 rows={3}
-                resize="vertical"
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel fontSize="sm">Difficulty</FormLabel>
-              <Select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-                placeholder="Select difficulty (optional)"
-              >
-                {DIFFICULTY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel fontSize="sm">Description / Notes</FormLabel>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional notes about this puzzle"
-                rows={2}
                 resize="vertical"
               />
             </FormControl>

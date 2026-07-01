@@ -8,6 +8,14 @@ const SAC_TYPE_SHORT = {
   unknown: 'Unknown',
 };
 
+export function buildMoveListLabels(history = []) {
+  return history.map((m, i) => {
+    const moveNum = Math.floor(i / 2) + 1;
+    if (m.color === 'w') return `${moveNum}. ${m.san}`;
+    return `${moveNum}... ${m.san}`;
+  });
+}
+
 export function stage0Summary(move) {
   if (!move) return '—';
   const parts = [`SEE ${move.see_value ?? 0}`];
@@ -84,11 +92,14 @@ export function stage4Summary(move) {
   return parts.join(' · ');
 }
 
-export function buildMoveListLabels(history) {
-  return history.map((m, i) => {
-    const moveNum = Math.floor(i / 2) + 1;
-    const color = m.color || (i % 2 === 0 ? 'w' : 'b');
-    if (color === 'w') return `${moveNum}. ${m.san}`;
-    return `${moveNum}... ${m.san}`;
-  });
+export function stageCellText(stageKey, move, { eligible = true } = {}) {
+  if (!eligible) return '—';
+  switch (stageKey) {
+    case 0: return stage0Summary(move);
+    case 1: return stage1Summary(move);
+    case 2: return stage2Summary(move);
+    case 3: return stage3Summary(move);
+    case 4: return stage4Summary(move);
+    default: return '—';
+  }
 }

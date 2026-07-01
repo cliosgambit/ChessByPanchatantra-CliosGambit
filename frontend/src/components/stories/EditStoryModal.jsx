@@ -14,8 +14,18 @@ import {
   Select,
   Textarea,
   VStack,
+  Image,
   useColorModeValue,
 } from '@chakra-ui/react';
+import { BOARD_THEMES } from '../curriculum/moduleThemes';
+
+const STORY_TYPES = [
+  { value: 'narrative', label: 'Narrative' },
+  { value: 'interactive', label: 'Interactive' },
+  { value: 'puzzle', label: 'Puzzle' },
+  { value: 'lesson', label: 'Lesson' },
+  { value: 'practice', label: 'Practice' },
+];
 
 function normalizeStatus(status) {
   return status === 'draft' ? 'draft' : 'active';
@@ -26,6 +36,9 @@ function EditStoryModal({ isOpen, onClose, onSave, story, saving = false }) {
     storyNumber: '',
     storyTitle: '',
     storyDescription: '',
+    storyType: 'narrative',
+    thumbnailUrl: '',
+    backgroundColor: BOARD_THEMES[0].key,
     status: 'active',
     tags: '',
   });
@@ -48,6 +61,9 @@ function EditStoryModal({ isOpen, onClose, onSave, story, saving = false }) {
           story.story_number != null ? String(story.story_number) : '',
         storyTitle: story.title || '',
         storyDescription: story.description || '',
+        storyType: story.story_type || 'narrative',
+        thumbnailUrl: story.thumbnail_url || '',
+        backgroundColor: story.themeKey || BOARD_THEMES[0].key,
         status: normalizeStatus(story.status),
         tags: tagsDisplay,
       });
@@ -76,6 +92,9 @@ function EditStoryModal({ isOpen, onClose, onSave, story, saving = false }) {
       description: form.storyDescription.trim(),
       status: form.status,
       tags,
+      story_type: form.storyType,
+      thumbnail_url: form.thumbnailUrl.trim(),
+      themeKey: form.backgroundColor,
     });
   };
 
@@ -139,6 +158,62 @@ function EditStoryModal({ isOpen, onClose, onSave, story, saving = false }) {
                 borderRadius="md"
                 rows={3}
               />
+            </FormControl>
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="600">
+                Story Type
+              </FormLabel>
+              <Select
+                value={form.storyType}
+                onChange={handleChange('storyType')}
+                borderColor={borderColor}
+                borderRadius="md"
+              >
+                {STORY_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="600">
+                Thumbnail / Image URL
+              </FormLabel>
+              <Input
+                placeholder="https://example.com/image.jpg"
+                value={form.thumbnailUrl}
+                onChange={handleChange('thumbnailUrl')}
+                borderColor={borderColor}
+                borderRadius="md"
+              />
+              {form.thumbnailUrl.trim() ? (
+                <Image
+                  src={form.thumbnailUrl.trim()}
+                  alt="Story preview"
+                  mt={3}
+                  borderRadius="md"
+                  maxH="140px"
+                  objectFit="cover"
+                />
+              ) : null}
+            </FormControl>
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="600">
+                Background Color
+              </FormLabel>
+              <Select
+                value={form.backgroundColor}
+                onChange={handleChange('backgroundColor')}
+                borderColor={borderColor}
+                borderRadius="md"
+              >
+                {BOARD_THEMES.map((theme) => (
+                  <option key={theme.key} value={theme.key}>
+                    {theme.label}
+                  </option>
+                ))}
+              </Select>
             </FormControl>
             <FormControl isRequired>
               <FormLabel fontSize="sm" fontWeight="600">

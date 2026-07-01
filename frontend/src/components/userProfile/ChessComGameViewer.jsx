@@ -15,6 +15,7 @@ import BrillianceStagesPanel from '../gameAnalysis/BrillianceStagesPanel';
 import StageEnginePanel from '../gameAnalysis/StageEnginePanel';
 import MoveClassIcon from '../gameAnalysis/MoveClassIcon';
 import { useBrillianceStages } from '../../hooks/useBrillianceStages';
+import { useLichessBrillianceStages } from '../../hooks/useLichessBrillianceStages';
 import { getStageMoveBadge, whiteCpToEvalDisplay } from '../../utils/stageEvalUtils';
 import { sanitizeChessComPgn } from '../../utils/chessComPgnUtils';
 import {
@@ -70,7 +71,7 @@ function stageByPly(stageData) {
   return map;
 }
 
-function ChessComGameViewer({ game, profileUsername }) {
+function ChessComGameViewer({ game, profileUsername, lichessGameId = null }) {
   const [moveIndex, setMoveIndex] = useState(-1);
   const [boardWidth, setBoardWidth] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(isChessSoundEnabled);
@@ -92,7 +93,9 @@ function ChessComGameViewer({ game, profileUsername }) {
     }
   }, [game?.moveHistory, game?.pgn]);
 
-  const brilliance = useBrillianceStages(game, profileUsername);
+  const chessComBrilliance = useBrillianceStages(game, profileUsername);
+  const lichessBrilliance = useLichessBrillianceStages(lichessGameId);
+  const brilliance = lichessGameId ? lichessBrilliance : chessComBrilliance;
 
   const stage0ByPly = useMemo(() => stageByPly(brilliance.stage0), [brilliance.stage0]);
   const stage4ByPly = useMemo(() => stageByPly(brilliance.stage4), [brilliance.stage4]);
@@ -308,9 +311,11 @@ function ChessComGameViewer({ game, profileUsername }) {
           <div className="chess-game-moves-panel">
             <div className="chess-game-moves-panel-head">
               <span>Moves</span>
-              {profileUsername && (
+              {profileUsername ? (
                 <span className="chess-game-moves-viewing">Viewing as {profileUsername}</span>
-              )}
+              ) : lichessGameId ? (
+                <span className="chess-game-moves-viewing">Custom PGN test</span>
+              ) : null}
             </div>
             <div ref={moveListRef} className="chess-game-moves-scroll">
               {!history.length ? (

@@ -1,0 +1,307 @@
+.chronicles-puzzle-page {
+  min-height: calc(100vh - 4rem);
+  padding: 1.5rem 1.75rem 2rem;
+  background: #f9f7f2;
+}
+
+.chronicles-puzzle-page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.chronicles-puzzle-page-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.chronicles-puzzle-page-subtitle {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.9375rem;
+}
+
+.chronicles-puzzle-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(220px, 260px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.chronicles-puzzle-meta,
+.chronicles-puzzle-history {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 1px 4px rgba(15, 23, 41, 0.05);
+}
+
+.chronicles-puzzle-meta-title,
+.chronicles-puzzle-history-title {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.chronicles-puzzle-meta-list {
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.chronicles-puzzle-meta-list div {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.chronicles-puzzle-meta-list dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+
+.chronicles-puzzle-meta-list dd {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #374151;
+  word-break: break-word;
+}
+
+.chronicles-puzzle-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.chronicles-puzzle-actions .chronicles-primary-btn,
+.chronicles-puzzle-actions .chronicles-secondary-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.chronicles-puzzle-answer-box,
+.chronicles-puzzle-poll-box {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid #e5e7eb;
+  background: #fff7ed;
+}
+
+.chronicles-puzzle-answer-box strong,
+.chronicles-puzzle-poll-box h3 {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #9a3412;
+}
+
+.chronicles-puzzle-answer-box p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #374151;
+  white-space: pre-wrap;
+}
+
+.chronicles-puzzle-poll-box {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+}
+
+.chronicles-puzzle-poll-box h3 {
+  color: #6b21a8;
+}
+
+.chronicles-puzzle-poll-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.45rem;
+  border: 1px solid #ddd6fe;
+  background: #fff;
+  color: #4c1d95;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chronicles-puzzle-poll-eval {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.chronicles-puzzle-poll-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  color: #7c3aed;
+}
+
+.chronicles-puzzle-center {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.chronicles-puzzle-board-wrap {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 41, 0.08);
+  width: 100%;
+  max-width: 620px;
+}
+
+.chronicles-puzzle-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.chronicles-puzzle-board-status {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.chronicles-puzzle-mode-toggle {
+  display: inline-flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f9fafb;
+}
+
+.chronicles-puzzle-mode-btn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.chronicles-puzzle-mode-btn:hover {
+  color: #374151;
+}
+
+.chronicles-puzzle-mode-btn--active {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.chronicles-puzzle-board-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.chronicles-puzzle-board-mode-label {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.chronicles-puzzle-board-reset {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chronicles-puzzle-board-reset:hover {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #ea580c;
+}
+
+.chronicles-puzzle-poll-option:hover {
+  background: #f3e8ff;
+  border-color: #c4b5fd;
+}
+
+.chronicles-puzzle-board-empty {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.chronicles-puzzle-history-scroll {
+  max-height: calc(100vh - 12rem);
+  overflow-y: auto;
+}
+
+.chronicles-puzzle-history-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.chronicles-puzzle-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.chronicles-puzzle-history-table th,
+.chronicles-puzzle-history-table td {
+  padding: 0.35rem 0.25rem;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.chronicles-puzzle-history-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+
+@media (max-width: 1100px) {
+  .chronicles-puzzle-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .chronicles-puzzle-center {
+    order: 1;
+  }
+
+  .chronicles-puzzle-meta {
+    order: 2;
+  }
+
+  .chronicles-puzzle-history {
+    order: 3;
+  }
+}

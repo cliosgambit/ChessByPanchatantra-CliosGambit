@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import TestMoveStageExplanation from './TestMoveStageExplanation';
 import {
-  buildMoveListLabels,
   stage0Summary,
   stage1Summary,
   stage2Summary,
@@ -9,6 +8,14 @@ import {
   stage4Summary,
 } from '../../utils/brillianceStageSummaries';
 import './BrillianceStages.css';
+
+function buildMoveListLabels(history = []) {
+  return history.map((m, i) => {
+    const moveNum = Math.floor(i / 2) + 1;
+    if (m.color === 'w') return `${moveNum}. ${m.san}`;
+    return `${moveNum}... ${m.san}`;
+  });
+}
 
 function stageByPly(stageData) {
   const map = new Map();

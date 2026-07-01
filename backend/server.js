@@ -13,8 +13,10 @@ const loginAdminRoutes = require('./routes/loginAdminRoutes');
 const dataRoutes = require('./routes/dataRoutes');
 const { migrateUsersToLogin } = require('./scripts/migrateUsersToLogin');
 const { ensureChessPuzzleColumns } = require('./scripts/ensureChessPuzzleColumns');
+const { ensureChessPuzzlePollTable } = require('./scripts/ensureChessPuzzlePollTable');
 const { ensureModuleColumns } = require('./scripts/ensureModuleColumns');
 const { ensureChapterColumns } = require('./scripts/ensureChapterColumns');
+const { ensureStoryColumns } = require('./scripts/ensureStoryColumns');
 const accessRoutes = require('./api/routes/accessRoutes'); // <-- NEW: Import access routes
 const trackerRoutes = require('./api/routes/trackerRoutes');
 const automationRoutes = require('./api/routes/automationRoutes');
@@ -25,6 +27,11 @@ const { ensureChessComSchema } = require('./scripts/ensureChessComSchema');
 const { ensureChessComMovesTable } = require('./scripts/ensureChessComMovesTable');
 const { ensurePlayerChessComColumns } = require('./scripts/ensurePlayerChessComColumns');
 const { ensureBrilliantMovePuzzlesTable } = require('./scripts/ensureBrilliantMovePuzzlesTable');
+const {
+  ensureChessComBrillianceTables,
+  migrateExistingBrillianceToSupabase,
+} = require('./scripts/ensureChessComBrillianceTables');
+const { ensureChessComSyncRawTable } = require('./scripts/ensureChessComSyncRawTable');
 const { autoCompleteActivityTracker } = require('./api/controllers/automationController');
 
 
@@ -79,12 +86,16 @@ const startServerAndServices = async () => {
     console.log('✅ Database connection successful.');
     await migrateUsersToLogin();
     await ensureChessPuzzleColumns();
+    await ensureChessPuzzlePollTable();
     await ensureModuleColumns();
     await ensureChapterColumns();
+    await ensureStoryColumns();
     await ensureChessComSchema();
     await ensureChessComMovesTable();
     await ensurePlayerChessComColumns();
     await ensureBrilliantMovePuzzlesTable();
+    await ensureChessComBrillianceTables();
+    await ensureChessComSyncRawTable();
 
     // console.log('Triggering initial data orchestration cycle...');
     // runDataUpdateCycle();
@@ -124,6 +135,12 @@ const startServerAndServices = async () => {
   }
 
   console.log(`🚀 Server is live at http://localhost:${PORT}`);
+
+  // One-time SQLite → Supabase backfill; can take a long time — must not block listen().
+  migrateExistingBrillianceToSupabase().catch((err) => {
+    console.error('❌ Brilliance SQLite → Supabase migration failed:', err.message);
+  });
+
   // Never auto-open browser tabs — nodemon restarts were spawning a new tab on every reload.
   // Use frontend dev server (npm start in /frontend → :3000) for daily development.
   // Set OPEN_BROWSER=true only if you explicitly want one tab opened on backend start.

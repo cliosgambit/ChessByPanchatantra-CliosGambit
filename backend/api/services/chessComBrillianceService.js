@@ -4,11 +4,11 @@ const { getStage0Features } = require('../../brilliance/services/brillianceStage
 const { getStage1Features } = require('../../brilliance/services/brillianceStage1Service');
 const { getStage2Features } = require('../../brilliance/services/brillianceStage2Service');
 const { getStage3Features } = require('../../brilliance/services/brillianceStage3Service');
-const { getStage4Features, getStage4Status } = require('../../brilliance/services/brillianceStage4Service');
-const { db } = require('../../brilliance/db/database');
+const { getStage4Features } = require('../../brilliance/services/brillianceStage4Service');
 const pgDb = require('../config/database');
+const brillianceSupabase = require('./brillianceSupabaseService');
 
-function buildStageResponse(gameId, pipeline = null) {
+function buildStageResponseFromSqlite(gameId, pipeline = null) {
   return {
     brillianceGameId: gameId,
     stage0: pipeline?.stage0 || getStage0Features(gameId),
@@ -19,9 +19,47 @@ function buildStageResponse(gameId, pipeline = null) {
   };
 }
 
+async function buildStageResponse(chessComUuid, sqliteGameId, pipeline = null) {
+  if (pipeline) {
+    await brillianceSupabase.syncBrillianceGameToSupabase(sqliteGameId, chessComUuid);
+  }
+
+  const fromPg = await brillianceSupabase.getBrillianceStagesFromSupabase(chessComUuid);
+  if (fromPg) {
+    return {
+      ...fromPg,
+      brillianceGameId: sqliteGameId,
+      source: 'supabase',
+    };
+  }
+
+  return {
+    ...buildStageResponseFromSqlite(sqliteGameId, pipeline),
+    source: 'sqlite',
+  };
+}
+
+async function getBrillianceForChessComGame(chessComUuid) {
+  if (!chessComUuid?.trim()) throw new Error('Game UUID is required');
+
+  const existingRun = await brillianceSupabase.getBrillianceRun(chessComUuid);
+  if (!existingRun) return { status: 'pending' };
+
+  const cached = await buildStageResponse(chessComUuid, existingRun.sqlite_game_id);
+  return { ...cached, cached: true };
+}
+
 async function runBrillianceForChessComGame({ pgn, chessComUuid, force = false }) {
   if (!pgn?.trim()) throw new Error('PGN is required for brilliance analysis');
   if (!chessComUuid?.trim()) throw new Error('Game UUID is required');
+
+  if (!force) {
+    const existingRun = await brillianceSupabase.getBrillianceRun(chessComUuid);
+    if (existingRun?.stage4_status === 'completed') {
+      const cached = await buildStageResponse(chessComUuid, existingRun.sqlite_game_id);
+      return { ...cached, cached: true };
+    }
+  }
 
   const imported = importOrGetGameForPgn(pgn, {
     originalFilename: `chesscom_${chessComUuid}.pgn`,
@@ -31,15 +69,8 @@ async function runBrillianceForChessComGame({ pgn, chessComUuid, force = false }
   const gameId = imported?.id;
   if (!gameId) throw new Error('Failed to import game for brilliance analysis');
 
-  if (!force) {
-    const stage4Status = getStage4Status(gameId);
-    if (stage4Status?.status === 'completed') {
-      return { ...buildStageResponse(gameId), cached: true };
-    }
-  }
-
   const pipeline = await runFullBrillianceForGame(gameId, { force });
-  return buildStageResponse(gameId, pipeline);
+  return buildStageResponse(chessComUuid, gameId, pipeline);
 }
 
 function formatPlayedAt(value) {
@@ -49,20 +80,10 @@ function formatPlayedAt(value) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function parsePgnMetadata(raw) {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
 function mapStage4Row(row, gameMap) {
-  const game = gameMap.get(row.lichess_game_id);
-  const meta = parsePgnMetadata(row.pgn_metadata);
-  const white = game?.white_username || meta?.White || '—';
-  const black = game?.black_username || meta?.Black || '—';
+  const game = gameMap.get(row.chess_com_uuid);
+  const white = game?.white_username || '—';
+  const black = game?.black_username || '—';
   const moverUsername =
     row.turn === 'white' ? white : row.turn === 'black' ? black : null;
   const moverName =
@@ -74,15 +95,15 @@ function mapStage4Row(row, gameMap) {
 
   return {
     id: row.id,
-    gameId: row.game_id,
-    uuid: row.lichess_game_id || null,
+    gameId: row.sqlite_game_id ?? null,
+    uuid: row.chess_com_uuid || null,
     chessComId: game?.chess_com_id || null,
     playerName: game?.owner_name || moverName || null,
     playerUsername: game?.chess_com_id || moverUsername || null,
     moverName: moverName || moverUsername || null,
     moverUsername: moverUsername && moverUsername !== '—' ? moverUsername : null,
-    whiteUsername: game?.white_username || meta?.White || null,
-    blackUsername: game?.black_username || meta?.Black || null,
+    whiteUsername: game?.white_username || null,
+    blackUsername: game?.black_username || null,
     whiteName: game?.white_name || null,
     blackName: game?.black_name || null,
     whiteRating: game?.white_rating ?? null,
@@ -115,31 +136,6 @@ function mapStage4Row(row, gameMap) {
     uciMove: row.uci_move || null,
   };
 }
-
-const STAGE4_SELECT = `
-  SELECT
-    s4.id,
-    s4.game_id,
-    s4.ply_index,
-    s4.san_move,
-    s4.turn,
-    s4.sac_type,
-    s4.classification,
-    s4.is_brilliant,
-    s4.brilliance_score,
-    s4.player_rating,
-    s4.created_at,
-    g.lichess_game_id,
-    g.stage4_status,
-    g.stage4_run_at,
-    g.pgn_metadata,
-    m.fen_before_move,
-    m.fen_after_move,
-    m.uci_move
-  FROM lichess_pgn_stage4 s4
-  JOIN lichess_pgn_games g ON g.id = s4.game_id
-  JOIN lichess_pgn_moves m ON m.id = s4.move_id
-`;
 
 async function loadGameMapForUuids(uuids) {
   const gameMap = new Map();
@@ -201,7 +197,7 @@ async function loadGameMapForUuids(uuids) {
            SELECT p."Player_Name"
            FROM players p
            WHERE LOWER(p."Chess_com_ID") = LOWER(g.black_username)
-             AND LOWER(TRIM(p."Player_Name")) <> LOWER(p."Chess_com_ID")
+             AND LOWER(TRIM(p."Chess_com_ID")) <> LOWER(p."Chess_com_ID")
            ORDER BY p."Chess_com_ID"
            LIMIT 1
          ),
@@ -246,20 +242,11 @@ async function loadVerificationMapForMoveIds(moveIds) {
 }
 
 async function listBrilliantMoves({ limit = 500 } = {}) {
-  const safeLimit = Math.min(Math.max(Number(limit) || 500, 1), 2000);
-  const stage4Rows = db
-    .prepare(
-      `${STAGE4_SELECT}
-       WHERE g.stage4_status = 'completed'
-       ORDER BY g.stage4_run_at DESC, s4.brilliance_score DESC, s4.id DESC
-       LIMIT ?`
-    )
-    .all(safeLimit);
-
+  const stage4Rows = await brillianceSupabase.listStage4MovesFromSupabase({ limit });
   if (!stage4Rows.length) return { rows: [], total: 0 };
 
-  const uuids = [...new Set(stage4Rows.map((r) => r.lichess_game_id).filter(Boolean))];
-  const moveIds = stage4Rows.map((row) => row.id);
+  const uuids = [...new Set(stage4Rows.map((r) => r.chess_com_uuid).filter(Boolean))];
+  const moveIds = stage4Rows.map((row) => Number(row.id));
   const [gameMap, verificationMap] = await Promise.all([
     loadGameMapForUuids(uuids),
     loadVerificationMapForMoveIds(moveIds),
@@ -267,7 +254,7 @@ async function listBrilliantMoves({ limit = 500 } = {}) {
 
   const mapped = stage4Rows.map((row) => {
     const base = mapStage4Row(row, gameMap);
-    const verification = verificationMap.get(row.id);
+    const verification = verificationMap.get(Number(row.id));
     const verificationStatus = verification?.verification_status || 'pending';
 
     return {
@@ -282,27 +269,20 @@ async function listBrilliantMoves({ limit = 500 } = {}) {
 }
 
 async function getBrilliantMoveById(moveId) {
-  const id = Number(moveId);
-  if (!Number.isInteger(id) || id <= 0) return null;
-
-  const row = db
-    .prepare(
-      `${STAGE4_SELECT}
-       WHERE s4.id = ? AND g.stage4_status = 'completed'`
-    )
-    .get(id);
-
+  const row = await brillianceSupabase.getStage4MoveFromSupabase(moveId);
   if (!row) return null;
 
   const gameMap = await loadGameMapForUuids(
-    row.lichess_game_id ? [row.lichess_game_id] : []
+    row.chess_com_uuid ? [row.chess_com_uuid] : []
   );
 
   return mapStage4Row(row, gameMap);
 }
 
 module.exports = {
+  getBrillianceForChessComGame,
   runBrillianceForChessComGame,
   listBrilliantMoves,
   getBrilliantMoveById,
+  buildStageResponse,
 };

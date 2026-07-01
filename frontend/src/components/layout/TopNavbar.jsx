@@ -7,17 +7,11 @@ import {
   HStack,
   Text,
   IconButton,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  MenuDivider,
-  Avatar,
   Button,
-  useColorModeValue,
   useBreakpointValue,
 } from '@chakra-ui/react';
 import { HamburgerIcon } from '@chakra-ui/icons';
+import { FaCrown } from 'react-icons/fa';
 import { FiLogOut } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { getRoleHomePath } from '../../services/authService';
@@ -31,11 +25,6 @@ import './TopNavbar.css';
 export { NAVBAR_HEIGHT };
 
 function NavItem({ item }) {
-  const inactiveColor = useColorModeValue('gray.600', 'gray.300');
-  const activeColor = useColorModeValue('navy.800', 'white');
-  const hoverBg = useColorModeValue('rgba(201, 162, 39, 0.12)', 'rgba(201, 162, 39, 0.18)');
-  const activeBg = useColorModeValue('rgba(15, 23, 41, 0.06)', 'rgba(255, 255, 255, 0.08)');
-  const hoverColor = useColorModeValue('navy.700', 'gold.200');
   const Icon = item.icon;
 
   return (
@@ -43,25 +32,11 @@ function NavItem({ item }) {
       {({ isActive }) => (
         <Box
           as={motion.div}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          position="relative"
+          whileTap={{ scale: 0.98 }}
           className={`top-nav-link ${isActive ? 'top-nav-link--active active' : ''}`}
-          color={isActive ? activeColor : inactiveColor}
-          bg={isActive ? activeBg : 'transparent'}
-          boxShadow={isActive ? '0 1px 0 rgba(201, 162, 39, 0.35)' : 'none'}
-          _hover={{ bg: isActive ? activeBg : hoverBg, color: isActive ? activeColor : hoverColor }}
         >
-          <Icon size={15} aria-hidden />
+          <Icon size={14} aria-hidden />
           <span>{item.label}</span>
-          {isActive && (
-            <motion.span
-              className="top-nav-active-indicator"
-              layoutId="topNavActiveIndicator"
-              initial={false}
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-            />
-          )}
         </Box>
       )}
     </NavLink>
@@ -69,10 +44,6 @@ function NavItem({ item }) {
 }
 
 function MobileNavLink({ item, onNavigate }) {
-  const inactiveColor = useColorModeValue('gray.700', 'gray.200');
-  const activeBg = useColorModeValue('rgba(201, 162, 39, 0.15)', 'rgba(201, 162, 39, 0.22)');
-  const activeColor = useColorModeValue('navy.800', 'white');
-  const hoverBg = useColorModeValue('gray.100', 'whiteAlpha.100');
   const Icon = item.icon;
 
   return (
@@ -83,9 +54,9 @@ function MobileNavLink({ item, onNavigate }) {
       onClick={onNavigate}
       className="top-navbar-mobile-link"
       sx={{
-        color: inactiveColor,
-        '&.active': { color: activeColor, background: activeBg, fontWeight: 600 },
-        '&:hover': { background: hoverBg },
+        color: 'gray.700',
+        '&.active': { color: '#ea580c', background: 'rgba(234, 88, 12, 0.1)', fontWeight: 700 },
+        '&:hover': { background: 'gray.100' },
       }}
     >
       <Icon size={18} aria-hidden />
@@ -94,23 +65,19 @@ function MobileNavLink({ item, onNavigate }) {
   );
 }
 
+function userInitial(user, displayName) {
+  const source = displayName || user?.email || 'A';
+  return source.charAt(0).toUpperCase();
+}
+
 function TopNavbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isDesktop = useBreakpointValue({ base: false, lg: true });
-
-  const navBg = useColorModeValue('rgba(255, 255, 255, 0.92)', 'rgba(15, 23, 41, 0.94)');
-  const borderColor = useColorModeValue('rgba(15, 23, 41, 0.08)', 'rgba(201, 162, 39, 0.2)');
-  const brandSubtext = useColorModeValue('gray.500', 'gray.400');
-  const menuBg = useColorModeValue('white', 'navy.800');
-  const iconColor = useColorModeValue('navy.700', 'gray.200');
-  const navShadow = useColorModeValue('0 4px 24px rgba(15, 23, 41, 0.08)', '0 4px 24px rgba(0, 0, 0, 0.35)');
-  const iconHoverBg = useColorModeValue('gray.100', 'whiteAlpha.200');
-  const iconActiveBg = useColorModeValue('gray.200', 'whiteAlpha.300');
-  const mobilePanelBg = useColorModeValue('rgba(255,255,255,0.98)', 'rgba(15,23,41,0.98)');
-  const gold = '#c9a227';
+  const borderColor = 'rgba(15, 23, 41, 0.08)';
+  const mobilePanelBg = 'rgba(249, 247, 242, 0.98)';
 
   const visibleNavItems = useMemo(() => filterNavByRole(PRIMARY_NAV_ITEMS, user), [user]);
   const displayName = user?.full_name || user?.email?.split('@')[0] || 'Admin';
@@ -131,38 +98,28 @@ function TopNavbar() {
         right={0}
         zIndex={1400}
         h={`${NAVBAR_HEIGHT}px`}
-        bg={navBg}
-        borderBottom="1px solid"
-        borderColor={borderColor}
-        boxShadow={navShadow}
         px={{ base: 3, md: 5, xl: 8 }}
         role="banner"
       >
         <Flex h="100%" align="center" justify="space-between" gap={3}>
-          <HStack spacing={3} flexShrink={0}>
-            <Box
-              as={NavLink}
-              to={getRoleHomePath(user?.role)}
-              display="flex"
-              flexDirection="column"
-              _hover={{ textDecoration: 'none' }}
-              aria-label="Chess By Panchatantra home"
-            >
-              <Text className="top-navbar-brand" fontSize={{ base: 'md', md: 'lg' }} fontWeight="800" lineHeight="1.1">
-                Chess By Panchatantra
-              </Text>
-            </Box>
-          </HStack>
+          <Box
+            as={NavLink}
+            to={getRoleHomePath(user?.role)}
+            className="top-navbar-brand-wrap"
+            aria-label="Chess By Panchatantra home"
+          >
+            <FaCrown className="top-navbar-crown" aria-hidden />
+            <Text className="top-navbar-brand">Chess By Panchatantra</Text>
+          </Box>
 
           {isDesktop && (
             <HStack
               as="nav"
               aria-label="Main navigation"
-              spacing={1}
               flex={1}
               justify="center"
               mx={4}
-              overflow="hidden"
+              className="top-nav-pill"
             >
               {visibleNavItems.map((item) => (
                 <NavItem key={`${item.path}-${item.label}`} item={item} />
@@ -173,52 +130,25 @@ function TopNavbar() {
           <HStack spacing={{ base: 1, md: 2 }} flexShrink={0}>
             {isAuthenticated && (
               <>
-                <Menu placement="bottom-end" isLazy>
-                  <MenuButton
-                    as={Button}
-                    variant="ghost"
-                    px={2}
-                    py={1}
-                    h="auto"
-                    borderRadius="xl"
-                    _hover={{ bg: iconHoverBg }}
-                    _active={{ bg: iconActiveBg }}
-                    aria-label="Open profile menu"
-                  >
-                    <HStack spacing={2}>
-                      <Avatar size="sm" name={displayName} bg="navy.700" color="gold.300" border="2px solid" borderColor={gold} />
-                      <Box textAlign="left" display={{ base: 'none', md: 'block' }}>
-                        <Text fontSize="sm" fontWeight="600" color={iconColor}>
-                          {displayName}
-                        </Text>
-                        <Text fontSize="xs" color={brandSubtext} textTransform="capitalize">
-                          {user?.role}
-                        </Text>
-                      </Box>
-                    </HStack>
-                  </MenuButton>
-                  <MenuList bg={menuBg} borderColor={borderColor} boxShadow="xl" py={2} minW="200px">
-                    <MenuItem isDisabled fontWeight="600">
-                      {user?.email}
-                    </MenuItem>
-                    <MenuDivider />
-                    <MenuItem onClick={() => navigate('/module-access')}>Module Access</MenuItem>
-                    <MenuItem onClick={() => navigate('/activity-tracker')}>Activity Tracker</MenuItem>
-                  </MenuList>
-                </Menu>
+                <div className="top-navbar-user-block">
+                  <div className="top-navbar-avatar" aria-hidden>
+                    {userInitial(user, displayName)}
+                  </div>
+                  <Box display={{ base: 'none', md: 'block' }}>
+                    <div className="top-navbar-user-name">{displayName}</div>
+                    <div className="top-navbar-user-role">{user?.role || 'admin'}</div>
+                  </Box>
+                </div>
 
-                <Button
-                  leftIcon={<FiLogOut />}
-                  size="sm"
-                  variant="outline"
-                  borderColor="gold.500"
-                  color="navy.700"
-                  display={{ base: 'none', md: 'inline-flex' }}
+                <button
+                  type="button"
+                  className="top-navbar-logout"
                   onClick={handleLogout}
-                  _hover={{ bg: 'gold.50' }}
+                  aria-label="Log out"
                 >
-                  Logout
-                </Button>
+                  <FiLogOut aria-hidden />
+                  <span className="top-navbar-logout-label">Logout</span>
+                </button>
               </>
             )}
 
@@ -226,12 +156,11 @@ function TopNavbar() {
               <IconButton
                 aria-label="Open menu"
                 icon={<HamburgerIcon />}
-                variant="outline"
+                variant="ghost"
                 size="md"
-                borderColor={borderColor}
-                color={iconColor}
+                color="#374151"
                 borderRadius="lg"
-                onClick={() => setMobileOpen((o) => !o)}
+                onClick={() => setMobileOpen((open) => !open)}
               />
             )}
           </HStack>
@@ -281,8 +210,8 @@ function TopNavbar() {
                   mt={4}
                   w="100%"
                   leftIcon={<FiLogOut />}
-                  variant="outline"
-                  colorScheme="red"
+                  variant="ghost"
+                  color="#ef4444"
                   onClick={handleLogout}
                 >
                   Logout

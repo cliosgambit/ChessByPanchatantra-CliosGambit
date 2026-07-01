@@ -10,6 +10,9 @@ import Login from '../pages/Login';
 import StudentDashboard from '../pages/StudentDashboard';
 import CoachDashboard from '../pages/CoachDashboard';
 import Dashboard from '../pages/Dashboard';
+import Chronicles from '../pages/Chronicles';
+import ChroniclesChessPuzzlePage from '../pages/ChroniclesChessPuzzlePage';
+import ChroniclesRatedPuzzlePage from '../pages/ChroniclesRatedPuzzlePage';
 import Curriculum from '../pages/Curriculum';
 import Principles from '../pages/Principles';
 import PrincipleDetails from '../pages/PrincipleDetails';
@@ -30,6 +33,7 @@ import ChaptersPage from '../pages/ChaptersPage';
 import StoriesPage from '../pages/StoriesPage';
 import StoryDetails from '../pages/StoryDetails';
 import MappingDetails from '../pages/MappingDetails';
+import TestPage from '../pages/TestPage';
 import CatchAllRedirect from './CatchAllRedirect';
 
 function RoleHomeRedirect() {
@@ -66,6 +70,9 @@ function AppRoutesContent() {
             <Route path="/dashboard" element={<Dashboard />} />
 
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/chronicles" element={<Chronicles />} />
+              <Route path="/chronicles/puzzles/chess/:puzzleId" element={<ChroniclesChessPuzzlePage />} />
+              <Route path="/chronicles/puzzles/rated/:puzzleId" element={<ChroniclesRatedPuzzlePage />} />
               <Route path="/curriculum" element={<Curriculum />} />
             </Route>
 
@@ -97,6 +104,7 @@ function AppRoutesContent() {
               <Route path="/brilliant-moves" element={<BrilliantMoves />} />
               <Route path="/puzzles/:puzzleId" element={<ViewPuzzle />} />
               <Route path="/puzzles" element={<Puzzles />} />
+              <Route path="/test" element={<TestPage />} />
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>

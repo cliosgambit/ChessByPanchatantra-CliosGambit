@@ -13,6 +13,22 @@ export function parseModuleIdNumber(moduleId) {
   return match ? parseInt(match[1], 10) : null;
 }
 
+export function formatModuleNumberLabel(module, moduleId) {
+  const num = module?.module_number ?? parseModuleIdNumber(moduleId);
+  if (Number.isFinite(num) && num > 0) return `Module ${num}`;
+  const digits = String(moduleId || '').replace(/\D/g, '');
+  if (digits) return `Module ${Number(digits)}`;
+  return moduleId || '—';
+}
+
+export function formatChapterNumberLabel(chapter, chapterId) {
+  const num = chapter?.chapter_number;
+  if (Number.isFinite(num) && num > 0) return `Chapter ${num}`;
+  const digits = String(chapterId || '').replace(/\D/g, '');
+  if (digits) return `Chapter ${Number(digits)}`;
+  return chapterId || '—';
+}
+
 function resolveModuleNumber(row) {
   const stored = col(row, 'module_number');
   if (stored != null && stored !== '') {
@@ -88,6 +104,10 @@ function mapStory(row) {
     module_id: col(row, 'module_id'),
     status: col(row, 'status') || 'published',
     tags: col(row, 'tags'),
+    thumbnail_url: col(row, 'thumbnail_url') || null,
+    themeKey: col(row, 'theme_key') || null,
+    story_type: col(row, 'story_type') || null,
+    story_number: col(row, 'story_number') ?? null,
   };
 }
 
@@ -124,6 +144,38 @@ export async function fetchChaptersByModule(moduleId) {
 export async function fetchStoriesByChapter(chapterId) {
   const rows = await fetchTable(TABLES.story, { orderBy: 'story_id', ascending: true });
   return rows.map(mapStory).filter((s) => s.chapter_id === chapterId);
+}
+
+export async function fetchAllStories() {
+  const [storyRows, moduleRows, chapterRows] = await Promise.all([
+    fetchTable(TABLES.story, { orderBy: 'story_id', ascending: true }),
+    fetchTable(TABLES.module),
+    fetchTable(TABLES.chapter),
+  ]);
+
+  const modulesById = new Map(
+    moduleRows
+      .map((row) => [col(row, 'module_id'), mapModule(row)])
+      .filter(([id, module]) => id && module)
+  );
+  const chaptersById = new Map(
+    chapterRows
+      .map((row) => [col(row, 'chapter_id'), mapChapter(row)])
+      .filter(([id, chapter]) => id && chapter)
+  );
+
+  return storyRows
+    .map(mapStory)
+    .filter(Boolean)
+    .map((story) => {
+      const module = modulesById.get(story.module_id);
+      const chapter = chaptersById.get(story.chapter_id);
+      return {
+        ...story,
+        moduleLabel: formatModuleNumberLabel(module, story.module_id),
+        chapterLabel: formatChapterNumberLabel(chapter, story.chapter_id),
+      };
+    });
 }
 
 function mapStoryMapping(row) {
@@ -345,10 +397,17 @@ export async function createStory(payload) {
     module_id: payload.module_id || '',
     status,
     tags: payload.tags || '[]',
+    thumbnail_url: payload.thumbnail_url || null,
+    theme_key: payload.theme_key || payload.themeKey || null,
+    story_type: payload.story_type || null,
+    story_number: payload.story_number ?? null,
   });
 }
 
-export async function updateStory(storyId, { title, description, status, tags }) {
+export async function updateStory(
+  storyId,
+  { title, description, status, tags, thumbnail_url, theme_key, themeKey, story_type }
+) {
   if (!title?.trim()) {
     throw new Error('Story title is required.');
   }
@@ -369,6 +428,9 @@ export async function updateStory(storyId, { title, description, status, tags })
     description: description?.trim() || '',
     status: normalizedStatus,
     tags: tags ?? col(existing, 'tags') ?? '[]',
+    thumbnail_url: thumbnail_url ?? col(existing, 'thumbnail_url') ?? null,
+    theme_key: theme_key ?? themeKey ?? col(existing, 'theme_key') ?? null,
+    story_type: story_type ?? col(existing, 'story_type') ?? null,
   });
 }
 

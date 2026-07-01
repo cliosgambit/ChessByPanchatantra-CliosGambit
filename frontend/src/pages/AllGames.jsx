@@ -30,7 +30,6 @@ import './AllGames.css';
 const POLL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 80;
 const ANALYSIS_CONCURRENCY = 2;
-const MAX_AUTO_ANALYSIS_GAMES = 150;
 const GAMES_PER_PAGE = 100;
 
 const DAY_FILTERS = DAY_FILTER_OPTIONS;
@@ -48,9 +47,38 @@ function gameOwner(game) {
   return game?.chessComId || (game?.isWhite ? game?.white : game?.black) || null;
 }
 
-function stage4Passed(result) {
-  const analyzed = result?.stage4?.analyzed_count ?? result?.stage4?.moves?.length ?? 0;
-  return analyzed > 0;
+function brillianceRunSucceeded(result) {
+  const stage4 = result?.stage4;
+  if (stage4?.status === 'failed' || stage4?.error) return false;
+  if (stage4?.status === 'completed') return true;
+  return [result?.stage0, result?.stage1, result?.stage2, result?.stage3, result?.stage4].every(
+    (stage) => stage?.status === 'completed'
+  );
+}
+
+function stage4StatusLabel(status) {
+  if (status === 'running') return 'Running';
+  if (status === 'pass') return 'Done';
+  if (status === 'fail') return 'Failed';
+  return 'Pending';
+}
+
+function brillianceUiStatusFromGame(game) {
+  const stage4Status = game?.brillianceRun?.stage4Status;
+  if (stage4Status === 'completed') return 'pass';
+  if (stage4Status === 'failed') return 'fail';
+  if (stage4Status === 'running') return 'running';
+  return null;
+}
+
+function buildStage4StatusMap(games) {
+  const next = {};
+  for (const game of games || []) {
+    if (!game?.uuid) continue;
+    const status = brillianceUiStatusFromGame(game);
+    if (status) next[game.uuid] = status;
+  }
+  return next;
 }
 
 function AllGames() {
@@ -89,6 +117,16 @@ function AllGames() {
     [activeFilter, filterLabels]
   );
 
+  const pendingAnalysisCount = useMemo(
+    () =>
+      filteredGames.filter((game) => {
+        if (!game?.uuid) return false;
+        const status = stage4StatusByGame[game.uuid];
+        return !status || status === 'idle' || status === 'pending';
+      }).length,
+    [filteredGames, stage4StatusByGame]
+  );
+
   const setActiveFilter = useCallback(
     (day) => {
       if (!VALID_DAY_KEYS.has(day) || day === activeFilterRef.current) return;
@@ -106,6 +144,18 @@ function AllGames() {
     setAllGames((prev) => (merge ? mergeAllGames(prev, incoming) : incoming));
     setPlayersCount(data.playersCount || 0);
     setSyncing(Boolean(data.syncInProgress));
+
+    const fromDb = buildStage4StatusMap(incoming);
+    if (Object.keys(fromDb).length) {
+      setStage4StatusByGame((prev) => {
+        const next = merge ? { ...prev } : {};
+        for (const [uuid, status] of Object.entries(fromDb)) {
+          if (prev[uuid] !== 'running') next[uuid] = status;
+        }
+        return next;
+      });
+    }
+
     return incoming;
   }, []);
 
@@ -113,33 +163,47 @@ function AllGames() {
     return fetchAllGamesFromDb({ day: 'all', previewPgn: false });
   }, []);
 
-  const analyzeGamesStageWise = useCallback(async (list) => {
-    const pending = (list || []).filter((game) => {
+  const runSingleBrilliance = useCallback(async (game, { force = false } = {}) => {
+    const uuid = game?.uuid;
+    const owner = gameOwner(game);
+    if (!uuid || !owner) return;
+    if (stage4StatusRef.current[uuid] === 'running') return;
+
+    setStage4StatusByGame((prev) => ({ ...prev, [uuid]: 'running' }));
+    try {
+      const result = await runChessComGameBrilliance(owner, uuid, { force });
+      setStage4StatusByGame((prev) => ({
+        ...prev,
+        [uuid]: brillianceRunSucceeded(result) ? 'pass' : 'fail',
+      }));
+    } catch {
+      setStage4StatusByGame((prev) => ({ ...prev, [uuid]: 'fail' }));
+    }
+  }, []);
+
+  const analyzeGamesStageWise = useCallback(async (list, { onlyPending = true } = {}) => {
+    const targets = (list || []).filter((game) => {
       if (!game?.uuid) return false;
+      if (!onlyPending) return true;
       const status = stage4StatusRef.current[game.uuid];
-      return !status || status === 'idle';
+      return !status || status === 'idle' || status === 'pending';
     });
 
-    if (!pending.length || (list || []).length > MAX_AUTO_ANALYSIS_GAMES) {
-      if ((list || []).length > MAX_AUTO_ANALYSIS_GAMES) {
-        setAnalysisRunning(false);
-      }
-      return;
-    }
+    if (!targets.length) return 0;
 
     analysisAbortRef.current = false;
     setAnalysisRunning(true);
     setStage4StatusByGame((prev) => {
       const next = { ...prev };
-      pending.forEach((game) => {
+      targets.forEach((game) => {
         next[game.uuid] = 'running';
       });
       return next;
     });
 
-    for (let offset = 0; offset < pending.length; offset += ANALYSIS_CONCURRENCY) {
+    for (let offset = 0; offset < targets.length; offset += ANALYSIS_CONCURRENCY) {
       if (analysisAbortRef.current) break;
-      const batch = pending.slice(offset, offset + ANALYSIS_CONCURRENCY);
+      const batch = targets.slice(offset, offset + ANALYSIS_CONCURRENCY);
       await Promise.all(
         batch.map(async (game) => {
           const uuid = game.uuid;
@@ -150,7 +214,7 @@ function AllGames() {
             if (analysisAbortRef.current) return;
             setStage4StatusByGame((prev) => ({
               ...prev,
-              [uuid]: stage4Passed(result) ? 'pass' : 'fail',
+              [uuid]: brillianceRunSucceeded(result) ? 'pass' : 'fail',
             }));
           } catch {
             if (analysisAbortRef.current) return;
@@ -161,7 +225,14 @@ function AllGames() {
     }
 
     if (!analysisAbortRef.current) setAnalysisRunning(false);
+    return targets.length;
   }, []);
+
+  const runBrilliancePipeline = useCallback(async () => {
+    if (analysisRunning || !filteredGames.length) return;
+    setError(null);
+    await analyzeGamesStageWise(filteredGames, { onlyPending: true });
+  }, [analysisRunning, filteredGames, analyzeGamesStageWise]);
 
   const clearPoll = useCallback(() => {
     if (pollTimerRef.current) {
@@ -254,21 +325,12 @@ function AllGames() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load cache once on mount
   }, []);
 
-  useEffect(() => {
-    analysisAbortRef.current = true;
-
-    if (!filteredGames.length || filteredGames.length > MAX_AUTO_ANALYSIS_GAMES) {
-      if (filteredGames.length > MAX_AUTO_ANALYSIS_GAMES) {
-        setAnalysisRunning(false);
-      }
-      return undefined;
-    }
-
-    analyzeGamesStageWise(filteredGames);
-    return () => {
+  useEffect(
+    () => () => {
       analysisAbortRef.current = true;
-    };
-  }, [filteredGames, analyzeGamesStageWise]);
+    },
+    [activeFilter]
+  );
 
   const handleSelect = useCallback(
     (game) => {
@@ -279,13 +341,41 @@ function AllGames() {
     [navigate]
   );
 
+  const renderBrillianceColumn = useCallback(
+    (game) => {
+      const status = stage4StatusByGame[game.uuid] || 'idle';
+      const isRunning = status === 'running';
+      const isDone = status === 'pass';
+      const isFailed = status === 'fail';
+      const canRun = Boolean(game.uuid && gameOwner(game));
+
+      return (
+        <div className="chess-brilliance-run-cell">
+          <span className={`chess-stage4-chip chess-stage4-chip--${status}`}>
+            {stage4StatusLabel(status)}
+          </span>
+          <button
+            type="button"
+            className={`chess-brilliance-run-btn${isDone || isFailed ? ' chess-brilliance-run-btn--rerun' : ''}`}
+            disabled={!canRun || isRunning || analysisRunning}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              runSingleBrilliance(game, { force: isDone || isFailed });
+            }}
+          >
+            {isRunning ? 'Running…' : isDone || isFailed ? 'Re-run' : 'Run S0–S4'}
+          </button>
+        </div>
+      );
+    },
+    [analysisRunning, runSingleBrilliance, stage4StatusByGame]
+  );
+
   const panelTitle = useMemo(() => {
     const match = DAY_FILTERS.find((filter) => filter.key === activeFilter) || DAY_FILTERS[3];
     return filterButtonLabel(match, filterLabels);
   }, [activeFilter, filterLabels]);
-
-  const showStage4Column =
-    filteredGames.length > 0 && filteredGames.length <= MAX_AUTO_ANALYSIS_GAMES;
 
   return (
     <Box className="chess-profile-page">
@@ -293,20 +383,35 @@ function AllGames() {
         <div className="chess-profile-header-card" style={{ marginTop: '1rem', paddingBottom: '1rem' }}>
           <div className="chess-profile-name-row">
             <h1 className="chess-profile-username">All Games</h1>
-            <button
-              type="button"
-              className="chess-btn chess-btn-secondary"
-              onClick={runSync}
-              disabled={syncing}
-            >
-              {syncing ? 'Syncing…' : 'Sync from Chess.com'}
-            </button>
+            <div className="all-games-header-actions">
+              <button
+                type="button"
+                className="chess-btn chess-btn-secondary"
+                onClick={runSync}
+                disabled={syncing}
+              >
+                {syncing ? 'Syncing…' : 'Sync from Chess.com'}
+              </button>
+              <button
+                type="button"
+                className="chess-btn chess-btn-primary"
+                onClick={runBrilliancePipeline}
+                disabled={analysisRunning || syncing || filteredGames.length === 0}
+                title={`Run Stage 0–4 brilliance pipeline for ${filteredGames.length} game(s) in ${dateLabel}`}
+              >
+                {analysisRunning
+                  ? 'Running pipeline…'
+                  : `Run Brilliance (${pendingAnalysisCount} pending)`}
+              </button>
+            </div>
           </div>
           <p className="chess-profile-display-name">
             Loaded: {initialLoading ? '…' : allGames.length} games • Showing: {dateLabel} • Filtered:{' '}
             {filteredGames.length} • Players tracked: {playersCount}
             {syncing || refreshing ? ' • Refreshing from Chess.com…' : ''}
-            {!syncing && !refreshing && analysisRunning ? ' • Running Stage 0-4 brilliance analysis…' : ''}
+            {!syncing && !refreshing && analysisRunning
+              ? ' • Running Stage 0–4 brilliance analysis…'
+              : ''}
           </p>
 
           <div className="all-games-filters" role="tablist" aria-label="Game day filters">
@@ -338,6 +443,7 @@ function AllGames() {
                 {filteredGames.length > GAMES_PER_PAGE
                   ? ` • Page ${pagination.page}/${pagination.totalPages}`
                   : ''}
+                {pendingAnalysisCount > 0 ? ` • ${pendingAnalysisCount} pending analysis` : ''}
               </span>
             </header>
             <div className="chess-profile-panel-body chess-games-panel-body">
@@ -361,27 +467,8 @@ function AllGames() {
                     onSelect={handleSelect}
                     showHeader
                     dateColumnLabel="Date & Time"
-                    extraColumnLabel={showStage4Column ? 'Stage 4' : null}
-                    extraColumn={
-                      showStage4Column
-                        ? (game) => {
-                            const status = stage4StatusByGame[game.uuid] || 'idle';
-                            const label =
-                              status === 'running'
-                                ? 'Running'
-                                : status === 'pass'
-                                  ? 'Passed'
-                                  : status === 'fail'
-                                    ? 'Not Passed'
-                                    : 'Pending';
-                            return (
-                              <span className={`chess-stage4-chip chess-stage4-chip--${status}`}>
-                                {label}
-                              </span>
-                            );
-                          }
-                        : null
-                    }
+                    extraColumnLabel="Brilliance"
+                    extraColumn={renderBrillianceColumn}
                   />
                   <AllGamesPagination
                     page={pagination.page}

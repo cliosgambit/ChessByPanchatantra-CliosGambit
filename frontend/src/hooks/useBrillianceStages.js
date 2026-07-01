@@ -1,4 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  fetchChessComGameBrillianceFromDb,
+  runChessComGameBrilliance,
+} from '../services/chessComDbService';
+
+function applyStagePayload(data, setters) {
+  setters.setStage0(data.stage0 || null);
+  setters.setStage1(data.stage1 || null);
+  setters.setStage2(data.stage2 || null);
+  setters.setStage3(data.stage3 || null);
+  setters.setStage4(data.stage4 || null);
+}
 
 export function useBrillianceStages(game, profileUsername) {
   const [stage0, setStage0] = useState(null);
@@ -11,32 +23,49 @@ export function useBrillianceStages(game, profileUsername) {
   const [stageFilter, setStageFilter] = useState(null);
   const requestIdRef = useRef(0);
 
+  const setters = {
+    setStage0,
+    setStage1,
+    setStage2,
+    setStage3,
+    setStage4,
+  };
+
   const runAnalysis = useCallback(
     async (force = false) => {
-      if (!game?.uuid || !game?.pgn || !profileUsername) return;
+      if (!game?.uuid || !profileUsername) return;
 
       const requestId = ++requestIdRef.current;
       setLoading(true);
       setError(null);
 
       try {
-        const res = await fetch(
-          `/api/chess-com/${encodeURIComponent(profileUsername)}/games/${encodeURIComponent(game.uuid)}/brilliance/run`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ force }),
-          }
-        );
-        const data = await res.json();
-        if (requestId !== requestIdRef.current) return;
-        if (!res.ok) throw new Error(data.error || 'Brilliance analysis failed');
+        if (!force) {
+          const cached = await fetchChessComGameBrillianceFromDb(profileUsername, game.uuid);
+          if (requestId !== requestIdRef.current) return;
 
-        setStage0(data.stage0 || null);
-        setStage1(data.stage1 || null);
-        setStage2(data.stage2 || null);
-        setStage3(data.stage3 || null);
-        setStage4(data.stage4 || null);
+          if (cached?.status === 'pending') {
+            // fall through to run
+          } else if (cached?.stage4?.status === 'completed') {
+            applyStagePayload(cached, setters);
+            return;
+          } else if (cached?.stage4?.status === 'failed') {
+            applyStagePayload(cached, setters);
+            setError(cached.stage4?.error || 'Brilliance analysis failed');
+            return;
+          } else if (cached?.stage4?.status === 'running') {
+            applyStagePayload(cached, setters);
+            return;
+          }
+        }
+
+        const data = await runChessComGameBrilliance(profileUsername, game.uuid, { force });
+        if (requestId !== requestIdRef.current) return;
+
+        applyStagePayload(data, setters);
+        if (data.stage4?.status === 'failed') {
+          setError(data.stage4?.error || 'Brilliance analysis failed');
+        }
       } catch (err) {
         if (requestId !== requestIdRef.current) return;
         setError(err.message || String(err));
@@ -46,15 +75,10 @@ export function useBrillianceStages(game, profileUsername) {
         }
       }
     },
-    [game?.uuid, game?.pgn, profileUsername]
+    [game?.uuid, profileUsername]
   );
 
   useEffect(() => {
-    setStage0(null);
-    setStage1(null);
-    setStage2(null);
-    setStage3(null);
-    setStage4(null);
     setStageFilter(null);
     setError(null);
     runAnalysis(false);

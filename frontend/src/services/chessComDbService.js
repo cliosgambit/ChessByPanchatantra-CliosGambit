@@ -2,8 +2,9 @@ import { apiFetch } from '../utils/apiFetch';
 
 const API_BASE = '/api/chess-com';
 
-export async function syncChessComPlayer(username) {
-  return apiFetch(`${API_BASE}/sync/${encodeURIComponent(username)}`, { method: 'POST' });
+export async function syncChessComPlayer(username, { full = false } = {}) {
+  const params = full ? '?full=true' : '?full=false';
+  return apiFetch(`${API_BASE}/sync/${encodeURIComponent(username)}${params}`, { method: 'POST' });
 }
 
 export async function fetchChessComProfileFromDb(username) {
@@ -105,8 +106,19 @@ export async function runChessComGameBrilliance(username, uuid, { force = false 
   );
 }
 
+export async function fetchChessComGameBrillianceFromDb(username, uuid) {
+  return apiFetch(
+    `${API_BASE}/${encodeURIComponent(username)}/games/${encodeURIComponent(uuid)}/brilliance`
+  );
+}
+
 export async function fetchBrilliantMovesFromDb({ limit = 500 } = {}) {
   return apiFetch(`${API_BASE}/brilliant-moves?limit=${limit}`);
+}
+
+export async function fetchBrilliancePipelineStatsFromDb({ day = 'all', timeZone = 'Asia/Kolkata' } = {}) {
+  const params = new URLSearchParams({ day, tz: timeZone });
+  return apiFetch(`${API_BASE}/brilliance-pipeline-stats?${params.toString()}`);
 }
 
 export async function fetchBrilliantMoveFromDb(moveId) {

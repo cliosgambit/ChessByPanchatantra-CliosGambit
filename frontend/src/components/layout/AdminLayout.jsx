@@ -7,7 +7,7 @@ import PageTransition from '../dashboard/PageTransition';
 
 function AdminLayout() {
   const location = useLocation();
-  const pageBg = useColorModeValue('#f4f1e8', 'navy.900');
+  const pageBg = useColorModeValue('#F9F7F2', 'navy.900');
 
   useEffect(() => {
     console.log('[AdminLayout] outlet render', {

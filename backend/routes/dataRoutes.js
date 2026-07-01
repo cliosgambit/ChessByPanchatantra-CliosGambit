@@ -19,12 +19,21 @@ const TABLE_SQL = {
   principles: 'principles',
   principle_position: 'principle_position',
   chess_puzzle: 'chess_puzzle',
+  chess_puzzle_poll_response: 'chess_puzzle_poll_response',
   '3000_rated_puzzles': '"3000_rated_puzzles"',
   roles_control: 'roles_control',
   story_mapping: 'story_mapping',
 };
 
-const WRITE_TABLES = new Set(['module', 'chapter', 'story', 'principles', 'principle_position', 'chess_puzzle']);
+const WRITE_TABLES = new Set([
+  'module',
+  'chapter',
+  'story',
+  'principles',
+  'principle_position',
+  'chess_puzzle',
+  'chess_puzzle_poll_response',
+]);
 
 function sqlTable(table) {
   return TABLE_SQL[table] || null;

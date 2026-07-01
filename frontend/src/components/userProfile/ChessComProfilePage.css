@@ -1321,11 +1321,52 @@
 
 .chess-games-table--with-extra .chess-games-table-head,
 .chess-games-table--with-extra .chess-game-row {
-  grid-template-columns: 54px minmax(0, 1fr) 76px 96px 52px 130px 108px;
+  grid-template-columns: 54px minmax(0, 1fr) 76px 96px 52px 168px 108px;
 }
 
 .chess-game-col-extra {
   text-align: center;
+}
+
+.chess-brilliance-run-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.chess-brilliance-run-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 999px;
+  background: rgba(129, 182, 76, 0.12);
+  color: var(--chess-accent, #81b64c);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.chess-brilliance-run-btn:hover:not(:disabled) {
+  background: rgba(129, 182, 76, 0.22);
+  border-color: rgba(129, 182, 76, 0.45);
+}
+
+.chess-brilliance-run-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chess-brilliance-run-btn--rerun {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--chess-text-muted, #a8a6a3);
 }
 
 .chess-stage4-chip {

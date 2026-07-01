@@ -82,7 +82,7 @@ def _parallel_candidate(
     forced=None,
     extra=None,
 ):
-    sac0 = stage0 if stage0 is not None else is_sacrifice_candidate(board, move, color)
+    sac0 = stage0 if stage0 is not None else is_sacrifice_candidate(board, move, color, ply_index=ply_index)
     sac_cls = sacrifice_class or {
         "sac_type": sac_type,
         "is_valid_sacrifice": False,
@@ -145,7 +145,7 @@ def resolve_engine_candidate(board, move, ply_index):
     quiet = ctx["quiet"]
 
     if quiet["quiet_score"] >= QUIET_DIRECT_THRESHOLD:
-        sac0 = is_sacrifice_candidate(board, move, color)
+        sac0 = is_sacrifice_candidate(board, move, color, ply_index=ply_index)
         return (
             _parallel_candidate(
                 board,
@@ -171,7 +171,7 @@ def resolve_engine_candidate(board, move, ply_index):
     sac0 = (
         stage1["stage0"]
         if stage1
-        else is_sacrifice_candidate(board, move, color)
+        else is_sacrifice_candidate(board, move, color, ply_index=ply_index)
     )
     sac_type = (
         (stage1.get("sacrifice_class") or {}).get("sac_type")
@@ -221,7 +221,7 @@ def resolve_engine_candidate(board, move, ply_index):
 
 def compute_engine_candidacy(board, move, ply_index):
     """Stage 0 flags — reflects all paths that can reach Stage 2."""
-    sac0 = is_sacrifice_candidate(board, move, color=board.turn)
+    sac0 = is_sacrifice_candidate(board, move, color=board.turn, ply_index=ply_index)
     quiet = quiet_brilliant_detector(board, move, board.turn)
     def_ctx = defensive_context(board, board.turn)
     candidate, path = resolve_engine_candidate(board, move, ply_index)
