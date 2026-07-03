@@ -65,6 +65,7 @@ function parseStage1Row(row) {
       features = null;
     }
   }
+  const sacClass = features?.sacrifice_class || {};
   return {
     id: row.id,
     game_id: row.game_id,
@@ -73,6 +74,10 @@ function parseStage1Row(row) {
     san_move: row.san_move,
     turn: row.turn,
     sac_type: row.sac_type,
+    moving_piece_type: sacClass.moving_piece_type ?? null,
+    sacrificed_piece_type: sacClass.sacrificed_piece_type ?? null,
+    sacrificed_piece_square: sacClass.sacrificed_piece_square ?? null,
+    sacrifice_mode: sacClass.sacrifice_mode ?? null,
     disqualifiers,
     is_valid_sacrifice: Boolean(row.is_valid_sacrifice),
     is_pseudo: Boolean(row.is_pseudo),

@@ -1453,6 +1453,111 @@
   color: #94a3b8;
 }
 
+.tp-stage0-gate-summary {
+  margin: 0 0 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #1e3a8a;
+}
+
+.tp-stage0-telemetry {
+  margin: 0 0 0.5rem;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.tp-depth-eval-block {
+  margin-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.65rem;
+}
+
+.tp-depth-eval-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.45rem;
+}
+
+.tp-depth-eval-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.tp-depth-eval-subtitle {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.tp-depth-eval-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.tp-depth-eval-table thead th {
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tp-depth-eval-table tbody td {
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.tp-depth-eval-depth {
+  font-weight: 700;
+  color: #4f46e5;
+  white-space: nowrap;
+  width: 2.5rem;
+}
+
+.tp-depth-eval-purpose {
+  color: #334155;
+  font-weight: 600;
+  min-width: 5.5rem;
+}
+
+.tp-depth-eval-cp {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.tp-depth-eval-note {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.tp-engine-body .tp-depth-eval-block {
+  margin-top: 0.65rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.55rem;
+}
+
+.tp-engine-body .tp-depth-eval-table thead th {
+  background: #f1f5f9;
+}
+
 .tp-analysis-empty {
   padding: 2rem 1rem;
   text-align: center;

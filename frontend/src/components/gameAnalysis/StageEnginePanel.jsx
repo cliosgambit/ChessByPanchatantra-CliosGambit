@@ -75,7 +75,7 @@ export default function StageEnginePanel({
                     <dd>{stage3Move.non_obvious_score ?? '—'}</dd>
                   </div>
                   <div>
-                    <dt>Rank d8→d22</dt>
+                    <dt>Rank d8→d18</dt>
                     <dd>
                       {stage3Move.rank_at_depth8}→{stage3Move.rank_at_depth22}
                     </dd>
@@ -85,7 +85,7 @@ export default function StageEnginePanel({
                     <dd>{stage3Move.depth_gain ?? '—'} cp</dd>
                   </div>
                   <div>
-                    <dt>Sound at d25</dt>
+                    <dt>Sound at d18</dt>
                     <dd>{stage3Move.is_sound ? 'Yes' : 'No'}</dd>
                   </div>
                 </dl>
@@ -153,7 +153,7 @@ export default function StageEnginePanel({
               {stage3Move.classification_if_unsound ? (
                 <span className="chess-stage-engine-foot--warn"> · {stage3Move.classification_if_unsound}</span>
               ) : stage3Move.is_sound ? (
-                <span className="chess-stage-engine-foot--pass"> · sound at d25</span>
+                <span className="chess-stage-engine-foot--pass"> · sound at d18</span>
               ) : null}
             </p>
           ) : stage2Move ? (

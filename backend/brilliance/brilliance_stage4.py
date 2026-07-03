@@ -29,7 +29,26 @@ TYPE_MULTIPLIERS = {
 }
 
 
-def rating_relative_surprise(player_rating, ev_score, rank_at_d8, sac_type):
+def _scoring_sac_type(sac_type, sacrificed_piece_type=None):
+    """
+    Score surprise/archetype from the intentionally sacrificed piece, not the mover.
+    Falls back to sac_type when no abandoned asset was identified.
+    """
+    if not sacrificed_piece_type:
+        return sac_type or "unknown"
+
+    piece_map = {
+        "queen": "queen_sacrifice",
+        "rook": "exchange_sacrifice",
+        "knight": "tactical_sacrifice",
+        "bishop": "tactical_sacrifice",
+        "pawn": "real_sacrifice",
+    }
+    return piece_map.get(sacrificed_piece_type, sac_type or "unknown")
+
+
+def rating_relative_surprise(player_rating, ev_score, rank_at_d8, sac_type, sacrificed_piece_type=None):
+    scoring_type = _scoring_sac_type(sac_type, sacrificed_piece_type)
     base_surprise = min(rank_at_d8 or 99, 10) / 10.0
 
     rating_factor = 0.2
@@ -38,7 +57,7 @@ def rating_relative_surprise(player_rating, ev_score, rank_at_d8, sac_type):
             rating_factor = factor
             break
 
-    type_mult = TYPE_MULTIPLIERS.get(sac_type or "", 1.0)
+    type_mult = TYPE_MULTIPLIERS.get(scoring_type or "", 1.0)
     ev_bonus = (ev_score or 0) * 0.15
     surprise = min(10.0, (base_surprise + rating_factor + ev_bonus) * type_mult * 5.0)
 
@@ -91,7 +110,9 @@ def brilliance_archetype(
     game_phase_val,
     king_safety_delta,
     is_defensive=False,
+    sacrificed_piece_type=None,
 ):
+    scoring_type = _scoring_sac_type(sac_type, sacrificed_piece_type)
     if is_quiet and not is_check:
         if game_phase_val == "endgame":
             return "endgame_revelation"
@@ -100,10 +121,10 @@ def brilliance_archetype(
     if is_defensive:
         return "defensive_brilliance"
 
-    if sac_type == "queen_sacrifice" and (king_safety_delta or 0) < -100:
+    if scoring_type == "queen_sacrifice" and (king_safety_delta or 0) < -100:
         return "thunderbolt"
 
-    if sac_type == "exchange_sacrifice":
+    if scoring_type == "exchange_sacrifice":
         return "strategic_masterstroke"
 
     if is_check and (king_safety_delta or 0) < -80:
@@ -281,6 +302,8 @@ def analyze_stage4_move(move_input):
     ev_score = move_input.get("ev_score") or 0
     rank_at_d8 = move_input.get("rank_at_depth8") or 99
     sac_type = move_input.get("sac_type") or "unknown"
+    sacrificed_piece_type = move_input.get("sacrificed_piece_type")
+    scoring_sac_type = _scoring_sac_type(sac_type, sacrificed_piece_type)
 
     deep_eval_mover = move_input.get("deep_eval_mover_cp")
     if deep_eval_mover is None and move_input.get("deep_eval_cp") is not None:
@@ -289,9 +312,11 @@ def analyze_stage4_move(move_input):
 
     game_phase_val = move_input.get("game_phase") or "middlegame"
     ply_index = move_input.get("ply_index")
-    novelty_score = compute_novelty_score(ply_index, game_phase_val, sac_type)
+    novelty_score = compute_novelty_score(ply_index, game_phase_val, scoring_sac_type)
 
-    surprise = rating_relative_surprise(player_rating, ev_score, rank_at_d8, sac_type)
+    surprise = rating_relative_surprise(
+        player_rating, ev_score, rank_at_d8, sac_type, sacrificed_piece_type
+    )
     pb = practical_brilliance_score(
         move_input.get("defense_difficulty"),
         bool(move_input.get("is_sound")),
@@ -307,6 +332,7 @@ def analyze_stage4_move(move_input):
         move_input.get("game_phase") or "middlegame",
         move_input.get("king_safety_delta"),
         bool(move_input.get("is_defensive")),
+        sacrificed_piece_type=sacrificed_piece_type,
     )
 
     defensive = None
@@ -350,6 +376,10 @@ def analyze_stage4_move(move_input):
         "san_move": move_input.get("san_move"),
         "turn": move_input.get("turn"),
         "sac_type": sac_type,
+        "sacrificed_piece_type": sacrificed_piece_type,
+        "moving_piece_type": move_input.get("moving_piece_type"),
+        "sacrifice_mode": move_input.get("sacrifice_mode"),
+        "scoring_sac_type": scoring_sac_type,
         "surprise": surprise,
         "practical": pb,
         "defensive": defensive,

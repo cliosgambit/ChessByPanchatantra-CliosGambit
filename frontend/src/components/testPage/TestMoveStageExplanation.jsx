@@ -6,6 +6,9 @@ import {
   buildStage3Rows,
   buildStage4Rows,
 } from '../../utils/brillianceStageScoreRows';
+import { getStage2DepthEvals, getStage3DepthEvals } from '../../utils/brillianceDepthEvals';
+import { buildStage0GateSummary, getStage0Telemetry } from '../../utils/brillianceStage0Report';
+import DepthEvalTable from './DepthEvalTable';
 
 function PassCell({ pass, na }) {
   if (na) return <span className="tp-score-na">—</span>;
@@ -90,6 +93,11 @@ export default function TestMoveStageExplanation({
     [s3Move, s4Move]
   );
 
+  const stage2DepthEvals = useMemo(() => getStage2DepthEvals(s2Move), [s2Move]);
+  const stage3DepthEvals = useMemo(() => getStage3DepthEvals(s3Move), [s3Move]);
+  const stage0GateSummary = useMemo(() => buildStage0GateSummary(s0Move), [s0Move]);
+  const stage0Telemetry = useMemo(() => getStage0Telemetry(s0Move), [s0Move]);
+
   if (plyIndex == null || !moveLabel) {
     return (
       <div className="tp-stage-scores-panel">
@@ -120,7 +128,15 @@ export default function TestMoveStageExplanation({
           {stage0Loading ? (
             <p className="tp-score-msg">Running…</p>
           ) : stage0Rows.length ? (
-            <ScoreTable rows={stage0Rows} />
+            <>
+              <p className="tp-stage0-gate-summary">{stage0GateSummary}</p>
+              {stage0Telemetry ? (
+                <p className="tp-stage0-telemetry">
+                  Telemetry (not gate): TM {stage0Telemetry.tm} · EV {stage0Telemetry.ev} · Harmony {stage0Telemetry.harmony} · King Δ {stage0Telemetry.kingDelta}
+                </p>
+              ) : null}
+              <ScoreTable rows={stage0Rows} />
+            </>
           ) : (
             <p className="tp-score-msg">No data</p>
           )}
@@ -176,7 +192,14 @@ export default function TestMoveStageExplanation({
           ) : !s1Move?.proceed_to_stage2 ? (
             <p className="tp-score-msg">Did not pass Stage 1</p>
           ) : stage2Rows.length ? (
-            <ScoreTable rows={stage2Rows} />
+            <>
+              <ScoreTable rows={stage2Rows} />
+              <DepthEvalTable
+                title={stage2DepthEvals.title}
+                subtitle={stage2DepthEvals.subtitle}
+                rows={stage2DepthEvals.rows}
+              />
+            </>
           ) : (
             <p className="tp-score-msg">No data</p>
           )}
@@ -206,7 +229,14 @@ export default function TestMoveStageExplanation({
           ) : !s1Move?.proceed_to_stage2 || !s2Move?.proceed_to_stage3 ? (
             <p className="tp-score-msg">Did not pass Stage 1→2 cascade</p>
           ) : stage3Rows.length ? (
-            <ScoreTable rows={stage3Rows} />
+            <>
+              <ScoreTable rows={stage3Rows} />
+              <DepthEvalTable
+                title={stage3DepthEvals.title}
+                subtitle={stage3DepthEvals.subtitle}
+                rows={stage3DepthEvals.rows}
+              />
+            </>
           ) : (
             <p className="tp-score-msg">No data</p>
           )}

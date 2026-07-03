@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import EvaluationGraph from '../gameAnalysis/EvaluationGraph';
 import MoveClassIcon from './MoveClassIcon';
 import { classifyMoveByCplDelta } from '../../utils/moveClassification';
+import DepthEvalTable from './DepthEvalTable';
+import { getStage2DepthEvals, getStage3DepthEvals } from '../../utils/brillianceDepthEvals';
 
 function formatWhiteCpScore(cp) {
   if (cp == null || !Number.isFinite(cp)) return null;
@@ -72,15 +74,16 @@ const RightSidebar = ({
     return formatWhiteCpLabel(stage2Move.best_score_cp);
   }, [stage2Move]);
 
-  if (empty) {
-    const depthLabel = stage3Move?.engine_depth
-      ? `d${stage3Move.engine_depth}`
-      : stage2Move?.engine_depth
-        ? `d${stage2Move.engine_depth}`
-        : engineEvalLoading
-          ? '…'
-          : '—';
+  const stage2DepthEvals = useMemo(() => getStage2DepthEvals(stage2Move), [stage2Move]);
+  const stage3DepthEvals = useMemo(() => getStage3DepthEvals(stage3Move), [stage3Move]);
 
+  const depthHeaderLabel = useMemo(() => {
+    if (stage3Move) return stage3DepthEvals.subtitle;
+    if (stage2Move) return stage2DepthEvals.subtitle;
+    return engineEvalLoading ? '…' : '—';
+  }, [stage2Move, stage3Move, stage2DepthEvals, stage3DepthEvals, engineEvalLoading]);
+
+  if (empty) {
     return (
       <aside className="tp-right-sidebar">
         <div className="tp-engine-panel">
@@ -89,7 +92,9 @@ const RightSidebar = ({
               <i className="fas fa-microchip tp-engine-icon" aria-hidden />
               Stockfish 18
             </h2>
-            <span className="tp-engine-depth">{depthLabel}</span>
+            <span className="tp-engine-depth" title="Search depths for this stage">
+              {depthHeaderLabel}
+            </span>
           </div>
 
           <div className="tp-engine-body">
@@ -118,50 +123,64 @@ const RightSidebar = ({
                 </div>
 
                 {stage3Move ? (
-                  <div className="tp-engine-stats">
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">Non-obvious</span>
-                      <span className="tp-engine-stat-value">{stage3Move.non_obvious_score ?? '—'}</span>
+                  <>
+                    <div className="tp-engine-stats">
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">Non-obvious</span>
+                        <span className="tp-engine-stat-value">{stage3Move.non_obvious_score ?? '—'}</span>
+                      </div>
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">Rank d8→d18</span>
+                        <span className="tp-engine-stat-value">
+                          {stage3Move.rank_at_depth8}→{stage3Move.rank_at_depth22}
+                        </span>
+                      </div>
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">Depth gain</span>
+                        <span className="tp-engine-stat-value">{stage3Move.depth_gain ?? '—'} cp</span>
+                      </div>
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">Sound at d18</span>
+                        <span className={`tp-engine-stat-value ${stage3Move.is_sound ? 'tp-cell-pass' : 'tp-cell-warn'}`}>
+                          {stage3Move.is_sound ? 'Yes' : 'No'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">Rank d8→d22</span>
-                      <span className="tp-engine-stat-value">
-                        {stage3Move.rank_at_depth8}→{stage3Move.rank_at_depth22}
-                      </span>
-                    </div>
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">Depth gain</span>
-                      <span className="tp-engine-stat-value">{stage3Move.depth_gain ?? '—'} cp</span>
-                    </div>
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">Sound at d25</span>
-                      <span className={`tp-engine-stat-value ${stage3Move.is_sound ? 'tp-cell-pass' : 'tp-cell-warn'}`}>
-                        {stage3Move.is_sound ? 'Yes' : 'No'}
-                      </span>
-                    </div>
-                  </div>
+                    <DepthEvalTable
+                      title={stage3DepthEvals.title}
+                      subtitle={stage3DepthEvals.subtitle}
+                      rows={stage3DepthEvals.rows}
+                    />
+                  </>
                 ) : (
-                  <div className="tp-engine-stats">
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">Best line</span>
-                      <span className="tp-engine-stat-value tp-engine-stat-value--mono">
-                        {stage2Move.best_move || '—'}
-                        {stage2BestDisplay ? ` (${stage2BestDisplay})` : ''}
-                      </span>
+                  <>
+                    <div className="tp-engine-stats">
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">Best line</span>
+                        <span className="tp-engine-stat-value tp-engine-stat-value--mono">
+                          {stage2Move.best_move || '—'}
+                          {stage2BestDisplay ? ` (${stage2BestDisplay})` : ''}
+                        </span>
+                      </div>
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">CPL</span>
+                        <span className="tp-engine-stat-value">{stage2Move.cpl_shallow ?? '—'} cp</span>
+                      </div>
+                      <div className="tp-engine-stat-row">
+                        <span className="tp-engine-stat-label">Engine rank</span>
+                        <span className="tp-engine-stat-value">
+                          {stage2Move.our_rank_in_top5 != null && stage2Move.our_rank_in_top5 < 99
+                            ? `#${stage2Move.our_rank_in_top5} at d12`
+                            : 'outside top 5 at d12'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">CPL</span>
-                      <span className="tp-engine-stat-value">{stage2Move.cpl_shallow ?? '—'} cp</span>
-                    </div>
-                    <div className="tp-engine-stat-row">
-                      <span className="tp-engine-stat-label">Engine rank</span>
-                      <span className="tp-engine-stat-value">
-                        {stage2Move.our_rank_in_top5 != null && stage2Move.our_rank_in_top5 < 99
-                          ? `#${stage2Move.our_rank_in_top5}`
-                          : 'outside top 5'}
-                      </span>
-                    </div>
-                  </div>
+                    <DepthEvalTable
+                      title={stage2DepthEvals.title}
+                      subtitle={stage2DepthEvals.subtitle}
+                      rows={stage2DepthEvals.rows}
+                    />
+                  </>
                 )}
               </>
             ) : navIndex <= 0 ? (
@@ -205,7 +224,7 @@ const RightSidebar = ({
                 {stage3Move.classification_if_unsound ? (
                   <span className="tp-cell-warn"> · {stage3Move.classification_if_unsound}</span>
                 ) : stage3Move.is_sound ? (
-                  <span className="tp-cell-pass"> · sound at d25</span>
+                  <span className="tp-cell-pass"> · sound at d18</span>
                 ) : null}
               </p>
             ) : stage2Move ? (

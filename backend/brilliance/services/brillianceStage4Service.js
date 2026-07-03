@@ -57,7 +57,7 @@ function buildStage4Inputs(gameId) {
 
   const stage1ByPly = new Map(
     db
-      .prepare(`SELECT ply_index, sac_type FROM lichess_pgn_stage1 WHERE game_id = ?`)
+      .prepare(`SELECT ply_index, sac_type, features_json FROM lichess_pgn_stage1 WHERE game_id = ?`)
       .all(gameId)
       .map((r) => [r.ply_index, r])
   );
@@ -80,6 +80,21 @@ function buildStage4Inputs(gameId) {
     let uciMove = null;
     let fenBefore = null;
     let preMoveEvalMover = null;
+    let sacrificedPieceType = null;
+    let movingPieceType = null;
+    let sacrificeMode = null;
+
+    if (s1.features_json) {
+      try {
+        const s1Features = JSON.parse(s1.features_json);
+        const sacClass = s1Features?.sacrifice_class || {};
+        sacrificedPieceType = sacClass.sacrificed_piece_type ?? null;
+        movingPieceType = sacClass.moving_piece_type ?? null;
+        sacrificeMode = sacClass.sacrifice_mode ?? null;
+      } catch {
+        sacrificedPieceType = null;
+      }
+    }
 
     if (s0.features_json) {
       try {
@@ -126,6 +141,9 @@ function buildStage4Inputs(gameId) {
       turn: s3.turn,
       player_rating: getPlayerRating(game.pgn_metadata, s3.turn),
       sac_type: s3.sac_type || s1.sac_type || null,
+      sacrificed_piece_type: sacrificedPieceType,
+      moving_piece_type: movingPieceType,
+      sacrifice_mode: sacrificeMode,
       ev_score: s0.ev_score ?? 0,
       multiplexing_score: s0.multiplexing_score ?? 0,
       king_safety_delta: s0.king_safety_delta ?? 0,

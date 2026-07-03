@@ -18,6 +18,9 @@ export function buildMoveListLabels(history = []) {
 
 export function stage0Summary(move) {
   if (!move) return '—';
+  if (move.suppression_reason) {
+    return `Suppressed: ${String(move.suppression_reason).replace(/_/g, ' ')}`;
+  }
   const parts = [`SEE ${move.see_value ?? 0}`];
   if (move.is_sacrifice_candidate) parts.push('Sac');
   const indirect = move.indirect_sacrifice_candidate
@@ -49,7 +52,15 @@ export function stage0Summary(move) {
 
 export function stage1Summary(move) {
   if (!move) return '—';
-  const parts = [SAC_TYPE_SHORT[move.sac_type] || move.sac_type];
+  const sacrificed = move.sacrificed_piece_type || move.features?.sacrifice_class?.sacrificed_piece_type;
+  const moving = move.moving_piece_type || move.features?.sacrifice_class?.moving_piece_type;
+  const mode = move.sacrifice_mode || move.features?.sacrifice_class?.sacrifice_mode;
+  let typeLabel = SAC_TYPE_SHORT[move.sac_type] || move.sac_type;
+  if (sacrificed && moving && sacrificed !== moving) {
+    const piece = sacrificed.charAt(0).toUpperCase() + sacrificed.slice(1);
+    typeLabel = mode === 'indirect' ? `${piece} sac (indirect)` : `${piece} sac`;
+  }
+  const parts = [typeLabel];
   parts.push(move.is_valid_sacrifice ? 'Valid' : 'Invalid');
   if (move.is_pseudo) parts.push('Pseudo');
   parts.push(`Mat ${move.material_loss_cp ?? 0}`);
