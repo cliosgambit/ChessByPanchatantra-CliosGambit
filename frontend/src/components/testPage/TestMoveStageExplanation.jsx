@@ -6,9 +6,10 @@ import {
   buildStage3Rows,
   buildStage4Rows,
 } from '../../utils/brillianceStageScoreRows';
-import { getStage2DepthEvals, getStage3DepthEvals } from '../../utils/brillianceDepthEvals';
+import { getStage2DepthEvals, getStage2TopMoves, getStage3DepthEvals } from '../../utils/brillianceDepthEvals';
 import { buildStage0GateSummary, getStage0Telemetry } from '../../utils/brillianceStage0Report';
 import DepthEvalTable from './DepthEvalTable';
+import TopMovesTable from './TopMovesTable';
 
 function PassCell({ pass, na }) {
   if (na) return <span className="tp-score-na">—</span>;
@@ -89,11 +90,12 @@ export default function TestMoveStageExplanation({
     [s2Move, s1Move, s3Move]
   );
   const stage4Rows = useMemo(
-    () => buildStage4Rows(s3Move, s4Move),
-    [s3Move, s4Move]
+    () => buildStage4Rows(s0Move, s3Move, s4Move),
+    [s0Move, s3Move, s4Move]
   );
 
   const stage2DepthEvals = useMemo(() => getStage2DepthEvals(s2Move), [s2Move]);
+  const stage2TopMoves = useMemo(() => getStage2TopMoves(s2Move), [s2Move]);
   const stage3DepthEvals = useMemo(() => getStage3DepthEvals(s3Move), [s3Move]);
   const stage0GateSummary = useMemo(() => buildStage0GateSummary(s0Move), [s0Move]);
   const stage0Telemetry = useMemo(() => getStage0Telemetry(s0Move), [s0Move]);
@@ -194,6 +196,12 @@ export default function TestMoveStageExplanation({
           ) : stage2Rows.length ? (
             <>
               <ScoreTable rows={stage2Rows} />
+              <TopMovesTable
+                title={stage2TopMoves.title}
+                subtitle={stage2TopMoves.subtitle}
+                verdict={stage2TopMoves.verdict}
+                rows={stage2TopMoves.rows}
+              />
               <DepthEvalTable
                 title={stage2DepthEvals.title}
                 subtitle={stage2DepthEvals.subtitle}

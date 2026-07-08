@@ -8,7 +8,10 @@ import sys
 
 import chess
 
-from brilliance_stage0 import compute_novelty_score
+from brilliance_stage3 import (
+    deep_eval_sound_score as compute_deep_eval_sound_score,
+    depth_eval_span_score as compute_depth_eval_span_score,
+)
 
 RATING_BRACKETS = [
     (0, 1100, 0.4),
@@ -75,16 +78,17 @@ def rating_relative_surprise(player_rating, ev_score, rank_at_d8, sac_type, sacr
     }
 
 
-def practical_brilliance_score(defense_difficulty, is_sound, deep_eval_mover_cp, tm_score):
+def practical_brilliance_score(defense_difficulty, deep_eval_sound_score, deep_eval_mover_cp, tm_score):
     deep_eval_mover_cp = deep_eval_mover_cp or 0
     defense_difficulty = defense_difficulty or 0.0
     tm_score = tm_score or 0
+    sound_score = deep_eval_sound_score or 0
 
-    obj_quality = max(0.0, min(1.0, (deep_eval_mover_cp + 200) / 400.0))
+    obj_quality = max(0.0, min(1.0, sound_score / 10.0))
     practical_value = defense_difficulty * (min(tm_score, 20) / 20.0)
     tal_zone = -200 <= deep_eval_mover_cp < -30
 
-    if is_sound:
+    if sound_score >= 7.5:
         pb_score = obj_quality * defense_difficulty * 10.0
         category = "objective_brilliant"
     elif tal_zone and defense_difficulty > 0.7:
@@ -100,6 +104,7 @@ def practical_brilliance_score(defense_difficulty, is_sound, deep_eval_mover_cp,
         "practical_value": round(practical_value, 3),
         "pb_score": round(pb_score, 2),
         "is_tal_zone": tal_zone,
+        "deep_eval_sound_score": round(sound_score, 2),
     }
 
 
@@ -253,39 +258,88 @@ def compute_brilliance_classification(
     defense_difficulty,
     multiplexing_score,
     ev_score,
-    is_sound,
+    deep_eval_sound_score=0,
+    depth_eval_span_score=0,
     quiet_score=0,
     is_defensive=False,
     material_deficit=0,
     defensive_score=0,
-    novelty_score=1.0,
 ):
-    brilliance_raw = (
-        (non_obvious_score or 0) * 0.30
-        + (surprise_score or 0) * 0.25
-        + (pb_score or 0) * 0.20
-        + (defense_difficulty or 0) * 10 * 0.10
-        + (multiplexing_score or 0) * 0.10
-        + (ev_score or 0) * 0.05
-    )
+    nob = non_obvious_score or 0
+    surprise = surprise_score or 0
+    pb = pb_score or 0
+    def_diff = defense_difficulty or 0
+    tm = multiplexing_score or 0
+    ev = ev_score or 0
+    sound_score = deep_eval_sound_score or 0
+    span_score = depth_eval_span_score or 0
+
+    w_nob = nob * 0.27
+    w_surprise = surprise * 0.23
+    w_pb = pb * 0.18
+    w_def = def_diff * 10 * 0.10
+    w_tm = tm * 0.08
+    w_ev = ev * 0.04
+    w_sound = sound_score * 0.06
+    w_span = span_score * 0.04
+
+    brilliance_raw = w_nob + w_surprise + w_pb + w_def + w_tm + w_ev + w_sound + w_span
+    quiet_bonus = 0.0
+    defensive_bonus = 0.0
 
     if quiet_score and quiet_score > 2.0:
-        brilliance_raw += (quiet_score / 10.0) * 2.0
+        quiet_bonus = (quiet_score / 10.0) * 2.0
+        brilliance_raw += quiet_bonus
 
     if is_defensive:
-        brilliance_raw += min(material_deficit, 500) / 500 * 2.0
+        defensive_bonus += min(material_deficit, 500) / 500 * 2.0
         if defensive_score >= 6.0:
-            brilliance_raw += defensive_score * 0.15
+            defensive_bonus += defensive_score * 0.15
+        brilliance_raw += defensive_bonus
 
     brilliance_raw = round(brilliance_raw, 2)
-    novelty = novelty_score if novelty_score is not None else 1.0
-    brilliance = round(brilliance_raw * novelty, 2)
+    brilliance = brilliance_raw
 
-    # C5+C6: opening theory hard block
-    if novelty <= 0.0:
-        return brilliance_raw, brilliance, "good_sacrifice", True
+    score_breakdown = {
+        "components": {
+            "non_obvious_score": round(nob, 2),
+            "surprise_score": round(surprise, 2),
+            "pb_score": round(pb, 2),
+            "defense_difficulty": round(def_diff, 3),
+            "multiplexing_score": round(tm, 2),
+            "ev_score": round(ev, 2),
+            "deep_eval_sound_score": round(sound_score, 2),
+            "depth_eval_span_score": round(span_score, 2),
+        },
+        "weights": {
+            "non_obvious_score": 0.27,
+            "surprise_score": 0.23,
+            "pb_score": 0.18,
+            "defense_difficulty": 1.0,
+            "multiplexing_score": 0.08,
+            "ev_score": 0.04,
+            "deep_eval_sound_score": 0.06,
+            "depth_eval_span_score": 0.04,
+        },
+        "weighted": {
+            "non_obvious_score": round(w_nob, 3),
+            "surprise_score": round(w_surprise, 3),
+            "pb_score": round(w_pb, 3),
+            "defense_difficulty": round(w_def, 3),
+            "multiplexing_score": round(w_tm, 3),
+            "ev_score": round(w_ev, 3),
+            "deep_eval_sound_score": round(w_sound, 3),
+            "depth_eval_span_score": round(w_span, 3),
+        },
+        "quiet_bonus": round(quiet_bonus, 3),
+        "defensive_bonus": round(defensive_bonus, 3),
+        "brilliance_score_raw": brilliance_raw,
+        "brilliance_score": brilliance,
+    }
 
-    if brilliance >= 6.5 and is_sound:
+    sound_enough = sound_score >= 7.5
+
+    if brilliance >= 6.5 and sound_enough:
         classification = "BRILLIANT"
     elif brilliance >= 5.0 or defensive_score >= 6.0:
         classification = "practical_brilliant"
@@ -294,7 +348,7 @@ def compute_brilliance_classification(
     else:
         classification = "good_sacrifice"
 
-    return brilliance_raw, brilliance, classification, False
+    return brilliance_raw, brilliance, classification, score_breakdown
 
 
 def analyze_stage4_move(move_input):
@@ -310,16 +364,25 @@ def analyze_stage4_move(move_input):
         cp = move_input["deep_eval_cp"]
         deep_eval_mover = cp if move_input.get("turn") == "white" else -cp
 
+    sound_score_val = move_input.get("deep_eval_sound_score")
+    if sound_score_val is None and deep_eval_mover is not None:
+        sound_score_val = compute_deep_eval_sound_score(deep_eval_mover)
+
+    span_score_val = move_input.get("depth_eval_span_score")
+    if span_score_val is None:
+        span_score_val = compute_depth_eval_span_score(
+            move_input.get("depth_eval_span_cp"),
+            bool(move_input.get("is_rising_curve")),
+        )
+
     game_phase_val = move_input.get("game_phase") or "middlegame"
-    ply_index = move_input.get("ply_index")
-    novelty_score = compute_novelty_score(ply_index, game_phase_val, scoring_sac_type)
 
     surprise = rating_relative_surprise(
         player_rating, ev_score, rank_at_d8, sac_type, sacrificed_piece_type
     )
     pb = practical_brilliance_score(
         move_input.get("defense_difficulty"),
-        bool(move_input.get("is_sound")),
+        sound_score_val,
         deep_eval_mover,
         move_input.get("multiplexing_score"),
     )
@@ -354,7 +417,7 @@ def analyze_stage4_move(move_input):
         except Exception:
             defensive = None
 
-    brilliance_score_raw, brilliance_score, classification, novelty_blocked = (
+    brilliance_score_raw, brilliance_score, classification, score_breakdown = (
         compute_brilliance_classification(
             move_input.get("non_obvious_score"),
             surprise["surprise_score"],
@@ -362,12 +425,12 @@ def analyze_stage4_move(move_input):
             move_input.get("defense_difficulty"),
             move_input.get("multiplexing_score"),
             ev_score,
-            bool(move_input.get("is_sound")),
+            deep_eval_sound_score=sound_score_val,
+            depth_eval_span_score=span_score_val,
             quiet_score=move_input.get("quiet_score") or 0,
             is_defensive=bool(move_input.get("is_defensive")),
             material_deficit=move_input.get("material_deficit") or 0,
             defensive_score=(defensive or {}).get("defensive_score") or 0,
-            novelty_score=novelty_score,
         )
     )
 
@@ -384,11 +447,9 @@ def analyze_stage4_move(move_input):
         "practical": pb,
         "defensive": defensive,
         "archetype": archetype,
-        "novelty_score": novelty_score,
-        "novelty_discounted": novelty_score < 1.0,
-        "novelty_blocked": novelty_blocked,
         "brilliance_score_raw": brilliance_score_raw,
         "brilliance_score": brilliance_score,
+        "score_breakdown": score_breakdown,
         "classification": classification,
         "is_brilliant": classification == "BRILLIANT",
         "engine_used": False,

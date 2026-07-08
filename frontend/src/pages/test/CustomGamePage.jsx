@@ -64,6 +64,47 @@ export default function CustomGamePage({
     if (loading !== undefined) setEngineEvalLoading(loading);
   }, []);
 
+  const runAllStages = useCallback(async (id) => {
+    if (!id || !hideBrilliancePanel) return;
+
+    setImportError(null);
+    setStage0Loading(true);
+    setStage1Loading(true);
+    setStage2Loading(true);
+    setStage3Loading(true);
+    setStage4Loading(true);
+
+    try {
+      const { data: s0 } = await api.post(`/lichess-pgns/games/${id}/stage0/run`, { force: true });
+      setStage0(s0);
+      setStage0Loading(false);
+
+      const { data: s1 } = await api.post(`/lichess-pgns/games/${id}/stage1/run`, { force: true });
+      setStage1(s1);
+      setStage1Loading(false);
+
+      const { data: s2 } = await api.post(`/lichess-pgns/games/${id}/stage2/run`, { force: true });
+      setStage2(s2);
+      setStage2Loading(false);
+
+      const { data: s3 } = await api.post(`/lichess-pgns/games/${id}/stage3/run`, { force: true });
+      setStage3(s3);
+      setStage3Loading(false);
+
+      const { data: s4 } = await api.post(`/lichess-pgns/games/${id}/stage4/run`, { force: true });
+      setStage4(s4);
+      setStage4Loading(false);
+    } catch (e) {
+      setImportError(e.message || String(e));
+    } finally {
+      setStage0Loading(false);
+      setStage1Loading(false);
+      setStage2Loading(false);
+      setStage3Loading(false);
+      setStage4Loading(false);
+    }
+  }, [hideBrilliancePanel]);
+
   const {
     position,
     selected,
@@ -121,30 +162,7 @@ export default function CustomGamePage({
         setGameInfo(data);
 
         if (hideBrilliancePanel) {
-          setStage0Loading(true);
-          const { data: s0 } = await api.post(`/lichess-pgns/games/${data.id}/stage0/run`, { force: true });
-          setStage0(s0);
-          setStage0Loading(false);
-
-          setStage1Loading(true);
-          const { data: s1 } = await api.post(`/lichess-pgns/games/${data.id}/stage1/run`, { force: true });
-          setStage1(s1);
-          setStage1Loading(false);
-
-          setStage2Loading(true);
-          const { data: s2 } = await api.post(`/lichess-pgns/games/${data.id}/stage2/run`, { force: true });
-          setStage2(s2);
-          setStage2Loading(false);
-
-          setStage3Loading(true);
-          const { data: s3 } = await api.post(`/lichess-pgns/games/${data.id}/stage3/run`, { force: true });
-          setStage3(s3);
-          setStage3Loading(false);
-
-          setStage4Loading(true);
-          const { data: s4 } = await api.post(`/lichess-pgns/games/${data.id}/stage4/run`, { force: true });
-          setStage4(s4);
-          setStage4Loading(false);
+          await runAllStages(data.id);
         }
 
         return true;
@@ -160,7 +178,7 @@ export default function CustomGamePage({
         setStage4Loading(false);
       }
     },
-    [loadPGN, inputSource, hideBrilliancePanel]
+    [loadPGN, inputSource, hideBrilliancePanel, runAllStages]
   );
 
   useEffect(() => {
@@ -394,7 +412,7 @@ export default function CustomGamePage({
         </div>
       )}
 
-      {importing && (
+      {(importing || stagesRunning) && (
         <div className="tp-status-toast">
           {hideBrilliancePanel && stage4Loading
             ? 'Running Stage 4…'
@@ -406,7 +424,9 @@ export default function CustomGamePage({
                 ? 'Running Stage 1…'
                 : hideBrilliancePanel && stage0Loading
                   ? 'Running Stage 0…'
-                  : 'Importing PGN…'}
+                  : importing
+                    ? 'Importing PGN…'
+                    : 'Running analysis…'}
         </div>
       )}
 
@@ -538,6 +558,16 @@ export default function CustomGamePage({
                   : 'Import a PGN to enable report download'}
               </span>
               <div className="tp-download-report-actions">
+                <button
+                  type="button"
+                  className="tp-rerun-stages-btn"
+                  onClick={() => runAllStages(gameId)}
+                  disabled={!gameId || stagesRunning || importing || !moveListLabels.length}
+                  title="Re-run brilliance stages 0–4 on the imported game"
+                >
+                  <i className="fas fa-redo" aria-hidden />
+                  {stagesRunning ? 'Running…' : 'Re-run all stages'}
+                </button>
                 <button
                   type="button"
                   className="tp-download-report-btn"

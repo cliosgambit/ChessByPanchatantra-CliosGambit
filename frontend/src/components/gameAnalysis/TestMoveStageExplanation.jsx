@@ -1,4 +1,7 @@
 import React, { useMemo } from 'react';
+import {
+  buildStage4Rows,
+} from '../../utils/brillianceStageScoreRows';
 
 const SAC_TYPE_SHORT = {
   queen_sacrifice: 'Queen sac',
@@ -307,17 +310,43 @@ function buildStage2Rows(s1, s2) {
   const cpl = s2.cpl_shallow ?? eng.cpl_shallow ?? null;
   const epDelta = s2.ep_delta_shallow ?? eng.ep_delta_shallow ?? null;
   const earlyFail = s2.gate_fail_reason === 'piece_already_lost_engine_confirmed';
+  const pres = s2.features?.preservation_check ?? null;
+  const forcedEngineBypassed = Boolean(
+    s2.forced_engine_bypassed ?? s2.features?.forced_engine_bypassed
+  );
+  const isOnlyGoodMove = Boolean(
+    s2.is_only_good_move ?? eng.is_only_good_move
+    ?? ((s2.n_reasonable_moves ?? eng.n_reasonable_moves) != null
+      && (s2.n_reasonable_moves ?? eng.n_reasonable_moves) <= 1)
+  );
 
   const rows = [];
 
-  if (earlyFail) {
+  if (pres?.skipped) {
     rows.push({
       label: 'Engine preserve',
-      got: 'lost',
-      need: 'survive',
+      got: pres.reason ?? 'skipped',
+      need: 'already lost before',
+      pass: true,
+      na: true,
+    });
+  } else if (earlyFail) {
+    rows.push({
+      label: 'Engine preserve',
+      got: 'already lost before',
+      need: 'save line exists',
       pass: false,
     });
-  } else {
+  } else if (pres && !pres.skipped && pres.en_prise_before_move) {
+    rows.push({
+      label: 'Engine preserve',
+      got: pres.already_lost_engine ? 'already lost before' : 'save exists',
+      need: 'not doomed before',
+      pass: !pres.already_lost_engine,
+    });
+  }
+
+  if (!earlyFail) {
     rows.push(
       {
         label: 'CPL',
@@ -339,11 +368,18 @@ function buildStage2Rows(s1, s2) {
         pass: epDelta != null ? epDelta >= -0.15 : null,
       },
       {
+        label: 'Only good move',
+        got: isOnlyGoodMove ? 'true' : 'false',
+        need: 'false',
+        pass: !isOnlyGoodMove,
+      },
+      {
         label: 'Engine forced',
-        got: s2.is_forced_engine ? 'true' : 'false',
-        need: '—',
-        pass: null,
-        na: true,
+        got: s2.is_forced_engine
+          ? (forcedEngineBypassed ? 'true · bypassed' : 'true')
+          : 'false',
+        need: 'false or bypass',
+        pass: !s2.is_forced_engine || forcedEngineBypassed,
       },
       {
         label: 'Near best',
@@ -392,8 +428,16 @@ function buildStage3Rows(s2, s1, s3) {
     {
       label: 'Deep eval',
       got: deepMover ?? s3.deep_eval_cp ?? '—',
-      need: '≥ −30',
-      pass: Boolean(s3.is_sound),
+      need: 'score in S4',
+      pass: null,
+      na: true,
+    },
+    {
+      label: 'Sound score',
+      got: eng.deep_eval_sound_score ?? s3.deep_eval_sound_score ?? '—',
+      need: '×0.06 in S4',
+      pass: null,
+      na: true,
     },
     {
       label: 'CPL deep',
@@ -402,10 +446,11 @@ function buildStage3Rows(s2, s1, s3) {
       pass: eng.is_near_best_deep ?? null,
     },
     {
-      label: 'Sound',
+      label: 'Sound (telemetry)',
       got: s3.is_sound ? 'true' : 'false',
-      need: 'true',
-      pass: Boolean(s3.is_sound),
+      need: '≥ −30 cp',
+      pass: null,
+      na: true,
     },
     {
       label: 'NOB score',
@@ -450,6 +495,20 @@ function buildStage3Rows(s2, s1, s3) {
       na: true,
     },
     {
+      label: 'd1−d18 span',
+      got: eng.depth_eval_span_cp ?? s3.depth_eval_span_cp ?? '—',
+      need: 'score in S4',
+      pass: null,
+      na: true,
+    },
+    {
+      label: 'Span score',
+      got: eng.depth_eval_span_score ?? s3.depth_eval_span_score ?? '—',
+      need: '×0.04 in S4',
+      pass: null,
+      na: true,
+    },
+    {
       label: 'Defense diff',
       got: s3.defense_difficulty ?? '—',
       need: '—',
@@ -464,57 +523,6 @@ function buildStage3Rows(s2, s1, s3) {
       highlight: true,
     },
   ];
-}
-
-function buildStage4Rows(s3Move, s4Move) {
-  if (!s3Move?.proceed_to_stage4) return [];
-  if (!s4Move) return [];
-
-  const rows = [
-    {
-      label: 'Score',
-      got: s4Move.brilliance_score ?? '—',
-      need: '≥ 6.5 brilliant',
-      pass: s4Move.is_brilliant ?? (s4Move.brilliance_score != null && s4Move.brilliance_score >= 6.5),
-    },
-    {
-      label: 'Class',
-      got: s4Move.classification ?? '—',
-      need: '—',
-      pass: null,
-      na: true,
-    },
-    {
-      label: 'Archetype',
-      got: (s4Move.archetype || 'masterstroke').replace(/_/g, ' '),
-      need: '—',
-      pass: null,
-      na: true,
-    },
-    {
-      label: 'Surprise',
-      got: s4Move.surprise_score ?? '—',
-      need: '—',
-      pass: null,
-      na: true,
-    },
-    {
-      label: 'PB score',
-      got: s4Move.pb_score ?? '—',
-      need: '—',
-      pass: null,
-      na: true,
-    },
-    {
-      label: 'Tal zone',
-      got: s4Move.is_tal_zone ? 'true' : 'false',
-      need: '—',
-      pass: null,
-      na: true,
-    },
-  ];
-
-  return rows;
 }
 
 function StageSection({ title, gatePass, gateLabel, children }) {
@@ -561,8 +569,8 @@ export default function TestMoveStageExplanation({
     [s2Move, s1Move, s3Move]
   );
   const stage4Rows = useMemo(
-    () => buildStage4Rows(s3Move, s4Move),
-    [s3Move, s4Move]
+    () => buildStage4Rows(s0Move, s3Move, s4Move),
+    [s0Move, s3Move, s4Move]
   );
 
   if (plyIndex == null || !moveLabel) {

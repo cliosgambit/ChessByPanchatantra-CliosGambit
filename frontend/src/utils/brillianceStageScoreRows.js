@@ -346,6 +346,27 @@ export function buildStage0Rows(s0) {
       na: favorableTrade,
     },
     {
+      label: 'Opponent fork',
+      got: (() => {
+        const forks = see.opponent_forks_before
+          ?? s0.features?.see?.opponent_forks_before
+          ?? s0.tactical_multiplexing?.opponent_fork_details_before
+          ?? [];
+        if (!forks.length) return 'false';
+        const f = forks[0];
+        return `${f.attacker_type ?? '?'}@${f.attacker_square ?? '?'} → ${(f.target_squares ?? []).join(',')}`;
+      })(),
+      need: '—',
+      pass: null,
+      na: true,
+    },
+    {
+      label: 'Fork escape loss',
+      got: (see.fork_escape_abandonment ?? s0.features?.see?.fork_escape_abandonment) ? 'true' : 'false',
+      need: 'false',
+      pass: !(see.fork_escape_abandonment ?? s0.features?.see?.fork_escape_abandonment),
+    },
+    {
       label: 'Sacrifice cand.',
       got: s0.is_sacrifice_candidate ? 'true' : 'false',
       need: 'true',
@@ -509,16 +530,70 @@ export function buildStage2Rows(s1, s2) {
   const cpl = s2.cpl_shallow ?? eng.cpl_shallow ?? null;
   const epDelta = s2.ep_delta_shallow ?? eng.ep_delta_shallow ?? null;
   const earlyFail = s2.gate_fail_reason === 'piece_already_lost_engine_confirmed';
+  const pres = s2.features?.preservation_check ?? null;
+  const forcedEngineBypassed = Boolean(
+    s2.forced_engine_bypassed ?? s2.features?.forced_engine_bypassed
+  );
+  const isOnlyGoodMove = Boolean(
+    s2.is_only_good_move ?? eng.is_only_good_move
+    ?? ((s2.n_reasonable_moves ?? eng.n_reasonable_moves) != null
+      && (s2.n_reasonable_moves ?? eng.n_reasonable_moves) <= 1)
+  );
 
   const rows = [];
 
-  if (earlyFail) {
+  if (pres?.skipped) {
     rows.push({
       label: 'Engine preserve',
-      got: 'lost',
-      need: 'survive',
+      got: pres.reason ?? 'skipped',
+      need: 'already lost before',
+      pass: true,
+      na: true,
+    });
+  } else if (earlyFail) {
+    rows.push({
+      label: 'Engine preserve',
+      got: 'already lost before',
+      need: 'save line exists',
       pass: false,
     });
+    if (pres?.best_preservation_move) {
+      rows.push({
+        label: 'Best save try',
+        got: pres.best_preservation_move,
+        need: '—',
+        pass: null,
+        na: true,
+      });
+    }
+    if (pres?.preservation_delta_cp != null) {
+      rows.push({
+        label: 'Save delta',
+        got: pres.preservation_delta_cp,
+        need: `≥ −${pres.preservation_threshold_cp ?? 'T'}`,
+        pass: false,
+      });
+    }
+  } else if (pres && !pres.skipped && pres.en_prise_before_move) {
+    rows.push({
+      label: 'Engine preserve',
+      got: pres.already_lost_engine ? 'already lost before' : 'save exists',
+      need: 'not doomed before',
+      pass: !pres.already_lost_engine,
+    });
+    if (pres.best_preservation_move) {
+      rows.push({
+        label: 'Best save',
+        got: `${pres.best_preservation_move}${pres.best_preservation_via === 'other_move' ? ' (defense)' : ''}`,
+        need: '—',
+        pass: null,
+        na: true,
+      });
+    }
+  }
+
+  if (earlyFail) {
+    // depth table only — no CPL rows
   } else {
     const preWhite = eng.pre_move_eval_white_cp;
     if (preWhite != null) {
@@ -570,11 +645,18 @@ export function buildStage2Rows(s1, s2) {
         pass: epDelta != null ? epDelta >= -0.15 : null,
       },
       {
+        label: 'Only good move',
+        got: isOnlyGoodMove ? 'true' : 'false',
+        need: 'false',
+        pass: !isOnlyGoodMove,
+      },
+      {
         label: 'Engine forced',
-        got: s2.is_forced_engine ? 'true' : 'false',
-        need: '—',
-        pass: null,
-        na: true,
+        got: s2.is_forced_engine
+          ? (forcedEngineBypassed ? 'true · bypassed' : 'true')
+          : 'false',
+        need: 'false or bypass',
+        pass: !s2.is_forced_engine || forcedEngineBypassed,
       },
       {
         label: 'Near best',
@@ -620,7 +702,7 @@ export function buildStage3Rows(s2, s1, s3) {
   const deepMover = eng.deep_eval_mover_cp ?? null;
   const cplDeep = eng.cpl_deep ?? null;
 
-  const depthCurveRows = [5, 10, 15, 18].map((d) => {
+  const depthCurveRows = [1, 5, 10, 15, 18].map((d) => {
     const key = String(d);
     const whiteCp = depthEvals[key] ?? depthEvals[d];
     const moverCp = depthEvalsMover[key] ?? depthEvalsMover[d];
@@ -643,8 +725,16 @@ export function buildStage3Rows(s2, s1, s3) {
     {
       label: 'Deep eval',
       got: deepMover ?? s3.deep_eval_cp ?? '—',
-      need: '≥ −30',
-      pass: Boolean(s3.is_sound),
+      need: 'score in S4',
+      pass: null,
+      na: true,
+    },
+    {
+      label: 'Sound score',
+      got: eng.deep_eval_sound_score ?? s3.deep_eval_sound_score ?? '—',
+      need: '×0.06 in S4',
+      pass: null,
+      na: true,
     },
     {
       label: 'CPL deep',
@@ -653,10 +743,11 @@ export function buildStage3Rows(s2, s1, s3) {
       pass: eng.is_near_best_deep ?? null,
     },
     {
-      label: 'Sound',
+      label: 'Sound (telemetry)',
       got: s3.is_sound ? 'true' : 'false',
-      need: 'true',
-      pass: Boolean(s3.is_sound),
+      need: '≥ −30 cp',
+      pass: null,
+      na: true,
     },
     {
       label: 'NOB score',
@@ -701,6 +792,20 @@ export function buildStage3Rows(s2, s1, s3) {
       na: true,
     },
     {
+      label: 'd1−d18 span',
+      got: eng.depth_eval_span_cp ?? s3.depth_eval_span_cp ?? '—',
+      need: 'score in S4',
+      pass: null,
+      na: true,
+    },
+    {
+      label: 'Span score',
+      got: eng.depth_eval_span_score ?? s3.depth_eval_span_score ?? '—',
+      need: '×0.04 in S4',
+      pass: null,
+      na: true,
+    },
+    {
       label: 'Defense diff',
       got: s3.defense_difficulty ?? '—',
       need: '—',
@@ -717,16 +822,120 @@ export function buildStage3Rows(s2, s1, s3) {
   ];
 }
 
-export function buildStage4Rows(s3Move, s4Move) {
+export function resolveStage4ScoreBreakdown(s0Move, s3Move, s4Move) {
+  const stored = s4Move?.score_breakdown ?? s4Move?.features?.score_breakdown;
+  if (stored) {
+    const raw = stored.brilliance_score_raw ?? stored.brilliance_score;
+    return {
+      ...stored,
+      brilliance_score_raw: raw,
+      brilliance_score: raw,
+    };
+  }
+
+  const nob = Number(
+    s3Move?.non_obvious_score
+    ?? s3Move?.features?.non_obvious_score
+    ?? s3Move?.features?.engine?.non_obvious_score
+    ?? 0
+  );
+  const surprise = Number(s4Move?.surprise_score ?? s4Move?.features?.surprise?.surprise_score ?? 0);
+  const pb = Number(s4Move?.pb_score ?? s4Move?.features?.practical?.pb_score ?? 0);
+  const defDiff = Number(
+    s3Move?.defense_difficulty
+    ?? s3Move?.features?.defense_difficulty
+    ?? s3Move?.features?.engine?.defense_difficulty
+    ?? 0
+  );
+  const tm = Number(
+    s0Move?.multiplexing_score
+    ?? s0Move?.tactical_multiplexing?.multiplexing_score
+    ?? s0Move?.features?.tactical_multiplexing?.multiplexing_score
+    ?? 0
+  );
+  const ev = Number(
+    s0Move?.ev_score
+    ?? s0Move?.expectation_violation?.ev_score
+    ?? s0Move?.features?.expectation_violation?.ev_score
+    ?? 0
+  );
+  const soundScore = Number(
+    s3Move?.features?.engine?.deep_eval_sound_score
+    ?? s3Move?.deep_eval_sound_score
+    ?? 0
+  );
+  const spanScore = Number(
+    s3Move?.features?.engine?.depth_eval_span_score
+    ?? s3Move?.depth_eval_span_score
+    ?? 0
+  );
+
+  const wNob = nob * 0.27;
+  const wSurprise = surprise * 0.23;
+  const wPb = pb * 0.18;
+  const wDef = defDiff * 10 * 0.10;
+  const wTm = tm * 0.08;
+  const wEv = ev * 0.04;
+  const wSound = soundScore * 0.06;
+  const wSpan = spanScore * 0.04;
+  const raw = Math.round((wNob + wSurprise + wPb + wDef + wTm + wEv + wSound + wSpan) * 100) / 100;
+  const finalScore = s4Move?.brilliance_score_raw ?? s4Move?.brilliance_score ?? raw;
+
+  return {
+    components: {
+      non_obvious_score: nob,
+      surprise_score: surprise,
+      pb_score: pb,
+      defense_difficulty: defDiff,
+      multiplexing_score: tm,
+      ev_score: ev,
+      deep_eval_sound_score: soundScore,
+      depth_eval_span_score: spanScore,
+    },
+    weights: {
+      non_obvious_score: 0.27,
+      surprise_score: 0.23,
+      pb_score: 0.18,
+      defense_difficulty: 1.0,
+      multiplexing_score: 0.08,
+      ev_score: 0.04,
+      deep_eval_sound_score: 0.06,
+      depth_eval_span_score: 0.04,
+    },
+    weighted: {
+      non_obvious_score: Math.round(wNob * 1000) / 1000,
+      surprise_score: Math.round(wSurprise * 1000) / 1000,
+      pb_score: Math.round(wPb * 1000) / 1000,
+      defense_difficulty: Math.round(wDef * 1000) / 1000,
+      multiplexing_score: Math.round(wTm * 1000) / 1000,
+      ev_score: Math.round(wEv * 1000) / 1000,
+      deep_eval_sound_score: Math.round(wSound * 1000) / 1000,
+      depth_eval_span_score: Math.round(wSpan * 1000) / 1000,
+    },
+    quiet_bonus: 0,
+    defensive_bonus: 0,
+    brilliance_score_raw: s4Move?.brilliance_score_raw ?? raw,
+    brilliance_score: finalScore,
+  };
+}
+
+function stage4ComponentRow(label, componentKey, breakdown, weightLabel) {
+  const got = breakdown.components?.[componentKey];
+  const weighted = breakdown.weighted?.[componentKey];
+  return {
+    label,
+    got: got ?? '—',
+    need: weighted != null ? `${weightLabel} → ${weighted}` : weightLabel,
+    pass: null,
+    na: true,
+  };
+}
+
+export function buildStage4Rows(s0Move, s3Move, s4Move) {
   if (!s3Move?.proceed_to_stage4 || !s4Move) return [];
 
-  return [
-    {
-      label: 'Score',
-      got: s4Move.brilliance_score ?? '—',
-      need: '≥ 6.5 brilliant',
-      pass: s4Move.is_brilliant ?? (s4Move.brilliance_score != null && s4Move.brilliance_score >= 6.5),
-    },
+  const breakdown = resolveStage4ScoreBreakdown(s0Move, s3Move, s4Move);
+  const rows = [
     {
       label: 'Class',
       got: s4Move.classification ?? '—',
@@ -741,28 +950,54 @@ export function buildStage4Rows(s3Move, s4Move) {
       pass: null,
       na: true,
     },
-    {
-      label: 'Surprise',
-      got: s4Move.surprise_score ?? '—',
+    stage4ComponentRow('NOB score', 'non_obvious_score', breakdown, '×0.27'),
+    stage4ComponentRow('Surprise', 'surprise_score', breakdown, '×0.23'),
+    stage4ComponentRow('PB score', 'pb_score', breakdown, '×0.18'),
+    stage4ComponentRow('Defense diff', 'defense_difficulty', breakdown, '×1.0'),
+    stage4ComponentRow('Sound score', 'deep_eval_sound_score', breakdown, '×0.06'),
+    stage4ComponentRow('Span score', 'depth_eval_span_score', breakdown, '×0.04'),
+    stage4ComponentRow('TM', 'multiplexing_score', breakdown, '×0.08'),
+    stage4ComponentRow('EV', 'ev_score', breakdown, '×0.04'),
+  ];
+
+  if (breakdown.quiet_bonus > 0) {
+    rows.push({
+      label: 'Quiet bonus',
+      got: breakdown.quiet_bonus,
       need: '—',
       pass: null,
       na: true,
-    },
-    {
-      label: 'PB score',
-      got: s4Move.pb_score ?? '—',
+    });
+  }
+  if (breakdown.defensive_bonus > 0) {
+    rows.push({
+      label: 'Defensive bonus',
+      got: breakdown.defensive_bonus,
       need: '—',
       pass: null,
       na: true,
-    },
-    {
+    });
+  }
+
+  rows.push({
+    label: 'Final score',
+    got: breakdown.brilliance_score ?? s4Move.brilliance_score ?? '—',
+    need: '≥ 6.5 brilliant',
+    pass: s4Move.is_brilliant ?? (breakdown.brilliance_score != null && breakdown.brilliance_score >= 6.5),
+    highlight: true,
+  });
+
+  if (s4Move.is_tal_zone != null) {
+    rows.push({
       label: 'Tal zone',
       got: s4Move.is_tal_zone ? 'true' : 'false',
       need: '—',
       pass: null,
       na: true,
-    },
-  ];
+    });
+  }
+
+  return rows;
 }
 
 /** Canonical check list per stage (union of all possible rows). */
@@ -800,15 +1035,18 @@ export const DETAILED_STAGE_SCHEMA = [
     title: 'Stage 3',
     fill: 'FFBAE6FD',
     checks: [
-      'Deep eval', 'CPL deep', 'Sound', 'NOB score', 'Rank d8', 'Rank d18', 'Rank jump',
-      'Rising curve', 'Depth gain', 'Defense diff', '→ Stage 4',
+      'Deep eval', 'Sound score', 'CPL deep', 'Sound (telemetry)', 'NOB score', 'Rank d8', 'Rank d18', 'Rank jump',
+      'Rising curve', 'Depth gain', 'd1−d18 span', 'Span score', 'Defense diff', '→ Stage 4',
     ],
   },
   {
     stage: 4,
     title: 'Stage 4',
     fill: 'FFFDE68A',
-    checks: ['Score', 'Class', 'Archetype', 'Surprise', 'PB score', 'Tal zone'],
+    checks: [
+      'Class', 'Archetype', 'NOB score', 'Surprise', 'PB score', 'Defense diff', 'TM', 'EV',
+      'Final score', 'Tal zone',
+    ],
   },
 ];
 
@@ -839,7 +1077,7 @@ export function buildAllStageRowsForMove(s0, s1, s2, s3, s4) {
     1: buildStage1Rows(s0, s1),
     2: buildStage2Rows(s1, s2),
     3: buildStage3Rows(s2, s1, s3),
-    4: buildStage4Rows(s3, s4),
+    4: buildStage4Rows(s0, s3, s4),
   };
 }
 

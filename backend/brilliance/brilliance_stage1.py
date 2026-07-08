@@ -14,6 +14,7 @@ import chess.pgn
 from brilliance_stage0 import (
     PIECE_NAMES,
     PIECE_VALUES,
+    _is_standard_piece_trade,
     analyze_piece_vulnerability,
     expectation_violation,
     game_phase,
@@ -29,6 +30,7 @@ from brilliance_stage0 import (
 
 HARD_DISQUALIFIERS = frozenset({
     "winning_capture_not_sacrifice",
+    "equal_trade_not_sacrifice",
     "opening_gambit_pawn_sacrifice",
     "pawn_sacrifice_insufficient_justification",
 })
@@ -354,10 +356,16 @@ def classify_sacrifice_type(
 
     disqualifiers = []
 
+    raw_see = (stage0 or {}).get("see_value", see_value)
+    net_applied = bool((stage0 or {}).get("net_see_applied"))
     if board.is_capture(move):
-        if see_value >= 150:
+        if raw_see >= 150 and not net_applied:
             disqualifiers.append("winning_capture_not_sacrifice")
-        elif see_value >= -100 and not is_exchange_sac:
+        elif net_applied and see_value >= 150:
+            disqualifiers.append("winning_capture_not_sacrifice")
+        elif _is_standard_piece_trade(board, move, raw_see) and not is_exchange_sac:
+            disqualifiers.append("equal_trade_not_sacrifice")
+        elif raw_see >= -100 and not is_exchange_sac and not net_applied:
             disqualifiers.append("equal_trade_not_sacrifice")
 
     if board.is_capture(move) and captured:

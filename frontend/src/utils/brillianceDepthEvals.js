@@ -6,7 +6,7 @@ export const STAGE2_ENGINE_DEPTHS = {
   shallowPrimary: 12,
 };
 
-export const STAGE3_DEPTH_CURVE = [5, 10, 15, 18];
+export const STAGE3_DEPTH_CURVE = [1, 5, 10, 15, 18];
 
 export const STAGE3_RANK_DEPTHS = {
   shallow: 8,
@@ -42,16 +42,23 @@ export function getStage2DepthEvals(s2) {
   const pres = s2.features?.preservation_check;
   const rows = [];
 
-  if (pres && !pres.skipped && pres.en_prise_before_move) {
+  if (pres && !pres.skipped) {
     rows.push({
       depth: STAGE2_ENGINE_DEPTHS.preservation,
       purpose: 'Piece preservation',
       eval: formatCpWhite(pres.current_eval_mover_cp),
       note: pres.already_lost_engine
-        ? 'already lost'
+        ? 'already lost before'
         : pres.best_preservation_eval_mover_cp != null
-          ? `best save ${formatCpWhite(pres.best_preservation_eval_mover_cp)}`
+          ? `best save ${formatCpWhite(pres.best_preservation_eval_mover_cp)}${pres.best_preservation_via === 'other_move' ? ' · defense' : ''}`
           : 'no save line',
+    });
+  } else if (pres?.skipped) {
+    rows.push({
+      depth: STAGE2_ENGINE_DEPTHS.preservation,
+      purpose: 'Piece preservation',
+      eval: '—',
+      note: `skipped · ${pres.reason ?? 'n/a'}`,
     });
   }
 
@@ -109,11 +116,96 @@ export function getStage2DepthEvals(s2) {
   };
 }
 
+function formatCpl(cpl) {
+  if (cpl == null || !Number.isFinite(Number(cpl))) return '—';
+  const n = Number(cpl);
+  if (n === 0) return '—';
+  return n > 0 ? `+${n}` : String(n);
+}
+
+/**
+ * Stage 2 d12 MultiPV top-5 legal moves before our move, plus verdict vs alternatives.
+ */
+export function getStage2TopMoves(s2) {
+  if (!s2) {
+    return { title: 'Legal moves', subtitle: 'd12 multipv · pre-move', rows: [], verdict: null };
+  }
+
+  const eng = s2.features?.engine ?? s2.features ?? {};
+  const top5 = eng.top5_moves ?? s2.top5_moves ?? [];
+  const nLegal = eng.n_legal ?? s2.n_legal;
+  const ourRank = s2.our_rank_in_top5 ?? eng.our_rank_in_top5;
+  const nReasonable = s2.n_reasonable_moves ?? eng.n_reasonable_moves;
+  const bestMove = s2.best_move ?? eng.best_move;
+
+  if (!top5.length) {
+    return {
+      title: 'Legal moves',
+      subtitle: 'd12 multipv · pre-move',
+      rows: [],
+      verdict: null,
+      nLegal,
+    };
+  }
+
+  const rows = top5.map((m) => {
+    const tags = [];
+    if (m.rank === 1) tags.push('best');
+    if (m.is_played) tags.push('played');
+    if (m.outside_top5) tags.push('outside top 5');
+    if (!m.within_150cp && m.rank !== 1 && !m.outside_top5) tags.push('bad');
+
+    return {
+      rank: m.outside_top5 ? '—' : `#${m.rank}`,
+      move: m.san,
+      eval: formatCpWhite(m.score_mover_cp ?? m.score_cp),
+      cpl: formatCpl(m.cpl_from_best),
+      note: tags.join(' · ') || '—',
+      isPlayed: Boolean(m.is_played),
+      isBest: m.rank === 1,
+      isBad: !m.within_150cp && m.rank !== 1,
+    };
+  });
+
+  let verdict = null;
+  const playedInTop = top5.find((m) => m.is_played && !m.outside_top5);
+  const second = top5.find((m) => m.rank === 2);
+
+  if (ourRank === 1 || (playedInTop && playedInTop.rank === 1)) {
+    const gap = second?.cpl_from_best;
+    if (nReasonable != null && nReasonable <= 1) {
+      verdict = `${bestMove || playedInTop?.san} is the only good move — not a brilliant candidate.`;
+    } else if (gap != null && gap > 150) {
+      verdict = `${bestMove || playedInTop?.san} is clearly best — next alternative is ${gap} cp worse.`;
+    } else if (nReasonable != null && nReasonable <= 2) {
+      verdict = `Forced position — ${nReasonable} moves within 150 cp of best; choice still exists.`;
+    } else if (gap != null && gap <= 50) {
+      verdict = `${bestMove || playedInTop?.san} is best, but several near-equal alternatives exist.`;
+    } else {
+      verdict = `${bestMove || playedInTop?.san} is best among ${nLegal ?? 'all'} legal moves.`;
+    }
+  } else if (ourRank != null && ourRank < 99) {
+    verdict = `Played move ranks #${ourRank}; best is ${bestMove || top5[0]?.san}.`;
+  } else {
+    verdict = `Played move is outside Stockfish top 5 at d12 (evaluated at d10).`;
+  }
+
+  const legalNote = nLegal != null ? `${nLegal} legal · top 5 at d12` : 'top 5 at d12';
+
+  return {
+    title: 'Legal moves',
+    subtitle: legalNote,
+    rows,
+    verdict,
+    nLegal,
+  };
+}
+
 /**
  * Stage 3 deep curve d5→d18 plus rank searches at d8 and d18.
  */
 export function getStage3DepthEvals(s3) {
-  if (!s3) return { title: 'Stage 3 depths', subtitle: 'd5 · d10 · d15 · d18', rows: [] };
+  if (!s3) return { title: 'Stage 3 depths', subtitle: 'd1 · d5 · d10 · d15 · d18', rows: [] };
 
   const eng = s3.features?.engine ?? {};
   const depthEvals = s3.depth_evals ?? eng.depth_evals ?? {};
@@ -128,7 +220,9 @@ export function getStage3DepthEvals(s3) {
       depth: d,
       purpose: d === 18 ? 'Depth curve (final)' : 'Depth curve',
       eval: formatCpPair(whiteCp, moverCp),
-      note: d === 18 ? `CPL deep gate · sound ≥ −0.30 mover` : 'post-move position',
+      note: d === 18
+        ? `CPL deep gate · sound/span scored in Stage 4`
+        : 'post-move position',
     });
   }
 

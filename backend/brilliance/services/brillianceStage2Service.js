@@ -81,6 +81,9 @@ function parseStage2Row(row) {
     classification_if_fail: row.classification_if_fail,
     engine_depth: row.engine_depth,
     candidate_path: features?.candidate_path ?? null,
+    n_legal: features?.engine?.n_legal ?? null,
+    top5_moves: features?.engine?.top5_moves ?? null,
+    is_only_good_move: Boolean(features?.engine?.is_only_good_move),
     features,
   };
 }

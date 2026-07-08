@@ -13,6 +13,8 @@ EVAL_PERSPECTIVE = "white"
 STAGE2_SEARCH_TIME_S = 2.0
 STAGE3_DEPTH_CURVE_TIME_S = 0.75
 STAGE3_SEARCH_TIME_S = 1.5
+# d5 vs d18 mover eval must shift by at least this (1 pawn) unless rising curve.
+STAGE3_MIN_DEPTH_EVAL_SPAN_CP = 100
 
 
 def engine_limit(*, depth=None, time_s=2.0):

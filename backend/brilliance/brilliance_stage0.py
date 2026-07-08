@@ -68,8 +68,8 @@ def phase_material(board):
 
 def compute_novelty_score(ply_index, game_phase, sac_type=None):
     """
-    Novelty multiplier [0.0, 1.0] — opening theory moves score near zero.
-    Used in Stage 0 telemetry and Stage 4 brilliance scaling.
+    Novelty multiplier [0.0, 1.0] — opening theory telemetry (Stage 0 only).
+    No longer applied to Stage 4 final score.
     """
     ply = ply_index if ply_index is not None else 999
 
@@ -234,22 +234,15 @@ def _sacrifice_exposure_empty():
     }
 
 
-def _enemy_compensation_from_move(board_before, board_after, move, color):
-    """
-    Highest-value enemy piece newly threatened by the moving piece's destination.
-    Used to detect favorable trades (e.g. abandon bishop but fork a rook).
-    """
-    from_sq = move.from_square
-    to_sq = move.to_square
+def _compensation_from_attacked_squares(board, attack_squares, color):
+    """Highest-value enemy piece on squares attacked from a given origin."""
     opp = not color
-    new_attack_squares = board_after.attacks(to_sq) - board_before.attacks(from_sq)
-
     best_value = 0
     best_square = None
     best_type = None
 
-    for sq in new_attack_squares:
-        piece = board_after.piece_at(sq)
+    for sq in attack_squares:
+        piece = board.piece_at(sq)
         if not piece or piece.color != opp or piece.piece_type == chess.KING:
             continue
 
@@ -266,21 +259,101 @@ def _enemy_compensation_from_move(board_before, board_after, move, color):
     }
 
 
+def _enemy_compensation_from_square(board, square, color):
+    """Highest-value enemy piece threatened by a friendly piece on square."""
+    return _compensation_from_attacked_squares(board, board.attacks(square), color)
+
+
+def _enemy_compensation_from_move(board_before, board_after, move, color):
+    """
+    Highest-value enemy piece newly threatened by the moving piece's destination.
+    Used to detect favorable trades (e.g. abandon bishop but fork a rook).
+    """
+    from_sq = move.from_square
+    to_sq = move.to_square
+    new_attack_squares = board_after.attacks(to_sq) - board_before.attacks(from_sq)
+    return _compensation_from_attacked_squares(board_after, new_attack_squares, color)
+
+
+def _merge_compensation(*comps):
+    """Keep the highest-value compensation threat across sources."""
+    best = {
+        "compensation_piece_value": 0,
+        "compensation_piece_square": None,
+        "compensation_piece_type": None,
+    }
+    for comp in comps:
+        if comp["compensation_piece_value"] > best["compensation_piece_value"]:
+            best = comp
+    return best
+
+
+def _compensation_for_piece(board_after, piece_sq, color, mover_compensation):
+    """
+    Compensation for abandoning piece_sq: mover's new threats plus the piece's
+    own attacks (e.g. pawn@b5 pressuring queen while en prise).
+    """
+    piece_comp = _enemy_compensation_from_square(board_after, piece_sq, color)
+    return _merge_compensation(mover_compensation, piece_comp)
+
+
 def _is_favorable_trade(exposed_value, compensation_value):
-    """True when newly threatened enemy material >= abandoned friendly material."""
+    """True when threatened enemy material >= abandoned friendly material."""
     return (
-        exposed_value >= SACRIFICE_MIN_PIECE_VALUE
+        exposed_value >= SACRIFICE_SCAN_MIN_PIECE_VALUE
         and compensation_value >= exposed_value
     )
 
 
-def _capture_see_counts_as_sacrifice(is_capture, see_val, net_info):
+def _is_standard_piece_trade(board, move, see_val=None):
+    """
+    Forced recapture exchange (e.g. Bxc6 bxc6): raw SEE already prices the full
+    capture/recapture sequence (~−28 for bishop vs knight). Not a sacrifice.
+    """
+    if not board.is_capture(move):
+        return False
+
+    if see_val is None:
+        see_val = see(board, move)
+    if see_val < EQUAL_TRADE_SEE_THRESHOLD:
+        return False
+
+    from_sq = move.from_square
+    to_sq = move.to_square
+    moving = board.piece_at(from_sq)
+    captured = board.piece_at(to_sq)
+    if not moving or not captured:
+        return False
+
+    if_val = PIECE_VALUES.get(moving.piece_type, 0)
+    cap_val = PIECE_VALUES.get(captured.piece_type, 0)
+
+    board_after = board.copy()
+    board_after.push(move)
+    if not any(m.to_square == to_sq for m in board_after.legal_moves):
+        return False
+
+    similar_pieces = (
+        if_val >= SACRIFICE_MIN_PIECE_VALUE
+        and cap_val >= if_val * 0.75
+    )
+    minor_for_major = (
+        if_val >= SACRIFICE_MIN_PIECE_VALUE
+        and cap_val >= SACRIFICE_SCAN_MIN_PIECE_VALUE
+        and abs(if_val - cap_val) <= 50
+    )
+    return similar_pieces or minor_for_major
+
+
+def _capture_see_counts_as_sacrifice(is_capture, see_val, net_info, *, is_standard_trade=False):
     """
     Stage 0 capture SEE gate (mirrors Stage 1 disqualifiers at board-only level).
-    Winning captures (SEE >= 150) and equal trades (SEE >= -100) are never sacrifices
-    unless net SEE applies with landing en prise.
+    Winning captures (SEE >= 150) and equal trades (SEE >= -100) are never sacrifices.
+    Net SEE only applies when raw SEE misprices a landing loss (Bxh6), not Bxc6 bxc6.
     """
     if not is_capture:
+        return False
+    if is_standard_trade or see_val >= EQUAL_TRADE_SEE_THRESHOLD:
         return False
     if see_val >= WINNING_CAPTURE_SEE_THRESHOLD:
         return False
@@ -297,9 +370,36 @@ def _remaining_defender_value(board_after, sq, color):
     )
 
 
+def _is_defended_equal_exchange(before, after):
+    """
+    Opponent can capture but we still have >= defenders vs attackers and SEE is
+    only a minor trade edge (e.g. Nxf3 Qxf3 ≈ +28). Not an intentional sacrifice.
+    """
+    if not after or after["attackers"] == 0:
+        return False
+    if after["defenders"] < after["attackers"]:
+        return False
+    return after["see"] <= OPP_PROFITABLE_SEE_THRESHOLD
+
+
+def _defender_removal_sacrifice_path(defender_removed, before, after, defense_weakened, risk_worsened):
+    """
+    Moving piece stopped defending a square — only counts when defense or SEE
+    actually worsened (queen relocalizing while keeping 2v1 coverage is not a sac).
+    """
+    if not defender_removed:
+        return False
+    if after["piece_type"] not in ("bishop", "knight", "rook", "queen"):
+        return False
+    if _is_defended_equal_exchange(before, after):
+        return False
+    return defense_weakened or risk_worsened
+
+
 def _audit_rejection_reason(
     piece_val,
     vuln_before,
+    before,
     after,
     newly_exposed,
     defender_removal,
@@ -315,6 +415,8 @@ def _audit_rejection_reason(
         return "not_en_prise_after"
     if favorable_trade:
         return "favorable_trade_compensation"
+    if _is_defended_equal_exchange(before, after):
+        return "defended_equal_exchange"
     if not (newly_exposed or defender_removal or became_lost or capture_landing):
         return "no_valid_sacrifice_path"
     if newly_exposed and after["see"] <= OPP_SEE_EN_PRISE_THRESHOLD:
@@ -349,18 +451,29 @@ def _verify_intentional_sacrifice_piece(
     if vuln_before.get("already_lost_before_move"):
         return None
 
+    if board.is_capture(move) and _is_standard_piece_trade(board, move):
+        return None
+
     if not after["en_prise"]:
         return None
 
-    favorable = _is_favorable_trade(piece_val, compensation["compensation_piece_value"])
-    if favorable and piece_val >= SACRIFICE_MIN_PIECE_VALUE:
+    audit_sq = chess.parse_square(after["square"])
+    piece_compensation = _compensation_for_piece(
+        board_after, audit_sq, color, compensation
+    )
+    favorable = _is_favorable_trade(
+        piece_val, piece_compensation["compensation_piece_value"]
+    )
+    if favorable:
+        return None
+
+    if _is_defended_equal_exchange(before, after):
         return None
 
     newly_exposed = not before["en_prise"] and after["en_prise"]
     risk_worsened = after["see"] > before["see"]
     defense_weakened = after["defenders"] < before["defenders"]
 
-    audit_sq = chess.parse_square(after["square"])
     vuln_after = analyze_piece_vulnerability(board_after, audit_sq, color)
     already_lost_after = vuln_after["already_lost_before_move"]
     became_lost = (
@@ -369,11 +482,8 @@ def _verify_intentional_sacrifice_piece(
         and after["en_prise"]
     )
 
-    defender_removal = defender_removed and after["piece_type"] in (
-        "bishop",
-        "knight",
-        "rook",
-        "queen",
+    defender_removal = _defender_removal_sacrifice_path(
+        defender_removed, before, after, defense_weakened, risk_worsened
     )
 
     capture_landing = False
@@ -388,6 +498,10 @@ def _verify_intentional_sacrifice_piece(
         )
 
     if not (newly_exposed or defender_removal or became_lost or capture_landing):
+        return None
+
+    audit_sq = chess.parse_square(after["square"])
+    if _fork_escape_abandonment(board, board_after, move, color, audit_sq):
         return None
 
     if newly_exposed:
@@ -491,9 +605,9 @@ def _compute_net_capture_see(board, move, color, see_val):
     landing = piece_hanging_status(board_after, to_sq, color)
     landing_en_prise = bool(landing and landing["en_prise"])
 
-    # Only when the mover is tactically lost on the landing square (e.g. Bxh6).
-    # Do NOT subtract mover value for safe winning captures (Qxd7 with no threat).
-    if landing_en_prise:
+    # Only net-adjust when landing is en prise and this is not a forced recapture trade.
+    # Bxh6: raw +pawn SEE while bishop is lost. Bxc6 bxc6: raw SEE ~−28 already complete.
+    if landing_en_prise and not _is_standard_piece_trade(board, move, see_val):
         return {
             "net_see_value": see_val - mover_val,
             "net_see_applied": True,
@@ -513,6 +627,9 @@ def _build_mover_landing_candidate(board, board_after, move, color, compensation
     moving_piece = board.piece_at(from_sq)
     piece_after = board_after.piece_at(to_sq)
     if moving_piece is None or piece_after is None or piece_after.color != color:
+        return None
+
+    if _is_standard_piece_trade(board, move):
         return None
 
     before = piece_hanging_status(board, from_sq, color)
@@ -592,11 +709,8 @@ def _build_sacrifice_piece_audit(board, board_after, move, color, compensation, 
             and vuln_after.get("already_lost_before_move")
             and after.get("en_prise")
         )
-        defender_removal = defender_removed and piece_after.piece_type in (
-            chess.BISHOP,
-            chess.KNIGHT,
-            chess.ROOK,
-            chess.QUEEN,
+        defender_removal = _defender_removal_sacrifice_path(
+            defender_removed, before, after, defense_weakened, risk_worsened
         )
         capture_landing = (
             sq == move.to_square
@@ -610,7 +724,29 @@ def _build_sacrifice_piece_audit(board, board_after, move, color, compensation, 
                 )
             )
         )
-        favorable = _is_favorable_trade(piece_val, compensation["compensation_piece_value"])
+        piece_compensation = _compensation_for_piece(
+            board_after, sq, color, compensation
+        )
+        favorable = _is_favorable_trade(
+            piece_val, piece_compensation["compensation_piece_value"]
+        )
+
+        if _fork_escape_abandonment(board, board_after, move, color, sq):
+            audit.append({
+                "square": sq_name,
+                "piece_type": PIECE_NAMES.get(piece_after.piece_type),
+                "piece_value": piece_val,
+                "verdict": "not_sacrifice",
+                "sacrifice_modes": [],
+                "pre_move_see": before["see"] if before else 0,
+                "post_move_see": after["see"],
+                "pre_en_prise": bool(before and before["en_prise"]),
+                "post_en_prise": bool(after["en_prise"]),
+                "already_lost_before": bool(vuln_before.get("already_lost_before_move")),
+                "already_lost_after": bool(vuln_after.get("already_lost_before_move")),
+                "reason": "fork_escape_abandonment",
+            })
+            continue
 
         audit.append({
             "square": sq_name,
@@ -627,6 +763,7 @@ def _build_sacrifice_piece_audit(board, board_after, move, color, compensation, 
             "reason": _audit_rejection_reason(
                 piece_val,
                 vuln_before,
+                before,
                 after,
                 newly_exposed,
                 defender_removal,
@@ -683,8 +820,14 @@ def analyze_sacrifice_exposure(board, move, color):
             and from_sq not in board_after.attackers(color, sq)
         )
 
+        piece_compensation = _compensation_for_piece(
+            board_after, sq, color, compensation
+        )
         if after["en_prise"] and not vuln_before["already_lost_before_move"]:
-            if _is_favorable_trade(after["piece_value"], compensation["compensation_piece_value"]):
+            if _is_favorable_trade(
+                after["piece_value"],
+                piece_compensation["compensation_piece_value"],
+            ):
                 record = {
                     **empty,
                     "newly_exposed_piece": after["piece_type"],
@@ -698,9 +841,9 @@ def analyze_sacrifice_exposure(board, move, color):
                     "pre_move_see": before["see"],
                     "post_move_see": after["see"],
                     "favorable_trade": True,
-                    "compensation_piece_value": compensation["compensation_piece_value"],
-                    "compensation_piece_square": compensation["compensation_piece_square"],
-                    "compensation_piece_type": compensation["compensation_piece_type"],
+                    "compensation_piece_value": piece_compensation["compensation_piece_value"],
+                    "compensation_piece_square": piece_compensation["compensation_piece_square"],
+                    "compensation_piece_type": piece_compensation["compensation_piece_type"],
                 }
                 if (
                     suppressed_favorable is None
@@ -737,6 +880,10 @@ def analyze_sacrifice_exposure(board, move, color):
         result = suppressed_favorable if suppressed_favorable else empty
         result["sacrifice_piece_audit"] = piece_audit
         result["verified_sacrifice_pieces"] = []
+        result["opponent_forks_before"] = find_opponent_forks(board, color)
+        result["fork_escape_abandonment"] = any(
+            a.get("reason") == "fork_escape_abandonment" for a in piece_audit
+        )
         return result
 
     all_candidates = [
@@ -765,6 +912,10 @@ def analyze_sacrifice_exposure(board, move, color):
         {k: v for k, v in p.items() if k != "_sort_key"} for p in verified
     ]
     best["sacrifice_piece_audit"] = piece_audit
+    best["opponent_forks_before"] = find_opponent_forks(board, color)
+    best["fork_escape_abandonment"] = any(
+        a.get("reason") == "fork_escape_abandonment" for a in piece_audit
+    )
 
     return best
 
@@ -835,10 +986,22 @@ def is_sacrifice_candidate(board, move, color, ply_index=None):
             ):
                 risk_threshold = PAWN_OPENING_OPP_SEE_THRESHOLD
             positional_risk = opp_see > risk_threshold
+            if positional_risk:
+                mover_comp = _enemy_compensation_from_move(
+                    board, board_after, move, color
+                )
+                mover_val = PIECE_VALUES.get(moving_piece.piece_type, 0)
+                if _is_favorable_trade(
+                    mover_val, mover_comp["compensation_piece_value"]
+                ):
+                    positional_risk = False
 
     exposure = analyze_sacrifice_exposure(board, move, color)
     verified_pieces = exposure.get("verified_sacrifice_pieces") or []
-    negative_see_sacrifice = _capture_see_counts_as_sacrifice(is_capture, see_val, net_info)
+    standard_trade = _is_standard_piece_trade(board, move, see_val) if is_capture else False
+    negative_see_sacrifice = _capture_see_counts_as_sacrifice(
+        is_capture, see_val, net_info, is_standard_trade=standard_trade
+    )
 
     newly_exposed_sacrifice = any(
         "newly_exposed" in p.get("sacrifice_modes", []) for p in verified_pieces
@@ -859,6 +1022,10 @@ def is_sacrifice_candidate(board, move, color, ply_index=None):
     )
 
     suppression_reason = None
+
+    if is_sac and exposure.get("fork_escape_abandonment"):
+        is_sac = False
+        suppression_reason = "fork_escape_abandonment"
 
     # C2: opening phase pawn sacrifice suppression (pawn moves only — not Bxh6-style piece sacs)
     if is_sac and is_opening_phase:
@@ -1037,6 +1204,7 @@ def analyze_piece_vulnerability(board, square, color):
         return empty
 
     en_prise = is_piece_en_prise(board, square, color)
+    fork_info = piece_in_opponent_fork(board, square, color)
     safe_escapes = sum(
         1
         for m in board.legal_moves
@@ -1049,7 +1217,10 @@ def analyze_piece_vulnerability(board, square, color):
     reason = None
 
     if en_prise:
-        if safe_escapes > 0 or capture_out:
+        if fork_info and safe_escapes == 0 and not capture_out:
+            already_lost = True
+            reason = "fork_victim"
+        elif safe_escapes > 0 or capture_out:
             already_lost = False
         elif absolute_pin and safe_escapes == 0 and not capture_out:
             already_lost = True
@@ -1062,6 +1233,8 @@ def analyze_piece_vulnerability(board, square, color):
         **empty,
         "en_prise_before_move": en_prise,
         "already_lost_before_move": already_lost,
+        "in_opponent_fork": fork_info is not None,
+        "opponent_fork": fork_info,
         "safe_escape_squares": safe_escapes,
         "has_capture_out": capture_out,
         "absolute_pin": absolute_pin,
@@ -1152,6 +1325,79 @@ def king_safety(board, color):
     }
 
 
+def find_opponent_forks(board, color):
+    """
+    Opponent pieces simultaneously attacking 2+ of our valuable pieces.
+    Classic knight forks on two rooks are the main case this catches.
+    """
+    opp = not color
+    forks = []
+    seen = set()
+    for sq in chess.SQUARES:
+        atk = board.piece_at(sq)
+        if not atk or atk.color != opp:
+            continue
+        targets = [
+            t
+            for t in board.attacks(sq)
+            if board.piece_at(t)
+            and board.piece_at(t).color == color
+            and PIECE_VALUES.get(board.piece_at(t).piece_type, 0) >= SACRIFICE_MIN_PIECE_VALUE
+        ]
+        if len(targets) < 2:
+            continue
+        key = tuple(sorted(chess.square_name(t) for t in targets))
+        if key in seen:
+            continue
+        seen.add(key)
+        forks.append(
+            {
+                "attacker_square": chess.square_name(sq),
+                "attacker_type": PIECE_NAMES.get(atk.piece_type),
+                "target_squares": [chess.square_name(t) for t in targets],
+                "target_values": sum(
+                    PIECE_VALUES.get(board.piece_at(t).piece_type, 0) for t in targets
+                ),
+            }
+        )
+    return forks
+
+
+def piece_in_opponent_fork(board, square, color):
+    """Fork record if square is one of 2+ targets of the same opponent attacker."""
+    sq_name = chess.square_name(square)
+    for fork in find_opponent_forks(board, color):
+        if sq_name in fork["target_squares"]:
+            return fork
+    return None
+
+
+def _fork_escape_abandonment(board, board_after, move, color, audit_sq):
+    """
+    Mover escaped one fork target by moving, leaving a sibling fork target doomed.
+    Losing the remaining forked piece is not an intentional sacrifice.
+    """
+    forks = find_opponent_forks(board, color)
+    if not forks:
+        return False
+
+    from_sq = move.from_square
+    for fork in forks:
+        targets = [chess.parse_square(t) for t in fork["target_squares"]]
+        if from_sq not in targets or audit_sq not in targets or from_sq == audit_sq:
+            continue
+        after = piece_hanging_status(board_after, audit_sq, color)
+        if not after or not after["en_prise"]:
+            continue
+        vuln_after = analyze_piece_vulnerability(board_after, audit_sq, color)
+        if (
+            vuln_after.get("already_lost_before_move")
+            or after["see"] > OPP_PROFITABLE_SEE_THRESHOLD
+        ):
+            return True
+    return False
+
+
 def tactical_multiplexing(board_before, board_after, color):
     opp = not color
 
@@ -1180,9 +1426,8 @@ def tactical_multiplexing(board_before, board_after, color):
                 continue
             valuable = [
                 sq
-                for sq in chess.SQUARES
-                if b.is_attacked_by(color, sq)
-                and b.piece_at(sq)
+                for sq in b.attacks(piece_sq)
+                if b.piece_at(sq)
                 and b.piece_at(sq).color == opp
                 and PIECE_VALUES.get(b.piece_at(sq).piece_type, 0) >= 305
             ]
@@ -1191,6 +1436,8 @@ def tactical_multiplexing(board_before, board_after, color):
         return result
 
     new_forks = [sq for sq in forks(board_after) if sq not in forks(board_before)]
+    opp_forks_before = find_opponent_forks(board_before, color)
+    opp_forks_after = find_opponent_forks(board_after, color)
 
     pins_before = sum(
         1
@@ -1225,6 +1472,9 @@ def tactical_multiplexing(board_before, board_after, color):
         "new_hanging": len(new_hanging),
         "new_forks": len(new_forks),
         "new_pins": new_pins,
+        "opponent_forks_before": len(opp_forks_before),
+        "opponent_forks_after": len(opp_forks_after),
+        "opponent_fork_details_before": opp_forks_before,
         "is_check": is_check,
         "is_checkmate": is_checkmate,
         "multiplexing_score": tm_score,

@@ -74,6 +74,10 @@ function buildStage4Inputs(gameId) {
     const s1 = stage1ByPly.get(s3.ply_index) || {};
     const s2 = stage2ByPly.get(s3.ply_index) || {};
     let deepEvalMover = null;
+    let depthEvalSpanCp = null;
+    let deepEvalSoundScore = null;
+    let depthEvalSpanScore = null;
+    let isRisingCurve = Boolean(s3.is_rising_curve);
     let materialBalanceBefore = null;
     let quietScore = 0;
     let materialDeficit = 0;
@@ -120,7 +124,12 @@ function buildStage4Inputs(gameId) {
     if (s3.features_json) {
       try {
         const features = JSON.parse(s3.features_json);
-        deepEvalMover = features?.engine?.deep_eval_mover_cp ?? null;
+        const eng = features?.engine ?? {};
+        deepEvalMover = eng.deep_eval_mover_cp ?? null;
+        depthEvalSpanCp = eng.depth_eval_span_cp ?? null;
+        deepEvalSoundScore = eng.deep_eval_sound_score ?? null;
+        depthEvalSpanScore = eng.depth_eval_span_score ?? null;
+        isRisingCurve = Boolean(eng.is_rising_curve ?? s3.is_rising_curve);
       } catch {
         deepEvalMover = null;
       }
@@ -158,8 +167,12 @@ function buildStage4Inputs(gameId) {
       non_obvious_score: s3.non_obvious_score,
       defense_difficulty: s3.defense_difficulty,
       is_sound: Boolean(s3.is_sound),
+      is_rising_curve: isRisingCurve,
       deep_eval_cp: s3.deep_eval_cp,
       deep_eval_mover_cp: deepEvalMover,
+      depth_eval_span_cp: depthEvalSpanCp,
+      deep_eval_sound_score: deepEvalSoundScore,
+      depth_eval_span_score: depthEvalSpanScore,
     };
   });
 }
@@ -218,9 +231,11 @@ function parseStage4Row(row) {
     practical_value: row.practical_value,
     is_tal_zone: Boolean(row.is_tal_zone),
     archetype: row.archetype,
+    brilliance_score_raw: features?.brilliance_score_raw ?? features?.score_breakdown?.brilliance_score_raw ?? null,
     brilliance_score: row.brilliance_score,
     classification: row.classification,
     is_brilliant: Boolean(row.is_brilliant),
+    score_breakdown: features?.score_breakdown ?? null,
     features,
   };
 }

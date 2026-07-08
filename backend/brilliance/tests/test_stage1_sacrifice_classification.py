@@ -100,6 +100,16 @@ class Stage1SacrificeClassificationTests(unittest.TestCase):
         self.assertTrue(result["is_valid_sacrifice"])
         self.assertNotIn("equal_trade_not_sacrifice", result.get("disqualifiers") or [])
 
+    def test_bxc6_equal_trade_blocked_at_stage1(self):
+        """Bxc6 bxc6 must not proceed — tactical bypass cannot override equal trade."""
+        fen = "8/1p6/2n5/8/4B3/8/8/8 w - - 0 1"
+        board = chess.Board(fen)
+        move = chess.Move.from_uci("e4c6")
+        from brilliance_stage1 import analyze_stage1_move
+
+        result = analyze_stage1_move(board, move, ply_index=18)
+        self.assertIsNone(result)
+
 
 if __name__ == "__main__":
     unittest.main()

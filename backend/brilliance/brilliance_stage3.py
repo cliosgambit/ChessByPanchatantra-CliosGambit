@@ -1,6 +1,6 @@
 """
 Brilliance Engine — Stage 3 deep Stockfish validation.
-Runs only on Stage 2 proceed_to_stage3 moves. Depth curve d5–18, rank d8/d18, defense d18.
+Runs only on Stage 2 proceed_to_stage3 moves. Depth curve d1–18, rank d8/d18, defense d18.
 All stored cp scores use white POV (+ = white better).
 """
 import io
@@ -15,6 +15,7 @@ import chess.pgn
 from brilliance_eval import (
     EVAL_PERSPECTIVE,
     STAGE3_DEPTH_CURVE_TIME_S,
+    STAGE3_MIN_DEPTH_EVAL_SPAN_CP,
     STAGE3_SEARCH_TIME_S,
     cp_from_info_white,
     cp_to_ep,
@@ -30,7 +31,56 @@ STOCKFISH_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "stockfish", "stockfish-windows-x86-64-avx2.exe")
 )
 
-DEPTH_CURVE = [5, 10, 15, 18]
+DEPTH_CURVE = [1, 5, 10, 15, 18]
+DEEP_EVAL_SOUND_THRESHOLD_CP = -30
+DEPTH_SPAN_SHALLOW_KEY = "1"
+DEPTH_SPAN_DEEP_KEY = "18"
+
+
+def depth_eval_span_mover_cp(engine_features):
+    """d1 minus d18 on mover POV — positive means shallow more optimistic."""
+    ev = engine_features.get("depth_evals_mover") or {}
+    d_shallow = ev.get(DEPTH_SPAN_SHALLOW_KEY)
+    d_deep = ev.get(DEPTH_SPAN_DEEP_KEY)
+    if d_shallow is None or d_deep is None:
+        return None
+    return d_shallow - d_deep
+
+
+def deep_eval_sound_score(deep_eval_mover_cp):
+    """
+    0–10 score for d18 mover eval soundness (Stage 4 input).
+    Maps −200cp→0, −30cp→~7.5, +200cp→10.
+    """
+    if deep_eval_mover_cp is None:
+        return 0.0
+    score = max(0.0, min(10.0, (deep_eval_mover_cp + 200) / 400.0 * 10.0))
+    return round(score, 2)
+
+
+def depth_eval_span_score(span_cp, is_rising_curve):
+    """
+    0–10 score for depth-revealed compensation (Stage 4 input).
+    Rising curve or |d1−d18| ≥ 1 pawn → high; flat lines → low.
+    """
+    if is_rising_curve:
+        return 10.0
+    if span_cp is None:
+        return 0.0
+    return round(min(10.0, abs(span_cp) / STAGE3_MIN_DEPTH_EVAL_SPAN_CP * 10.0), 2)
+
+
+def is_depth_eval_span_acceptable(engine_features):
+    """
+    Depth curve must move by at least 1 pawn between d1 and d18, unless the
+    eval crosses from losing to winning (rising curve). Telemetry only — not a gate.
+    """
+    span = depth_eval_span_mover_cp(engine_features)
+    if span is None:
+        return True
+    if engine_features.get("is_rising_curve"):
+        return True
+    return abs(span) >= STAGE3_MIN_DEPTH_EVAL_SPAN_CP
 
 
 def deep_engine_features(board_before, move, color, engine):
@@ -56,7 +106,8 @@ def deep_engine_features(board_before, move, color, engine):
 
     deep_eval_white = depth_evals_white[-1]
     deep_eval_mover = to_mover_cp(deep_eval_white, color)
-    is_sound = deep_eval_mover is not None and deep_eval_mover >= -30
+    is_sound = deep_eval_mover is not None and deep_eval_mover >= DEEP_EVAL_SOUND_THRESHOLD_CP
+    sound_score = deep_eval_sound_score(deep_eval_mover)
 
     shallow_multi = engine.analyse(
         board_before,
@@ -134,6 +185,13 @@ def deep_engine_features(board_before, move, color, engine):
         + (1 if is_non_obvious else 0) * 2
     )
 
+    depth_eval_span_cp = (
+        depth_evals_mover[0] - depth_evals_mover[-1]
+        if depth_evals_mover[0] is not None and depth_evals_mover[-1] is not None
+        else None
+    )
+    span_score = depth_eval_span_score(depth_eval_span_cp, is_rising_curve)
+
     return {
         "depth_evals": {str(d): e for d, e in zip(DEPTH_CURVE, depth_evals_white)},
         "depth_evals_mover": {str(d): e for d, e in zip(DEPTH_CURVE, depth_evals_mover)},
@@ -142,6 +200,15 @@ def deep_engine_features(board_before, move, color, engine):
         "early_eval_avg": round(early_avg, 1),
         "late_eval_avg": round(late_avg, 1),
         "depth_gain": round(depth_gain, 1),
+        "depth_eval_span_cp": round(depth_eval_span_cp, 1) if depth_eval_span_cp is not None else None,
+        "depth_eval_span_score": span_score,
+        "deep_eval_sound_score": sound_score,
+        "is_depth_eval_span_acceptable": is_depth_eval_span_acceptable(
+            {
+                "depth_evals_mover": {str(d): e for d, e in zip(DEPTH_CURVE, depth_evals_mover)},
+                "is_rising_curve": is_rising_curve,
+            }
+        ),
         "is_rising_curve": is_rising_curve,
         "deep_eval_cp": deep_eval_white,
         "deep_eval_mover_cp": deep_eval_mover,
@@ -166,9 +233,12 @@ def deep_engine_features(board_before, move, color, engine):
 
 
 def apply_stage3_gate(engine_features):
+    """
+    Hard gate: only CPL deep blocks Stage 4.
+    Soundness and depth span are scored in Stage 4 (deep_eval_sound_score,
+    depth_eval_span_score).
+    """
     unsound_reasons = []
-    if not engine_features.get("is_sound"):
-        unsound_reasons.append("deep_eval_below_threshold")
     if not engine_features.get("is_near_best_deep"):
         unsound_reasons.append("cpl_deep_too_high")
 

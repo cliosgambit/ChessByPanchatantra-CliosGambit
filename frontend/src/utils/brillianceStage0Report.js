@@ -64,7 +64,10 @@ export function buildStage0GateSummary(s0) {
   }
 
   if (g.suppression) {
-    return `Gate paths active (${paths.join(' · ')}) but SUPPRESSED: ${g.suppression.replace(/_/g, ' ')}. Sacrifice cand. = false.`;
+    const forkNote = g.suppression === 'fork_escape_abandonment'
+      ? 'Escaping a fork by abandoning the other target is not a sacrifice.'
+      : g.suppression.replace(/_/g, ' ');
+    return `Gate paths active (${paths.join(' · ')}) but SUPPRESSED: ${forkNote}. Sacrifice cand. = false.`;
   }
 
   if (g.passes) {

@@ -142,6 +142,90 @@ class Stage0SacrificeGateTests(unittest.TestCase):
         self.assertEqual(exposure.get("newly_exposed_piece_type"), "bishop")
         self.assertGreaterEqual(exposure.get("newly_exposed_piece_value", 0), 300)
 
+    def test_bxc6_equal_trade_not_sacrifice(self):
+        """
+        Bxc6 bxc6: bishop-for-knight recapture trade. Raw SEE ~−28 already prices
+        the sequence; must not net-adjust or flag as sacrifice (regression).
+        """
+        fen = "8/1p6/2n5/8/4B3/8/8/8 w - - 0 1"
+        board = chess.Board(fen)
+        move = chess.Move.from_uci("e4c6")
+
+        self.assertLess(see(board, move), 0)
+        self.assertGreaterEqual(see(board, move), -100)
+
+        result = is_sacrifice_candidate(board, move, chess.WHITE, ply_index=18)
+        self.assertFalse(result["net_see_applied"])
+        self.assertFalse(result["negative_see_sacrifice"])
+        self.assertFalse(result["is_sacrifice_candidate"])
+        self.assertEqual(result.get("verified_sacrifice_pieces"), [])
+
+    def test_qe4_queen_relocalizes_defender_not_bishop_sacrifice(self):
+        """
+        Qb7-e4: queen stops defending f3 but Bg2 still covers; Ne5xf3 is a
+        defended knight-for-bishop trade (SEE +28). Must not flag indirect sac.
+        """
+        fen = "6rk/pQ4bp/3p3q/4n3/5p2/2P2B2/PP3PPB/4R1K1 w - - 0 26"
+        board = chess.Board(fen)
+        move = next(m for m in board.legal_moves if board.san(m) == "Qe4")
+        result = is_sacrifice_candidate(board, move, chess.WHITE, ply_index=50)
+
+        self.assertFalse(result["hanging_sacrifice"])
+        self.assertFalse(result["is_sacrifice_candidate"])
+        self.assertFalse(result["proceed_to_stage1"])
+        self.assertEqual(result.get("verified_sacrifice_pieces"), [])
+
+        audit = result.get("sacrifice_piece_audit") or []
+        bishop_f3 = next((a for a in audit if a.get("square") == "f3"), None)
+        self.assertIsNotNone(bishop_f3)
+        self.assertEqual(bishop_f3["verdict"], "not_sacrifice")
+        self.assertEqual(bishop_f3["reason"], "defended_equal_exchange")
+
+    def test_pawn_attacking_queen_not_sacrifice_when_en_prise(self):
+        """
+        Pawn pressuring queen while en prise is compensation, not intentional sacrifice.
+        Rf8 must not open Stage 0 when pawn@b7 attacks queen@c6.
+        """
+        fen = "r6k/1p6/2Q5/8/8/8/8/7K b - - 0 40"
+        board = chess.Board(fen)
+        move = chess.Move.from_uci("a8f8")
+        result = is_sacrifice_candidate(board, move, chess.BLACK, ply_index=78)
+
+        self.assertFalse(result["is_sacrifice_candidate"])
+        self.assertFalse(result["proceed_to_stage1"])
+        self.assertTrue(result["favorable_trade"])
+        self.assertEqual(result.get("compensation_piece_type"), "queen")
+        self.assertEqual(result.get("verified_sacrifice_pieces"), [])
+
+        audit = result.get("sacrifice_piece_audit") or []
+        pawn_b7 = next((a for a in audit if a.get("square") == "b7"), None)
+        self.assertIsNotNone(pawn_b7)
+        self.assertEqual(pawn_b7["verdict"], "not_sacrifice")
+        self.assertEqual(pawn_b7["reason"], "favorable_trade_compensation")
+
+    def test_hanging_pawn_with_rook_queen_attack_not_sacrifice(self):
+        """
+        Rf8 attacks queen while pawn@b5 is already en prise (SEE 100) and becomes lost.
+        Mover compensation must suppress the hanging-exposure sacrifice path.
+        """
+        fen = "r6k/8/2B5/1p6/8/5Q2/8/7K b - - 0 40"
+        board = chess.Board(fen)
+        move = chess.Move.from_uci("a8f8")
+        result = is_sacrifice_candidate(board, move, chess.BLACK, ply_index=78)
+
+        self.assertFalse(result["is_sacrifice_candidate"])
+        self.assertFalse(result["proceed_to_stage1"])
+        self.assertFalse(result["hanging_sacrifice"])
+        self.assertFalse(result["positional_risk"])
+        self.assertTrue(result["favorable_trade"])
+        self.assertEqual(result.get("verified_sacrifice_pieces"), [])
+
+        audit = result.get("sacrifice_piece_audit") or []
+        pawn_b5 = next((a for a in audit if a.get("square") == "b5"), None)
+        self.assertIsNotNone(pawn_b5)
+        self.assertEqual(pawn_b5["verdict"], "not_sacrifice")
+        self.assertEqual(pawn_b5["reason"], "favorable_trade_compensation")
+
 
 if __name__ == "__main__":
     unittest.main()
