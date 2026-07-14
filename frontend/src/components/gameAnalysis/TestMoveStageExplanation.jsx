@@ -35,9 +35,9 @@ function ScoreTable({ rows }) {
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
+        {rows.map((row, idx) => (
           <tr
-            key={row.label}
+            key={`${idx}-${row.label}`}
             className={`border-t border-slate-100 ${row.highlight ? 'bg-slate-50/80' : ''}`}
           >
             <td className="py-1 pr-1 text-slate-700 font-medium">{row.label}</td>

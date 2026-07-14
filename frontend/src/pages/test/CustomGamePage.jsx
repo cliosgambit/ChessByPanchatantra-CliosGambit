@@ -32,6 +32,31 @@ import {
 } from '../../utils/testPageCellClass';
 import '../TestPage.css';
 
+/** Module-level lock so overlapping stage pipelines cannot wipe each other's rows. */
+const stageRunLocks = new Map(); // gameId -> Promise
+
+async function withStageRunLock(gameId, fn) {
+  const id = String(gameId);
+  const prev = stageRunLocks.get(id) || Promise.resolve();
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const chained = prev.then(() => gate);
+  stageRunLocks.set(
+    id,
+    chained.finally(() => {
+      if (stageRunLocks.get(id) === chained) stageRunLocks.delete(id);
+    })
+  );
+  await prev.catch(() => {});
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
 export default function CustomGamePage({
   boardId = 'CustomGameBoard',
   inputSource = 'custom_game',
@@ -75,12 +100,40 @@ export default function CustomGamePage({
     if (loading !== undefined) setEngineEvalLoading(loading);
   }, []);
 
+  const analysisRunIdRef = useRef(0);
+
+  const syncStagesToAppDb = useCallback(async () => {
+    if (!chessComUuid || !profileUsername) return;
+    try {
+      const { runChessComGameBrilliance } = await import('../../services/chessComDbService');
+      await runChessComGameBrilliance(profileUsername, chessComUuid, { syncOnly: true });
+    } catch (err) {
+      console.warn('[brilliance] app-DB sync failed (non-fatal):', err?.message || err);
+    }
+  }, [chessComUuid, profileUsername]);
+
   const runAllStages = useCallback(async (id, { force = true } = {}) => {
-    if (!id || !hideBrilliancePanel) return;
+    if (!id || !hideBrilliancePanel) {
+      console.warn('[brilliance] runAllStages skipped', { id, hideBrilliancePanel });
+      return;
+    }
+
+    return withStageRunLock(id, async () => {
+    const runId = ++analysisRunIdRef.current;
+    const active = () => runId === analysisRunIdRef.current;
+    const log = (msg, extra) => {
+      if (extra !== undefined) console.log(`[brilliance] run#${runId} ${msg}`, extra);
+      else console.log(`[brilliance] run#${runId} ${msg}`);
+    };
+    const stop = (reason, err) => {
+      console.error(`[brilliance] run#${runId} STOPPED — ${reason}`, err || '');
+    };
 
     setImportError(null);
+    setStageFilter(null);
+    log(`start game=${id} force=${force}`);
 
-    // Reuse completed stage results when reopening a reviewed game
+    // Only reuse cache when it has real stage0 rows (empty "completed" was blanking the table)
     if (!force) {
       try {
         const [{ data: statusGame }, s0, s1, s2, s3, s4] = await Promise.all([
@@ -91,55 +144,147 @@ export default function CustomGamePage({
           api.get(`/lichess-pgns/games/${id}/stage3`),
           api.get(`/lichess-pgns/games/${id}/stage4`),
         ]);
-        if (statusGame?.stage4_status === 'completed' || s4?.data?.status === 'completed') {
+        if (!active()) {
+          stop('superseded during cache read');
+          return;
+        }
+        const cachedMoves = s0?.data?.moves?.length ?? 0;
+        const stage4Done =
+          statusGame?.stage4_status === 'completed' || s4?.data?.status === 'completed';
+        if (stage4Done && cachedMoves > 0) {
+          log(`cache hit — ${cachedMoves} stage0 moves`, {
+            s1: s1?.data?.moves?.length ?? 0,
+            s2: s2?.data?.moves?.length ?? 0,
+            s3: s3?.data?.moves?.length ?? 0,
+            s4: s4?.data?.moves?.length ?? 0,
+          });
           setStage0(s0.data);
           setStage1(s1.data);
           setStage2(s2.data);
           setStage3(s3.data);
           setStage4(s4.data);
+          setStage0Loading(false);
+          setStage1Loading(false);
+          setStage2Loading(false);
+          setStage3Loading(false);
+          setStage4Loading(false);
           return;
         }
-      } catch {
-        // fall through to full run
+        log('cache miss — running stages 0–4', {
+          stage4Done,
+          cachedMoves,
+          stage4Status: statusGame?.stage4_status ?? s4?.data?.status,
+        });
+      } catch (err) {
+        console.warn(`[brilliance] run#${runId} cache read failed, running stages:`, err?.message || err);
       }
     }
 
-    setStage0Loading(true);
-    setStage1Loading(true);
-    setStage2Loading(true);
-    setStage3Loading(true);
-    setStage4Loading(true);
+    if (!active()) {
+      stop('superseded before stage run');
+      return;
+    }
+
+    setStage0(null);
+    setStage1(null);
+    setStage2(null);
+    setStage3(null);
+    setStage4(null);
+
+    const paint = () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+      });
 
     try {
+      setStage0Loading(true);
+      setStage1Loading(true);
+      setStage2Loading(true);
+      setStage3Loading(true);
+      setStage4Loading(true);
+      await paint();
+      if (!active()) {
+        stop('superseded before stage0');
+        return;
+      }
+
+      log('stage0 running…');
       const { data: s0 } = await api.post(`/lichess-pgns/games/${id}/stage0/run`, { force: true });
+      if (!active()) {
+        stop('superseded after stage0');
+        return;
+      }
       setStage0(s0);
       setStage0Loading(false);
+      log(`stage0 done — moves=${s0?.moves?.length ?? 0}`);
+      void syncStagesToAppDb();
+      await paint();
 
+      log('stage1 running…');
       const { data: s1 } = await api.post(`/lichess-pgns/games/${id}/stage1/run`, { force: true });
+      if (!active()) {
+        stop('superseded after stage1');
+        return;
+      }
       setStage1(s1);
       setStage1Loading(false);
+      log(`stage1 done — moves=${s1?.moves?.length ?? 0}`);
+      void syncStagesToAppDb();
+      await paint();
 
+      log('stage2 running…');
       const { data: s2 } = await api.post(`/lichess-pgns/games/${id}/stage2/run`, { force: true });
+      if (!active()) {
+        stop('superseded after stage2');
+        return;
+      }
       setStage2(s2);
       setStage2Loading(false);
+      log(`stage2 done — moves=${s2?.moves?.length ?? 0}`);
+      void syncStagesToAppDb();
+      await paint();
 
+      log('stage3 running…');
       const { data: s3 } = await api.post(`/lichess-pgns/games/${id}/stage3/run`, { force: true });
+      if (!active()) {
+        stop('superseded after stage3');
+        return;
+      }
       setStage3(s3);
       setStage3Loading(false);
+      log(`stage3 done — moves=${s3?.moves?.length ?? 0}`);
+      void syncStagesToAppDb();
+      await paint();
 
+      log('stage4 running…');
       const { data: s4 } = await api.post(`/lichess-pgns/games/${id}/stage4/run`, { force: true });
+      if (!active()) {
+        stop('superseded after stage4');
+        return;
+      }
       setStage4(s4);
       setStage4Loading(false);
+      log(`stage4 done — moves=${s4?.moves?.length ?? 0}`);
+      void syncStagesToAppDb();
+      log('all stages complete');
     } catch (e) {
-      setImportError(e.message || String(e));
+      stop(e?.message || String(e), e);
+      if (active()) setImportError(e.message || String(e));
     } finally {
-      setStage0Loading(false);
-      setStage1Loading(false);
-      setStage2Loading(false);
-      setStage3Loading(false);
-      setStage4Loading(false);
+      // Only the active run may clear loading — a superseded run's finally was
+      // wiping the live table mid-analysis (needed Re-run every time).
+      if (active()) {
+        setStage0Loading(false);
+        setStage1Loading(false);
+        setStage2Loading(false);
+        setStage3Loading(false);
+        setStage4Loading(false);
+      } else {
+        console.warn(`[brilliance] run#${runId} finally skipped (superseded)`);
+      }
     }
-  }, [hideBrilliancePanel]);
+    });
+  }, [hideBrilliancePanel, syncStagesToAppDb]);
 
   const {
     position,
@@ -169,6 +314,10 @@ export default function CustomGamePage({
     async (pgn) => {
       const text = String(pgn || '').trim();
       if (!text) return false;
+
+      // Cancel any in-flight stage run before starting a new import
+      analysisRunIdRef.current += 1;
+      console.log('[brilliance] import start — cancelled prior runs, gen=', analysisRunIdRef.current);
 
       setImportError(null);
       setImporting(true);
@@ -200,38 +349,25 @@ export default function CustomGamePage({
         if (!ok) throw new Error('Could not parse imported PGN');
 
         if (defaultOrientation === 'black' || defaultOrientation === 'white') {
-          setOrientation(defaultOrientation);
+          setOrientation((prev) => (prev === defaultOrientation ? prev : defaultOrientation));
         }
 
         setGameId(data.id);
         setGameInfo(data);
+        setImporting(false);
 
         if (hideBrilliancePanel) {
-          // Prefer cached stages on review open; Re-run button still forces
-          await runAllStages(data.id, { force: !chessComUuid });
-
-          // Persist stage results into chess_com brilliance tables for Brilliant Moves list
-          if (chessComUuid && profileUsername) {
-            try {
-              const { runChessComGameBrilliance } = await import('../../services/chessComDbService');
-              await runChessComGameBrilliance(profileUsername, chessComUuid, { syncOnly: true });
-            } catch {
-              // Non-fatal — analysis UI already has stage data
-            }
-          }
+          // Prefer cache when valid; otherwise run 0→4 live (same as test page)
+          await runAllStages(data.id, { force: false });
         }
 
         return true;
       } catch (e) {
+        console.error('[brilliance] import STOPPED:', e?.message || e);
         setImportError(e.message || String(e));
         return false;
       } finally {
         setImporting(false);
-        setStage0Loading(false);
-        setStage1Loading(false);
-        setStage2Loading(false);
-        setStage3Loading(false);
-        setStage4Loading(false);
       }
     },
     [
@@ -240,34 +376,46 @@ export default function CustomGamePage({
       hideBrilliancePanel,
       runAllStages,
       chessComUuid,
-      profileUsername,
       defaultOrientation,
       setOrientation,
     ]
   );
 
-  // Auto-load PGN when opening a Chess.com game via Review
+  // Auto-load PGN when opening a Chess.com game via Review.
+  // Claim the key SYNCHRONOUSLY so React Strict Mode's double-effect cannot
+  // start two imports (that raced force stage0 and wiped moves to 0).
+  const handleImportPGNRef = useRef(handleImportPGN);
+  handleImportPGNRef.current = handleImportPGN;
   const autoLoadKeyRef = useRef(null);
   useEffect(() => {
     const text = String(initialPgn || '').trim();
     if (!text) return undefined;
-    const key = `${chessComUuid || ''}:${text.slice(0, 80)}`;
-    if (autoLoadKeyRef.current === key) return undefined;
-    autoLoadKeyRef.current = key;
-    let cancelled = false;
-    (async () => {
-      if (cancelled) return;
-      await handleImportPGN(text);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [initialPgn, chessComUuid, handleImportPGN]);
+    const key = `${chessComUuid || 'custom'}:${text.slice(0, 80)}`;
 
-  useEffect(() => {
-    if (!hideBrilliancePanel || stage1Loading || !stage1?.moves?.length) return;
-    setStageFilter((prev) => (prev === null ? 'stage1' : prev));
-  }, [hideBrilliancePanel, stage1Loading, stage1?.moves?.length]);
+    // Must claim before any await — otherwise Strict Mode runs this effect twice
+    // and both imports force-run stage0 concurrently (moves=0 race).
+    if (autoLoadKeyRef.current === key) {
+      console.log('[brilliance] autoLoad skip (already claimed)', key.slice(0, 48));
+      return undefined;
+    }
+    autoLoadKeyRef.current = key;
+    console.log('[brilliance] autoLoad claimed', key.slice(0, 48));
+
+    (async () => {
+      try {
+        const ok = await handleImportPGNRef.current(text);
+        if (ok === false) {
+          autoLoadKeyRef.current = null;
+          console.warn('[brilliance] autoLoad failed — claim released for retry');
+        }
+      } catch (err) {
+        autoLoadKeyRef.current = null;
+        console.error('[brilliance] autoLoad error — claim released', err?.message || err);
+      }
+    })();
+
+    return undefined;
+  }, [initialPgn, chessComUuid]);
 
   const stage2Move = useMemo(() => {
     if (!stage2?.moves?.length || navIndex <= 0) return null;
@@ -370,14 +518,21 @@ export default function CustomGamePage({
   );
 
   const visibleTableRows = useMemo(() => {
+    // While Stage 0/1 are still running, show the full move list (with
+    // "Running…" cells) instead of an empty Stage 1-filtered table.
+    const stage0Ready = !stage0Loading && Boolean(stage0?.moves?.length);
+    const stage3Ready = !stage3Loading && Boolean(stage3?.moves?.length);
+
     if (stageFilter === 'stage1') {
+      if (!stage0Ready) return tableMoveRows;
       return tableMoveRows.filter(({ plyIndex }) => stage0ByPly.get(plyIndex)?.proceed_to_stage1);
     }
     if (stageFilter === 'stage4') {
+      if (!stage3Ready) return tableMoveRows;
       return tableMoveRows.filter(({ plyIndex }) => stage3ByPly.get(plyIndex)?.proceed_to_stage4);
     }
     return tableMoveRows;
-  }, [tableMoveRows, stageFilter, stage0ByPly, stage3ByPly]);
+  }, [tableMoveRows, stageFilter, stage0ByPly, stage3ByPly, stage0Loading, stage3Loading, stage0?.moves?.length, stage3?.moves?.length]);
 
   const stage1EligibleCount = useMemo(
     () => tableMoveRows.filter(({ plyIndex }) => stage0ByPly.get(plyIndex)?.proceed_to_stage1).length,
@@ -497,19 +652,21 @@ export default function CustomGamePage({
 
       {(importing || stagesRunning) && (
         <div className="tp-status-toast">
-          {hideBrilliancePanel && stage4Loading
-            ? 'Running Stage 4…'
-            : hideBrilliancePanel && stage3Loading
-              ? 'Running Stage 3…'
-              : hideBrilliancePanel && stage2Loading
-              ? 'Running Stage 2…'
+          {importing && !stagesRunning
+            ? 'Importing PGN…'
+            : hideBrilliancePanel && stage0Loading
+              ? 'Running Stage 0…'
               : hideBrilliancePanel && stage1Loading
                 ? 'Running Stage 1…'
-                : hideBrilliancePanel && stage0Loading
-                  ? 'Running Stage 0…'
-                  : importing
-                    ? 'Importing PGN…'
-                    : 'Running analysis…'}
+                : hideBrilliancePanel && stage2Loading
+                  ? 'Running Stage 2…'
+                  : hideBrilliancePanel && stage3Loading
+                    ? 'Running Stage 3…'
+                    : hideBrilliancePanel && stage4Loading
+                      ? 'Running Stage 4…'
+                      : importing
+                        ? 'Importing PGN…'
+                        : 'Running analysis…'}
         </div>
       )}
 
@@ -604,9 +761,7 @@ export default function CustomGamePage({
               <button
                 type="button"
                 onClick={() => setStageFilter((v) => (v === 'stage1' ? null : 'stage1'))}
-                disabled={
-                  stage0Loading || stage1Loading || stage2Loading || stage3Loading || stage4Loading || !stage0?.moves?.length
-                }
+                disabled={stage0Loading || !stage0?.moves?.length}
                 className={`tp-stage-tab ${stageFilter === 'stage1' ? 'tp-stage-tab--active tp-stage-tab--stage1' : ''}`}
               >
                 Stage 1
@@ -614,9 +769,7 @@ export default function CustomGamePage({
               <button
                 type="button"
                 onClick={() => setStageFilter((v) => (v === 'stage4' ? null : 'stage4'))}
-                disabled={
-                  stage0Loading || stage1Loading || stage2Loading || stage3Loading || stage4Loading || !stage3?.moves?.length
-                }
+                disabled={stage3Loading || !stage3?.moves?.length}
                 className={`tp-stage-tab ${stageFilter === 'stage4' ? 'tp-stage-tab--active tp-stage-tab--stage4' : ''}`}
               >
                 Stage 4
@@ -700,9 +853,13 @@ export default function CustomGamePage({
                       ) : visibleTableRows.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="tp-analysis-empty">
-                            {stageFilter === 'stage4'
-                              ? 'No moves selected for Stage 4.'
-                              : 'No moves eligible for Stage 1.'}
+                            {stagesRunning || stage0Loading
+                              ? 'Running analysis…'
+                              : stageFilter === 'stage4'
+                                ? 'No moves selected for Stage 4.'
+                                : stageFilter === 'stage1'
+                                  ? 'No moves eligible for Stage 1.'
+                                  : 'No moves to show.'}
                           </td>
                         </tr>
                       ) : (
@@ -743,7 +900,9 @@ export default function CustomGamePage({
                                 )}
                               </td>
                               <td>
-                                {!isStage1Eligible ? (
+                                {stage0Loading || (stage1Loading && !stage0) ? (
+                                  <span className="tp-cell-running">…</span>
+                                ) : !isStage1Eligible ? (
                                   <span className="tp-cell-muted">—</span>
                                 ) : stage1Loading ? (
                                   <span className="tp-cell-running">Running…</span>
@@ -754,7 +913,9 @@ export default function CustomGamePage({
                                 )}
                               </td>
                               <td>
-                                {!isStage2Eligible ? (
+                                {stage1Loading || (stage2Loading && !stage1) ? (
+                                  <span className="tp-cell-running">…</span>
+                                ) : !isStage2Eligible ? (
                                   <span className="tp-cell-muted">—</span>
                                 ) : stage2Loading ? (
                                   <span className="tp-cell-running">Running…</span>
@@ -765,7 +926,9 @@ export default function CustomGamePage({
                                 )}
                               </td>
                               <td>
-                                {!isStage3Eligible ? (
+                                {stage2Loading || (stage3Loading && !stage2) ? (
+                                  <span className="tp-cell-running">…</span>
+                                ) : !isStage3Eligible ? (
                                   <span className="tp-cell-muted">—</span>
                                 ) : stage3Loading ? (
                                   <span className="tp-cell-running">Running…</span>
@@ -776,7 +939,9 @@ export default function CustomGamePage({
                                 )}
                               </td>
                               <td>
-                                {!isStage4Eligible ? (
+                                {stage3Loading || (stage4Loading && !stage3) ? (
+                                  <span className="tp-cell-running">…</span>
+                                ) : !isStage4Eligible ? (
                                   <span className="tp-cell-muted">—</span>
                                 ) : stage4Loading ? (
                                   <span className="tp-cell-running">Running…</span>

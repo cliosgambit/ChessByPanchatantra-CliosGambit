@@ -640,83 +640,91 @@ export const useChessGame = (options = {}) => {
     const el = boardContainerRef.current;
     if (!el) return undefined;
 
+    let raf = 0;
+    let lastApplied = -1;
+
     const updateSize = () => {
-      const stack = el.querySelector('[data-board-fit-stack]');
-      const evalBar = boardLayout === 'minimal' ? null : el.querySelector('.eval-bar-bg');
-      const styles = window.getComputedStyle(el);
-      const gap = Number.parseFloat(styles.gap || styles.columnGap || '16') || 16;
-      const evalW =
-        boardLayout === 'minimal' ? 0 : (evalBar?.getBoundingClientRect().width || 28) + gap;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const stack = el.querySelector('[data-board-fit-stack]');
+        const evalBar = boardLayout === 'minimal' ? null : el.querySelector('.eval-bar-bg');
+        const styles = window.getComputedStyle(el);
+        const gap = Number.parseFloat(styles.gap || styles.columnGap || '16') || 16;
+        const evalW =
+          boardLayout === 'minimal' ? 0 : (evalBar?.getBoundingClientRect().width || 28) + gap;
 
-      let innerW;
-      let innerH;
+        let innerW;
+        let innerH;
 
-      if (boardLayout === 'minimal' && stack) {
-        const stackStyles = window.getComputedStyle(stack);
-        const padX =
-          (Number.parseFloat(stackStyles.paddingLeft) || 0) +
-          (Number.parseFloat(stackStyles.paddingRight) || 0);
-        const padY =
-          (Number.parseFloat(stackStyles.paddingTop) || 0) +
-          (Number.parseFloat(stackStyles.paddingBottom) || 0);
-        const rect = stack.getBoundingClientRect();
-        let badgeH = 0;
-        stack.querySelectorAll('[data-player-badge]').forEach((node) => {
-          badgeH += node.getBoundingClientRect().height;
-        });
-        const rowGap = Number.parseFloat(stackStyles.rowGap || stackStyles.gap || '0') || 0;
-        innerW = Math.max(0, rect.width - padX);
-        innerH = Math.max(0, rect.height - padY - badgeH - rowGap * 2);
-      } else {
-        innerW = Math.max(0, el.clientWidth - evalW);
-        innerH = el.clientHeight;
-        const scrollRoot = el.closest('[data-app-scroll-root]');
-        if (scrollRoot) {
-          const sr = scrollRoot.getBoundingClientRect();
-          const er = el.getBoundingClientRect();
-          innerH = Math.max(innerH || 0, sr.bottom - er.top - 24);
+        if (boardLayout === 'minimal' && stack) {
+          const stackStyles = window.getComputedStyle(stack);
+          const padX =
+            (Number.parseFloat(stackStyles.paddingLeft) || 0) +
+            (Number.parseFloat(stackStyles.paddingRight) || 0);
+          const padY =
+            (Number.parseFloat(stackStyles.paddingTop) || 0) +
+            (Number.parseFloat(stackStyles.paddingBottom) || 0);
+          const rect = stack.getBoundingClientRect();
+          let badgeH = 0;
+          stack.querySelectorAll('[data-player-badge]').forEach((node) => {
+            badgeH += node.getBoundingClientRect().height;
+          });
+          const rowGap = Number.parseFloat(stackStyles.rowGap || stackStyles.gap || '0') || 0;
+          innerW = Math.max(0, rect.width - padX);
+          innerH = Math.max(0, rect.height - padY - badgeH - rowGap * 2);
+        } else {
+          innerW = Math.max(0, el.clientWidth - evalW);
+          innerH = el.clientHeight;
+          const scrollRoot = el.closest('[data-app-scroll-root]');
+          if (scrollRoot) {
+            const sr = scrollRoot.getBoundingClientRect();
+            const er = el.getBoundingClientRect();
+            innerH = Math.max(innerH || 0, sr.bottom - er.top - 24);
+          }
         }
-      }
 
-      if (innerW < 80 || innerH < 80) return;
-      let side = Math.max(160, Math.min(Math.floor(innerW), Math.floor(innerH), 1200));
+        if (innerW < 80 || innerH < 80) return;
+        let side = Math.max(160, Math.min(Math.floor(innerW), Math.floor(innerH), 1200));
 
-      if (maxViewportHeightRatio != null && maxViewportHeightRatio > 0) {
-        const badgeOverhead =
-          boardLayout === 'minimal' && stack
-            ? (() => {
-                let badgeH = 0;
-                stack.querySelectorAll('[data-player-badge]').forEach((node) => {
-                  badgeH += node.getBoundingClientRect().height;
-                });
-                const stackStyles = window.getComputedStyle(stack);
-                const padY =
-                  (Number.parseFloat(stackStyles.paddingTop) || 0) +
-                  (Number.parseFloat(stackStyles.paddingBottom) || 0);
-                const rowGap = Number.parseFloat(stackStyles.rowGap || stackStyles.gap || '0') || 0;
-                return badgeH + padY + rowGap * 2;
-              })()
-            : 96;
-        const maxSideFromViewport = Math.floor(window.innerHeight * maxViewportHeightRatio - badgeOverhead);
-        if (maxSideFromViewport >= 160) {
-          side = Math.min(side, maxSideFromViewport);
+        if (maxViewportHeightRatio != null && maxViewportHeightRatio > 0) {
+          const badgeOverhead =
+            boardLayout === 'minimal' && stack
+              ? (() => {
+                  let badgeH = 0;
+                  stack.querySelectorAll('[data-player-badge]').forEach((node) => {
+                    badgeH += node.getBoundingClientRect().height;
+                  });
+                  const stackStyles = window.getComputedStyle(stack);
+                  const padY =
+                    (Number.parseFloat(stackStyles.paddingTop) || 0) +
+                    (Number.parseFloat(stackStyles.paddingBottom) || 0);
+                  const rowGap = Number.parseFloat(stackStyles.rowGap || stackStyles.gap || '0') || 0;
+                  return badgeH + padY + rowGap * 2;
+                })()
+              : 96;
+          const maxSideFromViewport = Math.floor(window.innerHeight * maxViewportHeightRatio - badgeOverhead);
+          if (maxSideFromViewport >= 160) {
+            side = Math.min(side, maxSideFromViewport);
+          }
         }
-      }
 
-      setBoardWidth(side);
+        const rounded = Math.round(side);
+        // Ignore sub-pixel / 1–2px thrash that caused max-update-depth loops
+        if (Math.abs(rounded - lastApplied) < 3) return;
+        lastApplied = rounded;
+        setBoardWidth((prev) => (Math.abs(prev - rounded) < 3 ? prev : rounded));
+      });
     };
 
     updateSize();
+    // Only observe the outer container — observing children that change with
+    // boardWidth feedback-loops into max update depth.
     const ro = new ResizeObserver(() => updateSize());
     ro.observe(el);
-    const stackEl = el.querySelector('[data-board-fit-stack]');
-    if (stackEl) ro.observe(stackEl);
-    const scrollRootEl = el.closest('[data-app-scroll-root]');
-    if (scrollRootEl) ro.observe(scrollRootEl);
-    const pageRoot = el.closest('.lichess-game-view');
-    if (pageRoot) ro.observe(pageRoot);
     window.addEventListener('resize', updateSize);
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
       window.removeEventListener('resize', updateSize);
     };
@@ -726,12 +734,16 @@ export const useChessGame = (options = {}) => {
     const entry = timeline[navIndex];
     if (!entry) return;
 
-    // Restore board state synchronization
-    setPosition(entry.position);
-    setTurn(entry.turn);
-    setCastling(entry.castling);
-    setEnPassantTarget(entry.enPassantTarget);
+    // Only update when values actually change — avoids max-update-depth loops
+    setPosition((prev) => (prev === entry.position ? prev : entry.position));
+    setTurn((prev) => (prev === entry.turn ? prev : entry.turn));
+    setCastling((prev) => (prev === entry.castling ? prev : entry.castling));
+    setEnPassantTarget((prev) =>
+      prev === entry.enPassantTarget ? prev : entry.enPassantTarget
+    );
+  }, [navIndex, timeline]);
 
+  useEffect(() => {
     if (!enableAnalysis) return;
 
     // Update the queue with any missing indices

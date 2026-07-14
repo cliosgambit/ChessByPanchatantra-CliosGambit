@@ -11,12 +11,19 @@ function mapLoginUser(row) {
     full_name: row.Player_Name || row.email,
     email: row.email,
     role: roleRaw === 'paused' ? 'student' : roleRaw,
+    chess_com_id: row.chess_com_id || null,
   };
 }
 
 function isLoginActive(row) {
   return row && row.password && (row.Role || '').toLowerCase() !== 'paused';
 }
+
+const LOGIN_WITH_STUDENT_SQL = `
+  SELECT l.id, l."Player_Name", l.email, l.password, l."Role", s.chess_com_id
+  FROM "Login" l
+  LEFT JOIN Students s ON s.login_id = l.id
+`;
 
 exports.login = async (req, res) => {
   const { email, password, rememberMe } = req.body;
@@ -31,9 +38,8 @@ exports.login = async (req, res) => {
 
   try {
     const { rows } = await db.query(
-      `SELECT id, "Player_Name", email, password, "Role"
-       FROM "Login"
-       WHERE LOWER(email) = LOWER($1)
+      `${LOGIN_WITH_STUDENT_SQL}
+       WHERE LOWER(l.email) = LOWER($1)
        LIMIT 1`,
       [email.trim()]
     );
@@ -69,9 +75,8 @@ exports.logout = async (req, res) => {
 async function fetchLoginIdentity({ email, id }) {
   if (email) {
     const { rows } = await db.query(
-      `SELECT id, "Player_Name", email, "Role", password
-       FROM "Login"
-       WHERE LOWER(email) = LOWER($1)
+      `${LOGIN_WITH_STUDENT_SQL}
+       WHERE LOWER(l.email) = LOWER($1)
        LIMIT 1`,
       [email]
     );
@@ -80,9 +85,8 @@ async function fetchLoginIdentity({ email, id }) {
 
   if (id != null && id !== '') {
     const { rows } = await db.query(
-      `SELECT id, "Player_Name", email, "Role", password
-       FROM "Login"
-       WHERE id = $1
+      `${LOGIN_WITH_STUDENT_SQL}
+       WHERE l.id = $1
        LIMIT 1`,
       [id]
     );

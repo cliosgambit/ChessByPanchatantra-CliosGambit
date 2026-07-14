@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiExternalLink } from 'react-icons/fi';
 import CustomGamePage from './test/CustomGamePage';
@@ -26,16 +26,21 @@ function ChessComGamePage() {
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const loadedUuidRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadGame() {
-      setLoading(true);
+      // Avoid unmounting CustomGamePage when we already have this game (remount
+      // restarted analysis and raced Strict Mode double-effects).
+      const alreadyLoaded = loadedUuidRef.current === gameId && game;
+      if (!alreadyLoaded) setLoading(true);
       setError(null);
       try {
         const fromDb = await fetchChessComGameFromDb(profileUsername, gameId);
         if (!cancelled && fromDb) {
+          loadedUuidRef.current = gameId;
           setGame(fromDb);
           return;
         }
@@ -43,6 +48,7 @@ function ChessComGamePage() {
         if (!cancelled) {
           const cached = loadChessComGame(profileUsername, gameId);
           if (cached) {
+            loadedUuidRef.current = gameId;
             setGame(cached);
             return;
           }
@@ -57,6 +63,7 @@ function ChessComGamePage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when route ids change
   }, [profileUsername, gameId]);
 
   const playerOverride = useMemo(() => {
@@ -82,7 +89,7 @@ function ChessComGamePage() {
     return sanitizeChessComPgn(game.pgn);
   }, [game?.pgn]);
 
-  if (loading) {
+  if (loading && !game) {
     return (
       <div className="chess-game-page">
         <div className="chess-game-page-inner">
@@ -158,6 +165,7 @@ function ChessComGamePage() {
         </header>
 
         <CustomGamePage
+          key={game.uuid || gameId}
           boardId={`ChessComReview-${game.uuid || gameId}`}
           inputSource="chess_com_review"
           hideBrilliancePanel

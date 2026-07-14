@@ -172,7 +172,11 @@ exports.login = async (req, res) => {
   try {
     const email = normalizeEmail(id);
     const { rows } = await db.query(
-      'SELECT * FROM "Login" WHERE LOWER(email) = LOWER($1)',
+      `SELECT l.*, s.chess_com_id AS student_chess_com_id
+       FROM "Login" l
+       LEFT JOIN Students s ON s.login_id = l.id
+       WHERE LOWER(l.email) = LOWER($1)
+       LIMIT 1`,
       [email]
     );
     const user = rows[0];
@@ -191,6 +195,7 @@ exports.login = async (req, res) => {
       full_name: user.Player_Name || user.email,
       email: user.email || null,
       role: (user.Role || 'student').toLowerCase(),
+      chess_com_id: user.student_chess_com_id || null,
     };
 
     const token = signToken(safeUser, false);

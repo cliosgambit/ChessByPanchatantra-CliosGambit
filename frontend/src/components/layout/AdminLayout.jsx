@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Box, useColorModeValue } from '@chakra-ui/react';
 import { AnimatePresence } from 'framer-motion';
@@ -8,13 +8,6 @@ import PageTransition from '../dashboard/PageTransition';
 function AdminLayout() {
   const location = useLocation();
   const pageBg = useColorModeValue('#F9F7F2', 'navy.900');
-
-  useEffect(() => {
-    console.log('[AdminLayout] outlet render', {
-      pathname: location.pathname,
-      hash: window.location.hash,
-    });
-  }, [location.pathname]);
 
   return (
     <Box minH="100vh" bg={pageBg} w="100%">

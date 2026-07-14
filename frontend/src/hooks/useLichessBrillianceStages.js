@@ -63,11 +63,6 @@ export function useLichessBrillianceStages(gameId) {
     runAnalysis(false);
   }, [runAnalysis]);
 
-  useEffect(() => {
-    if (loading || !stage1?.moves?.length) return;
-    setStageFilter((prev) => (prev === null ? 'stage1' : prev));
-  }, [loading, stage1?.moves?.length]);
-
   return {
     stage0,
     stage1,

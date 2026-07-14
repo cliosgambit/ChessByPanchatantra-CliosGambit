@@ -46,7 +46,14 @@ export default defineConfig({
   plugins: [react(), backendHealthCheckPlugin()],
   server: {
     port: 3000,
+    strictPort: true,
     open: false,
+    hmr: {
+      // Keep HMR on the same port as the page (avoids ws://3000 vs page://3001 mismatch
+      // when a stale Vite already occupied 3000 and a second instance jumped to 3001).
+      protocol: 'ws',
+      host: 'localhost',
+    },
     proxy: {
       '/api': {
         target: BACKEND_TARGET,

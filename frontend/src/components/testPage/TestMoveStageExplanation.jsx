@@ -33,8 +33,8 @@ function ScoreTable({ rows }) {
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr key={row.label} className={row.highlight ? 'tp-score-row--highlight' : undefined}>
+        {rows.map((row, idx) => (
+          <tr key={`${idx}-${row.label}`} className={row.highlight ? 'tp-score-row--highlight' : undefined}>
             <td className="tp-score-check">{row.label}</td>
             <td className="tp-score-got">{row.got}</td>
             <td className="tp-score-need">{row.need}</td>

@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus, FiRefreshCw, FiTrash2, FiX } from 'react-icons/fi';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
+import { useAuth } from '../context/AuthContext';
 import {
   assignMoralPuzzle,
   fetchMoralPuzzles,
   unassignMoralPuzzle,
 } from '../services/libraryService';
+import { fetchModuleMoralPuzzles } from '../services/modulesService';
 import { fetchGmPuzzles } from '../services/gmPuzzleService';
 import { fetchLichessPuzzles } from '../services/lichessPuzzleService';
 import {
@@ -34,8 +36,14 @@ function playFenForAssignment(assignment) {
 }
 
 function LibraryMoralPuzzles() {
-  const { storyId, moralId } = useParams();
+  const { storyId, moralId, moduleId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const canManage = isAdmin;
+  const storyBackPath = moduleId
+    ? `/modules/${moduleId}/stories/${storyId}`
+    : `/library/${storyId}`;
 
   const [story, setStory] = useState(null);
   const [moral, setMoral] = useState(null);
@@ -56,7 +64,9 @@ function LibraryMoralPuzzles() {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchMoralPuzzles(storyId, moralId);
+      const data = moduleId
+        ? await fetchModuleMoralPuzzles(moduleId, storyId, moralId)
+        : await fetchMoralPuzzles(storyId, moralId);
       setStory(data.story || null);
       setMoral(data.moral || null);
       setAssignments(data.assignments || []);
@@ -70,7 +80,7 @@ function LibraryMoralPuzzles() {
     } finally {
       setLoading(false);
     }
-  }, [storyId, moralId]);
+  }, [moduleId, storyId, moralId]);
 
   useEffect(() => {
     load();
@@ -193,7 +203,7 @@ function LibraryMoralPuzzles() {
     return (
       <div className="moral-puzzles-page">
         <p className="moral-puzzles-error">{error || 'Not found.'}</p>
-        <button type="button" className="moral-puzzles-back" onClick={() => navigate(`/library/${storyId}`)}>
+        <button type="button" className="moral-puzzles-back" onClick={() => navigate(storyBackPath)}>
           <FiArrowLeft aria-hidden /> Back to story
         </button>
       </div>
@@ -206,7 +216,7 @@ function LibraryMoralPuzzles() {
         <button
           type="button"
           className="moral-puzzles-back"
-          onClick={() => navigate(`/library/${storyId}`)}
+          onClick={() => navigate(storyBackPath)}
         >
           <FiArrowLeft aria-hidden /> Back to story
         </button>
@@ -232,30 +242,36 @@ function LibraryMoralPuzzles() {
 
         <section className="moral-puzzles-assign">
           <h3>Assigned puzzles ({assignments.length})</h3>
-          <div className="moral-puzzles-add-row">
-            <button type="button" className="moral-puzzles-btn" onClick={() => openPicker('gm')} disabled={busy}>
-              <FiPlus aria-hidden /> GM
-            </button>
-            <button
-              type="button"
-              className="moral-puzzles-btn"
-              onClick={() => openPicker('lichess')}
-              disabled={busy}
-            >
-              <FiPlus aria-hidden /> Lichess
-            </button>
-            <button
-              type="button"
-              className="moral-puzzles-btn moral-puzzles-btn--primary"
-              onClick={() => openPicker('chesscom')}
-              disabled={busy}
-            >
-              <FiPlus aria-hidden /> Chess.com
-            </button>
-          </div>
+          {canManage ? (
+            <div className="moral-puzzles-add-row">
+              <button type="button" className="moral-puzzles-btn" onClick={() => openPicker('gm')} disabled={busy}>
+                <FiPlus aria-hidden /> GM
+              </button>
+              <button
+                type="button"
+                className="moral-puzzles-btn"
+                onClick={() => openPicker('lichess')}
+                disabled={busy}
+              >
+                <FiPlus aria-hidden /> Lichess
+              </button>
+              <button
+                type="button"
+                className="moral-puzzles-btn moral-puzzles-btn--primary"
+                onClick={() => openPicker('chesscom')}
+                disabled={busy}
+              >
+                <FiPlus aria-hidden /> Chess.com
+              </button>
+            </div>
+          ) : null}
 
           {assignments.length === 0 ? (
-            <p className="moral-puzzles-muted">No puzzles yet. Add from GM, Lichess, or Chess.com.</p>
+            <p className="moral-puzzles-muted">
+              {canManage
+                ? 'No puzzles yet. Add from GM, Lichess, or Chess.com.'
+                : 'No puzzles assigned to this moral yet.'}
+            </p>
           ) : (
             <ul className="moral-puzzles-list">
               {assignments.map((a, i) => (
@@ -267,15 +283,17 @@ function LibraryMoralPuzzles() {
                     <span className="moral-puzzles-source">{SOURCE_LABEL[a.source] || a.source}</span>
                     <span>{a.puzzle?.title || `#${a.puzzle_id}`}</span>
                   </button>
-                  <button
-                    type="button"
-                    className="moral-puzzles-icon-btn"
-                    aria-label="Remove"
-                    disabled={busy}
-                    onClick={() => handleRemove(a.assignment_id)}
-                  >
-                    <FiTrash2 aria-hidden />
-                  </button>
+                  {canManage ? (
+                    <button
+                      type="button"
+                      className="moral-puzzles-icon-btn"
+                      aria-label="Remove"
+                      disabled={busy}
+                      onClick={() => handleRemove(a.assignment_id)}
+                    >
+                      <FiTrash2 aria-hidden />
+                    </button>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -298,7 +316,7 @@ function LibraryMoralPuzzles() {
         </div>
       </div>
 
-      {picker ? (
+      {canManage && picker ? (
         <div className="moral-puzzles-modal" role="dialog" aria-modal="true">
           <div className="moral-puzzles-modal-card">
             <header>

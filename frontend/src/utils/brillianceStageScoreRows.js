@@ -285,7 +285,7 @@ export function buildStage0Rows(s0) {
         }]
       : []),
     {
-      label: 'Positional risk',
+      label: 'Positional risk (detail)',
       got: positionalRisk ? 'true' : 'false',
       need: 'true',
       pass: positionalRisk,

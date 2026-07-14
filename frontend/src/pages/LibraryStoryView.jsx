@@ -51,6 +51,8 @@ function LibraryStoryView() {
   const { storyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const backPath = location.state?.from || '/library';
+  const backLabel = location.state?.fromLabel || 'Library';
 
   const [story, setStory] = useState(null);
   const [moralsCatalog, setMoralsCatalog] = useState([]);
@@ -358,8 +360,8 @@ function LibraryStoryView() {
     return (
       <div className="story-view">
         <p className="story-view-error">{error || 'Story not found.'}</p>
-        <button type="button" className="story-view-back" onClick={() => navigate('/library')}>
-          <FiArrowLeft aria-hidden /> Back to Library
+        <button type="button" className="story-view-back" onClick={() => navigate(backPath)}>
+          <FiArrowLeft aria-hidden /> Back to {backLabel}
         </button>
       </div>
     );
@@ -375,8 +377,8 @@ function LibraryStoryView() {
       <div className="story-view-panel story-view-panel--content">
         <div className="story-view-content-inner">
           <div className="story-view-toolbar">
-            <button type="button" className="story-view-back" onClick={() => navigate('/library')}>
-              <FiArrowLeft aria-hidden /> Library
+            <button type="button" className="story-view-back" onClick={() => navigate(backPath)}>
+              <FiArrowLeft aria-hidden /> {backLabel}
             </button>
             {!editing ? (
               <button type="button" className="story-view-edit" onClick={startEdit}>

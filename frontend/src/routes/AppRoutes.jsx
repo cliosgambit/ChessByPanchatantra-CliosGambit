@@ -7,6 +7,9 @@ import AdminLayout from '../components/layout/AdminLayout';
 import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
+import ModulesPage from '../pages/ModulesPage';
+import ModuleDetailPage from '../pages/ModuleDetailPage';
+import ModuleStoryViewPage from '../pages/ModuleStoryViewPage';
 import TablesBrowser from '../pages/TablesBrowser';
 import Library from '../pages/Library';
 import LibraryStoryForm from '../pages/LibraryStoryForm';
@@ -47,6 +50,16 @@ function AppRoutesContent() {
         <Route element={<ProtectedRoute requireAuth />}>
           <Route element={<AdminLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/modules" element={<ModulesPage />} />
+            <Route path="/modules/:moduleId" element={<ModuleDetailPage />} />
+            <Route
+              path="/modules/:moduleId/stories/:storyId"
+              element={<ModuleStoryViewPage />}
+            />
+            <Route
+              path="/modules/:moduleId/stories/:storyId/morals/:moralId"
+              element={<LibraryMoralPuzzles />}
+            />
             <Route path="/puzzles" element={<Puzzles />} />
             <Route path="/puzzles/gm" element={<GmPuzzles />} />
             <Route path="/puzzles/gm/:puzzleId" element={<GmPuzzleView />} />
@@ -54,10 +67,10 @@ function AppRoutesContent() {
             <Route path="/puzzles/lichess/:puzzleId" element={<LichessPuzzleView />} />
             <Route path="/puzzles/chesscom" element={<ChessComPuzzles />} />
             <Route path="/puzzles/chesscom/:puzzleId" element={<ViewPuzzle />} />
+            <Route path="/players/:userId" element={<UserProfilePage />} />
+            <Route path="/players/:userId/game/:gameId" element={<ChessComGamePage />} />
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
               <Route path="/students" element={<Students />} />
-              <Route path="/players/:userId" element={<UserProfilePage />} />
-              <Route path="/players/:userId/game/:gameId" element={<ChessComGamePage />} />
               <Route path="/brilliant-moves" element={<BrilliantMoves />} />
               <Route path="/brilliant-moves/:moveId" element={<ViewBrilliantMove />} />
               <Route path="/all-games" element={<AllGames />} />
