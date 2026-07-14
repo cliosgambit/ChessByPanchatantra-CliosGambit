@@ -22,6 +22,9 @@ import ViewPuzzle from '../pages/ViewPuzzle';
 import Students from '../pages/Students';
 import UserProfilePage from '../pages/UserProfilePage';
 import ChessComGamePage from '../pages/ChessComGamePage';
+import BrilliantMoves from '../pages/BrilliantMoves';
+import ViewBrilliantMove from '../pages/ViewBrilliantMove';
+import AllGames from '../pages/AllGames';
 import CatchAllRedirect from './CatchAllRedirect';
 
 function RoleHomeRedirect() {
@@ -55,6 +58,9 @@ function AppRoutesContent() {
               <Route path="/students" element={<Students />} />
               <Route path="/players/:userId" element={<UserProfilePage />} />
               <Route path="/players/:userId/game/:gameId" element={<ChessComGamePage />} />
+              <Route path="/brilliant-moves" element={<BrilliantMoves />} />
+              <Route path="/brilliant-moves/:moveId" element={<ViewBrilliantMove />} />
+              <Route path="/all-games" element={<AllGames />} />
               <Route path="/tables" element={<TablesBrowser />} />
               <Route path="/tables/:tableName" element={<TablesBrowser />} />
               <Route path="/library" element={<Library />} />

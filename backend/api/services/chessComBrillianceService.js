@@ -24,17 +24,35 @@ async function buildStageResponse(chessComUuid, sqliteGameId, pipeline = null) {
     await brillianceSupabase.syncBrillianceGameToSupabase(sqliteGameId, chessComUuid);
   }
 
+  // Prefer compute DB — exact same objects the test page uses
+  if (sqliteGameId) {
+    try {
+      const fromCompute = buildStageResponseFromSqlite(sqliteGameId, pipeline);
+      if (fromCompute.stage0 || fromCompute.stage4 || pipeline) {
+        return {
+          ...fromCompute,
+          chessComUuid,
+          brillianceGameId: sqliteGameId,
+          source: 'compute',
+        };
+      }
+    } catch (err) {
+      console.warn('[brilliance] compute DB read failed, falling back to app DB:', err.message);
+    }
+  }
+
   const fromPg = await brillianceSupabase.getBrillianceStagesFromSupabase(chessComUuid);
   if (fromPg) {
     return {
       ...fromPg,
       brillianceGameId: sqliteGameId,
-      source: 'supabase',
+      source: 'app_db',
     };
   }
 
   return {
     ...buildStageResponseFromSqlite(sqliteGameId, pipeline),
+    chessComUuid,
     source: 'sqlite',
   };
 }
@@ -47,6 +65,21 @@ async function getBrillianceForChessComGame(chessComUuid) {
 
   const cached = await buildStageResponse(chessComUuid, existingRun.sqlite_game_id);
   return { ...cached, cached: true };
+}
+
+async function syncBrillianceForChessComGame({ pgn, chessComUuid }) {
+  if (!pgn?.trim()) throw new Error('PGN is required for brilliance sync');
+  if (!chessComUuid?.trim()) throw new Error('Game UUID is required');
+
+  const imported = importOrGetGameForPgn(pgn, {
+    originalFilename: `chesscom_${chessComUuid}.pgn`,
+    lichessGameId: chessComUuid,
+  });
+  const gameId = imported?.id;
+  if (!gameId) throw new Error('Failed to resolve game for brilliance sync');
+
+  await brillianceSupabase.syncBrillianceGameToSupabase(gameId, chessComUuid);
+  return buildStageResponse(chessComUuid, gameId);
 }
 
 async function runBrillianceForChessComGame({ pgn, chessComUuid, force = false }) {
@@ -69,7 +102,32 @@ async function runBrillianceForChessComGame({ pgn, chessComUuid, force = false }
   const gameId = imported?.id;
   if (!gameId) throw new Error('Failed to import game for brilliance analysis');
 
-  const pipeline = await runFullBrillianceForGame(gameId, { force });
+  // Mark run as started so live polls have a row immediately
+  await pgDb.query(
+    `INSERT INTO chess_com_brilliance_runs (
+       chess_com_uuid, sqlite_game_id,
+       stage0_status, stage1_status, stage2_status, stage3_status, stage4_status,
+       synced_at, updated_at, created_at
+     ) VALUES ($1, $2, 'running', 'pending', 'pending', 'pending', 'running', NOW(), NOW(), NOW())
+     ON CONFLICT (chess_com_uuid) DO UPDATE SET
+       sqlite_game_id = EXCLUDED.sqlite_game_id,
+       stage0_status = 'running',
+       stage1_status = CASE WHEN $3 THEN 'pending' ELSE chess_com_brilliance_runs.stage1_status END,
+       stage2_status = CASE WHEN $3 THEN 'pending' ELSE chess_com_brilliance_runs.stage2_status END,
+       stage3_status = CASE WHEN $3 THEN 'pending' ELSE chess_com_brilliance_runs.stage3_status END,
+       stage4_status = 'running',
+       updated_at = NOW()`,
+    [chessComUuid, gameId, force ? 1 : 0]
+  );
+
+  // Sync to app DB after each stage so the Stage 0–4 table can poll live
+  const pipeline = await runFullBrillianceForGame(gameId, {
+    force,
+    onStageComplete: async () => {
+      await brillianceSupabase.syncBrillianceGameToSupabase(gameId, chessComUuid);
+    },
+  });
+
   return buildStageResponse(chessComUuid, gameId, pipeline);
 }
 
@@ -282,6 +340,7 @@ async function getBrilliantMoveById(moveId) {
 module.exports = {
   getBrillianceForChessComGame,
   runBrillianceForChessComGame,
+  syncBrillianceForChessComGame,
   listBrilliantMoves,
   getBrilliantMoveById,
   buildStageResponse,

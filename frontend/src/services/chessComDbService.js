@@ -95,13 +95,13 @@ export async function syncYesterdaysGamesFromChessCom() {
   return syncAllGamesFromChessCom();
 }
 
-export async function runChessComGameBrilliance(username, uuid, { force = false } = {}) {
+export async function runChessComGameBrilliance(username, uuid, { force = false, syncOnly = false } = {}) {
   return apiFetch(
     `${API_BASE}/${encodeURIComponent(username)}/games/${encodeURIComponent(uuid)}/brilliance/run`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ force }),
+      body: JSON.stringify({ force, syncOnly }),
     }
   );
 }

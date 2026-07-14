@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBookOpen, FiGrid, FiUsers } from 'react-icons/fi';
+import { FiBookOpen, FiGrid, FiUsers, FiZap } from 'react-icons/fi';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -24,6 +24,12 @@ function Dashboard() {
       title: 'Students',
       icon: <FiUsers aria-hidden />,
       path: '/students',
+    },
+    {
+      key: 'brilliant-moves',
+      title: 'Brilliant Moves',
+      icon: <FiZap aria-hidden />,
+      path: '/brilliant-moves',
     },
   ];
 

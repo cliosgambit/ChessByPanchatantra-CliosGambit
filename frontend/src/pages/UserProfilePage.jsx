@@ -144,11 +144,17 @@ function formatNumber(value) {
   return Number(value).toLocaleString();
 }
 
-function RatingCard({ label, iconUrl, className, current, best }) {
+function RatingCard({ label, iconUrl, className, current, best, selected = false, onSelect }) {
   const hasRating = current != null;
 
   return (
-    <div className={`chess-rating-card ${className}`}>
+    <button
+      type="button"
+      className={`chess-rating-card ${className}${selected ? ' is-selected' : ''}`}
+      onClick={onSelect}
+      aria-pressed={selected}
+      title={`Show ${label} rating graph (last 3 months)`}
+    >
       <div className="chess-rating-card-body">
         <div className="chess-rating-card-text">
           <div className="chess-rating-card-label">{label}</div>
@@ -161,7 +167,7 @@ function RatingCard({ label, iconUrl, className, current, best }) {
           <img src={iconUrl} alt="" className="chess-rating-card-icon-img" aria-hidden="true" />
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -362,6 +368,24 @@ function UserProfilePage() {
     useChessComUserData(chessUsername);
 
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeRatingClass, setActiveRatingClass] = useState('blitz');
+  const ratingPickDoneRef = React.useRef(false);
+
+  useEffect(() => {
+    ratingPickDoneRef.current = false;
+    setActiveRatingClass('blitz');
+  }, [chessUsername]);
+
+  useEffect(() => {
+    if (!stats || ratingPickDoneRef.current) return;
+    const preferred =
+      RATING_CARDS.find((card) => stats[card.key]?.current != null) ||
+      RATING_CARDS.find((card) => card.key === 'blitz');
+    if (preferred) {
+      setActiveRatingClass(preferred.key);
+      ratingPickDoneRef.current = true;
+    }
+  }, [stats]);
 
   useEffect(() => {
     if (activeTab === 'games' || activeTab === 'report') {
@@ -545,17 +569,30 @@ function UserProfilePage() {
               </div>
 
               {stats && (
-                <div className="chess-profile-ratings-row">
-                  {RATING_CARDS.map((card) => (
-                    <RatingCard
-                      key={card.key}
-                      label={card.label}
-                      iconUrl={card.iconUrl}
-                      className={card.className}
-                      current={stats[card.key]?.current}
-                      best={stats[card.key]?.best}
+                <div className="chess-profile-ratings-block">
+                  <div className="chess-profile-ratings-row" role="tablist" aria-label="Time control ratings">
+                    {RATING_CARDS.map((card) => (
+                      <RatingCard
+                        key={card.key}
+                        label={card.label}
+                        iconUrl={card.iconUrl}
+                        className={card.className}
+                        current={stats[card.key]?.current}
+                        best={stats[card.key]?.best}
+                        selected={activeRatingClass === card.key}
+                        onSelect={() => setActiveRatingClass(card.key)}
+                      />
+                    ))}
+                  </div>
+                  <div className="chess-profile-ratings-chart">
+                    <RatingProgressChart
+                      username={chessUsername}
+                      activeTimeClass={activeRatingClass}
+                      onActiveTimeClassChange={setActiveRatingClass}
+                      hideTabs
+                      compact
                     />
-                  ))}
+                  </div>
                 </div>
               )}
 

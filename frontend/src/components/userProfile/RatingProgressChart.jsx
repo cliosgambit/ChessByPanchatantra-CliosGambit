@@ -41,12 +41,33 @@ function RatingTooltip({ active, payload }) {
   );
 }
 
-function RatingProgressChart({ username }) {
+/**
+ * @param {object} props
+ * @param {string} props.username
+ * @param {string} [props.activeTimeClass] controlled time class (bullet|blitz|rapid|daily)
+ * @param {(key: string) => void} [props.onActiveTimeClassChange]
+ * @param {boolean} [props.hideTabs] hide internal tab buttons (when rating cards drive selection)
+ * @param {boolean} [props.compact] denser layout for profile header
+ */
+function RatingProgressChart({
+  username,
+  activeTimeClass: controlledTimeClass,
+  onActiveTimeClassChange,
+  hideTabs = false,
+  compact = false,
+}) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTimeClass, setActiveTimeClass] = useState('blitz');
+  const [internalTimeClass, setInternalTimeClass] = useState('blitz');
   const initialPickDoneRef = useRef(false);
+  const isControlled = controlledTimeClass != null;
+  const activeTimeClass = isControlled ? controlledTimeClass : internalTimeClass;
+
+  const setActiveTimeClass = (key) => {
+    if (onActiveTimeClassChange) onActiveTimeClassChange(key);
+    if (!isControlled) setInternalTimeClass(key);
+  };
 
   useEffect(() => {
     const safeUsername = decodeURIComponent(username || '').trim();
@@ -57,7 +78,7 @@ function RatingProgressChart({ username }) {
     }
 
     initialPickDoneRef.current = false;
-    setActiveTimeClass('blitz');
+    if (!isControlled) setInternalTimeClass('blitz');
 
     let cancelled = false;
     setLoading(true);
@@ -80,7 +101,7 @@ function RatingProgressChart({ username }) {
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, isControlled]);
 
   const seriesByTimeClass = useMemo(() => {
     const grouped = Object.fromEntries(TIME_CONTROLS.map((tc) => [tc.key, []]));
@@ -104,7 +125,7 @@ function RatingProgressChart({ username }) {
   }, [games]);
 
   useEffect(() => {
-    if (initialPickDoneRef.current || !games.length) return;
+    if (isControlled || initialPickDoneRef.current || !games.length) return;
     const best = TIME_CONTROLS.map((tc) => ({
       key: tc.key,
       count: seriesByTimeClass[tc.key]?.length || 0,
@@ -115,7 +136,7 @@ function RatingProgressChart({ username }) {
       setActiveTimeClass(best.key);
       initialPickDoneRef.current = true;
     }
-  }, [games, seriesByTimeClass]);
+  }, [games, seriesByTimeClass, isControlled]);
 
   const activeConfig = TIME_CONTROLS.find((tc) => tc.key === activeTimeClass) || TIME_CONTROLS[1];
   const chartData = seriesByTimeClass[activeTimeClass] || [];
@@ -139,38 +160,46 @@ function RatingProgressChart({ username }) {
     return ticks;
   }, [chartData]);
 
+  const chartHeight = compact ? 180 : 220;
+
   return (
-    <div className="chess-rating-chart">
+    <div className={`chess-rating-chart${compact ? ' chess-rating-chart--compact' : ''}`}>
       <div className="chess-rating-chart-header">
         <div>
-          <h3 className="chess-rating-chart-title">Rating Progress</h3>
+          <h3 className="chess-rating-chart-title">
+            {activeConfig.label} · last {MONTHS_WINDOW} months
+          </h3>
           <p className="chess-rating-chart-subtitle">
-            Last {MONTHS_WINDOW} months · rated games only
+            {hideTabs
+              ? 'Rated games only · click a rating box above to switch'
+              : `Last ${MONTHS_WINDOW} months · rated games only`}
           </p>
         </div>
-        <div className="chess-rating-chart-tabs" role="tablist" aria-label="Time control">
-          {TIME_CONTROLS.map((tc) => {
-            const count = seriesByTimeClass[tc.key]?.length || 0;
-            const isActive = activeTimeClass === tc.key;
-            return (
-              <button
-                key={tc.key}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`chess-rating-chart-tab${isActive ? ' is-active' : ''}`}
-                style={{ '--tab-accent': tc.color }}
-                onClick={() => {
-                  initialPickDoneRef.current = true;
-                  setActiveTimeClass(tc.key);
-                }}
-              >
-                {tc.label}
-                {count > 0 && <span className="chess-rating-chart-tab-count">{count}</span>}
-              </button>
-            );
-          })}
-        </div>
+        {!hideTabs && (
+          <div className="chess-rating-chart-tabs" role="tablist" aria-label="Time control">
+            {TIME_CONTROLS.map((tc) => {
+              const count = seriesByTimeClass[tc.key]?.length || 0;
+              const isActive = activeTimeClass === tc.key;
+              return (
+                <button
+                  key={tc.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`chess-rating-chart-tab${isActive ? ' is-active' : ''}`}
+                  style={{ '--tab-accent': tc.color }}
+                  onClick={() => {
+                    initialPickDoneRef.current = true;
+                    setActiveTimeClass(tc.key);
+                  }}
+                >
+                  {tc.label}
+                  {count > 0 && <span className="chess-rating-chart-tab-count">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="chess-rating-chart-body">
@@ -207,7 +236,7 @@ function RatingProgressChart({ username }) {
                 </span>
               )}
             </div>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={chartHeight}>
               <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3835" vertical={false} />
                 <XAxis

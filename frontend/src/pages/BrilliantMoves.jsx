@@ -22,7 +22,7 @@ import {
 import '../components/userProfile/ChessComProfilePage.css';
 import './AllGames.css';
 
-const STATS_POLL_MS = 3000;
+const STATS_POLL_MS = 1500;
 
 const EMPTY_PIPELINE_STATS = {
   gamesFetched: 0,

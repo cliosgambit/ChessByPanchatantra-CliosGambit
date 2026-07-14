@@ -321,8 +321,48 @@
   margin-top: 1.25rem;
 }
 
+.chess-profile-ratings-block {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.chess-profile-ratings-block .chess-profile-ratings-row {
+  margin-top: 0;
+}
+
+.chess-profile-ratings-chart {
+  background: var(--chess-panel);
+  border: 1px solid var(--chess-border);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem 0.65rem;
+}
+
+.chess-profile-ratings-chart .chess-rating-chart--compact .chess-rating-chart-header {
+  margin-bottom: 0.35rem;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-title {
+  font-size: 0.95rem;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-subtitle {
+  font-size: 0.72rem;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-meta {
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+}
+
 .chess-rating-card {
   position: relative;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
   background: var(--chess-panel);
   border: 1px solid var(--chess-border);
   border-radius: 0.65rem;
@@ -346,6 +386,16 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
   border-color: var(--rating-border, var(--chess-border));
+}
+
+.chess-rating-card.is-selected {
+  border-color: var(--rating-border, var(--rating-accent, var(--chess-accent)));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rating-accent, var(--chess-accent)) 35%, transparent);
+  transform: translateY(-1px);
+}
+
+.chess-rating-card.is-selected::before {
+  height: 4px;
 }
 
 .chess-rating-card-body {
@@ -456,6 +506,23 @@
 
 .chess-rating-chart {
   width: 100%;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-header {
+  margin-bottom: 0.35rem;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-title {
+  font-size: 0.95rem;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-subtitle {
+  font-size: 0.72rem;
+}
+
+.chess-rating-chart--compact .chess-rating-chart-meta {
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
 }
 
 .chess-rating-chart-header {

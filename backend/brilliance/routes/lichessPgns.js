@@ -17,6 +17,7 @@ const {
   listGames,
   listAllGames,
   importCustomPgn,
+  importOrGetGameForPgn,
 } = require('../services/lichessPgnService');
 const {
   getStage0Status,
@@ -185,12 +186,17 @@ function mountLichessPgnsRoutes(app) {
   app.post('/api/lichess-pgns/custom/import', (req, res) => {
     const pgnText = req.body?.pgn_text ?? req.body?.pgnText ?? req.body?.pgn;
     const filename = req.body?.filename ?? req.body?.original_filename ?? 'custom_game.pgn';
+    const lichessGameId =
+      req.body?.lichess_game_id ?? req.body?.lichessGameId ?? req.body?.chess_com_uuid ?? null;
     if (!pgnText || typeof pgnText !== 'string') {
       res.status(400).json({ error: 'pgn_text is required' });
       return;
     }
     try {
-      const game = importCustomPgn(pgnText, { originalFilename: String(filename) });
+      const game = importOrGetGameForPgn(pgnText, {
+        originalFilename: String(filename),
+        lichessGameId: lichessGameId ? String(lichessGameId) : null,
+      });
       res.status(201).json(game);
     } catch (e) {
       res.status(400).json({ error: e?.message || String(e) });

@@ -1,9 +1,10 @@
 import api from './authService';
 
-export async function importCustomPgn(pgnText, filename = 'custom_game.pgn') {
+export async function importCustomPgn(pgnText, filename = 'custom_game.pgn', options = {}) {
   const { data } = await api.post('/lichess-pgns/custom/import', {
     pgn_text: pgnText,
     filename,
+    lichess_game_id: options.lichessGameId || null,
   });
   return data;
 }

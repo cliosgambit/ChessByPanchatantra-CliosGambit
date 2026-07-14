@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiExternalLink } from 'react-icons/fi';
-import ChessComGameViewer from '../components/userProfile/ChessComGameViewer';
+import CustomGamePage from './test/CustomGamePage';
 import { fetchChessComGameFromDb } from '../services/chessComDbService';
 import { loadChessComGame } from '../utils/chessComGameNavigation';
+import { sanitizeChessComPgn } from '../utils/chessComPgnUtils';
 import '../components/userProfile/ChessComGamePage.css';
 
 const TIME_CLASS_ICONS = {
@@ -58,6 +59,29 @@ function ChessComGamePage() {
     };
   }, [profileUsername, gameId]);
 
+  const playerOverride = useMemo(() => {
+    if (!game) return null;
+    return {
+      white: game.white || game.whiteUsername || 'White',
+      black: game.black || game.blackUsername || 'Black',
+      whiteRating: game.whiteRating ?? null,
+      blackRating: game.blackRating ?? null,
+    };
+  }, [game]);
+
+  const defaultOrientation = useMemo(() => {
+    if (!game || !profileUsername) return 'white';
+    const self = String(profileUsername).toLowerCase();
+    const black = String(game.black || game.blackUsername || '').toLowerCase();
+    if (game.isWhite === false || black === self) return 'black';
+    return 'white';
+  }, [game, profileUsername]);
+
+  const initialPgn = useMemo(() => {
+    if (!game?.pgn) return null;
+    return sanitizeChessComPgn(game.pgn);
+  }, [game?.pgn]);
+
   if (loading) {
     return (
       <div className="chess-game-page">
@@ -68,7 +92,7 @@ function ChessComGamePage() {
     );
   }
 
-  if (!game) {
+  if (!game || !initialPgn) {
     return (
       <div className="chess-game-page">
         <div className="chess-game-page-inner">
@@ -93,13 +117,13 @@ function ChessComGamePage() {
   const timeIcon = game.timeClass ? TIME_CLASS_ICONS[game.timeClass] : null;
 
   return (
-    <div className="chess-game-page">
-      <div className="chess-game-page-inner">
+    <div className="chess-game-page chess-game-page--test">
+      <div className="chess-game-page-inner chess-game-page-inner--test">
         <header className="chess-game-page-topbar">
           <button
             type="button"
             className="chess-game-topbar-btn"
-            onClick={() => navigate(`/users/${encodeURIComponent(profileUsername)}`)}
+            onClick={() => navigate(`/players/${encodeURIComponent(profileUsername)}`)}
           >
             <FiArrowLeft />
             <span>Back to Profile</span>
@@ -133,7 +157,17 @@ function ChessComGamePage() {
           )}
         </header>
 
-        <ChessComGameViewer game={game} profileUsername={profileUsername} />
+        <CustomGamePage
+          boardId={`ChessComReview-${game.uuid || gameId}`}
+          inputSource="chess_com_review"
+          hideBrilliancePanel
+          hideImport
+          initialPgn={initialPgn}
+          chessComUuid={game.uuid || gameId}
+          profileUsername={profileUsername}
+          defaultOrientation={defaultOrientation}
+          playerOverride={playerOverride}
+        />
       </div>
     </div>
   );

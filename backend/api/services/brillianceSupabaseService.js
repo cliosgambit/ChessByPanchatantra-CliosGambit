@@ -25,7 +25,7 @@ async function upsertBrillianceRun(chessComUuid, sqliteGameId, stages) {
     `INSERT INTO chess_com_brilliance_runs (
        chess_com_uuid, sqlite_game_id, move_count,
        stage0_status, stage0_run_at, stage0_sacrifice_count, stage0_error,
-       stage1_status, stage1_run_at, stage1_candidate_count, stage1_proceed_stage2_count, stage1_error,
+       stage1_status, stage1_run_at, stage1_candidate_count, stage1_proceed_stage2_count, stage1_valid_count, stage1_error,
        stage2_status, stage2_run_at, stage2_analyzed_count, stage2_proceed_stage3_count, stage2_error,
        stage3_status, stage3_run_at, stage3_analyzed_count, stage3_sound_count, stage3_error,
        stage4_status, stage4_run_at, stage4_analyzed_count, stage4_brilliant_count, stage4_error,
@@ -33,10 +33,10 @@ async function upsertBrillianceRun(chessComUuid, sqliteGameId, stages) {
      ) VALUES (
        $1, $2, $3,
        $4, $5, $6, $7,
-       $8, $9, $10, $11, $12,
-       $13, $14, $15, $16, $17,
-       $18, $19, $20, $21, $22,
-       $23, $24, $25, $26, $27,
+       $8, $9, $10, $11, $12, $13,
+       $14, $15, $16, $17, $18,
+       $19, $20, $21, $22, $23,
+       $24, $25, $26, $27, $28,
        NOW(), NOW()
      )
      ON CONFLICT (chess_com_uuid) DO UPDATE SET
@@ -50,6 +50,7 @@ async function upsertBrillianceRun(chessComUuid, sqliteGameId, stages) {
        stage1_run_at = EXCLUDED.stage1_run_at,
        stage1_candidate_count = EXCLUDED.stage1_candidate_count,
        stage1_proceed_stage2_count = EXCLUDED.stage1_proceed_stage2_count,
+       stage1_valid_count = EXCLUDED.stage1_valid_count,
        stage1_error = EXCLUDED.stage1_error,
        stage2_status = EXCLUDED.stage2_status,
        stage2_run_at = EXCLUDED.stage2_run_at,
@@ -80,6 +81,7 @@ async function upsertBrillianceRun(chessComUuid, sqliteGameId, stages) {
       s1.run_at ?? null,
       s1.candidate_count ?? 0,
       s1.proceed_to_stage2_count ?? 0,
+      s1.valid_sacrifice_count ?? s1.valid_count ?? 0,
       s1.error ?? null,
       s2.status ?? 'pending',
       s2.run_at ?? null,
@@ -116,16 +118,22 @@ async function replaceStageRows(table, chessComUuid, rows, inserter) {
   }
 }
 
+/** Store the exact test-page parsed move object (plus a snapshot marker). */
+function moveSnapshotJson(m) {
+  return JSON.stringify({ _snapshot: 1, ...m });
+}
+
 async function syncStage0(chessComUuid, moves) {
   await replaceStageRows('chess_com_brilliance_stage0', chessComUuid, moves, async (uuid, m) => {
-    const features = m.features || m;
     await pgDb.query(
       `INSERT INTO chess_com_brilliance_stage0 (
          chess_com_uuid, ply_index, san_move, turn, game_phase, see_value,
-         is_capture, is_sacrifice_candidate, proceed_to_stage1,
+         is_capture, is_sacrifice_candidate, was_piece_hanging, proceed_to_stage1,
          king_safety_delta, multiplexing_score, ev_score, harmony_score,
+         control_delta, activity_delta, is_check, moving_piece_type,
+         dest_attackers, dest_defenders,
          novelty_score, early_game_blocked, features_json
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
       [
         uuid,
         m.ply_index,
@@ -135,14 +143,21 @@ async function syncStage0(chessComUuid, moves) {
         m.see_value,
         Boolean(m.is_capture),
         Boolean(m.is_sacrifice_candidate),
+        Boolean(m.was_piece_hanging),
         Boolean(m.proceed_to_stage1),
         m.king_safety_delta,
         m.multiplexing_score,
         m.ev_score,
         m.harmony_score,
-        features?.novelty_score ?? m.novelty_score ?? null,
-        Boolean(features?.early_game_blocked ?? m.early_game_blocked),
-        JSON.stringify(features),
+        m.control_delta ?? null,
+        m.activity_delta ?? null,
+        Boolean(m.is_check),
+        m.moving_piece_type ?? null,
+        m.dest_attackers ?? null,
+        m.dest_defenders ?? null,
+        m.novelty_score ?? m.features?.novelty_score ?? null,
+        Boolean(m.early_game_blocked ?? m.features?.early_game_blocked),
+        moveSnapshotJson(m),
       ]
     );
   });
@@ -150,14 +165,18 @@ async function syncStage0(chessComUuid, moves) {
 
 async function syncStage1(chessComUuid, moves) {
   await replaceStageRows('chess_com_brilliance_stage1', chessComUuid, moves, async (uuid, m) => {
-    const features = m.features || m;
-    const disq = features?.sacrifice_class?.disqualifiers ?? features?.disqualifiers ?? [];
+    const disq =
+      m.disqualifiers ??
+      m.features?.sacrifice_class?.disqualifiers ??
+      m.features?.disqualifiers ??
+      [];
     await pgDb.query(
       `INSERT INTO chess_com_brilliance_stage1 (
          chess_com_uuid, ply_index, san_move, turn, sac_type,
-         is_valid_sacrifice, is_forced, proceed_to_stage2, gate_fail_reason,
-         material_loss_cp, features_json
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         is_valid_sacrifice, is_pseudo, is_forced, proceed_to_stage2, gate_fail_reason,
+         material_loss_cp, sacrifice_uncertainty, recapture_options, forced_reason, n_legal,
+         disqualifiers_json, features_json
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
       [
         uuid,
         m.ply_index,
@@ -165,11 +184,17 @@ async function syncStage1(chessComUuid, moves) {
         m.turn,
         m.sac_type,
         Boolean(m.is_valid_sacrifice),
+        Boolean(m.is_pseudo),
         Boolean(m.is_forced),
         Boolean(m.proceed_to_stage2),
         m.gate_fail_reason,
         m.material_loss_cp,
-        JSON.stringify({ ...features, disqualifiers: disq }),
+        m.sacrifice_uncertainty ?? null,
+        m.recapture_options ?? null,
+        m.forced_reason ?? null,
+        m.n_legal ?? null,
+        JSON.stringify(disq),
+        moveSnapshotJson(m),
       ]
     );
   });
@@ -177,25 +202,35 @@ async function syncStage1(chessComUuid, moves) {
 
 async function syncStage2(chessComUuid, moves) {
   await replaceStageRows('chess_com_brilliance_stage2', chessComUuid, moves, async (uuid, m) => {
-    const features = m.features || m;
     await pgDb.query(
       `INSERT INTO chess_com_brilliance_stage2 (
-         chess_com_uuid, ply_index, san_move, turn,
-         cpl_shallow, ep_delta_shallow, our_rank_in_top5, is_best_or_near_best,
-         proceed_to_stage3, gate_fail_reason, features_json
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         chess_com_uuid, ply_index, san_move, turn, sac_type,
+         best_move, best_score_cp, our_score_cp, our_rank_in_top5,
+         cpl_shallow, ep_delta_shallow, is_forced_engine, n_reasonable_moves, response_width,
+         is_best_or_near_best, proceed_to_stage3, gate_fail_reason, classification_if_fail,
+         engine_depth, features_json
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
       [
         uuid,
         m.ply_index,
         m.san_move,
         m.turn,
+        m.sac_type ?? null,
+        m.best_move ?? null,
+        m.best_score_cp ?? null,
+        m.our_score_cp ?? null,
+        m.our_rank_in_top5,
         m.cpl_shallow,
         m.ep_delta_shallow,
-        m.our_rank_in_top5,
+        Boolean(m.is_forced_engine),
+        m.n_reasonable_moves ?? null,
+        m.response_width ?? null,
         Boolean(m.is_best_or_near_best),
         Boolean(m.proceed_to_stage3),
         m.gate_fail_reason,
-        JSON.stringify(features),
+        m.classification_if_fail ?? null,
+        m.engine_depth ?? 12,
+        moveSnapshotJson(m),
       ]
     );
   });
@@ -203,27 +238,45 @@ async function syncStage2(chessComUuid, moves) {
 
 async function syncStage3(chessComUuid, moves) {
   await replaceStageRows('chess_com_brilliance_stage3', chessComUuid, moves, async (uuid, m) => {
-    const features = m.features || m;
     await pgDb.query(
       `INSERT INTO chess_com_brilliance_stage3 (
-         chess_com_uuid, ply_index, san_move, turn, deep_eval_cp,
-         is_sound, non_obvious_score, rank_at_depth8, rank_at_depth22, rank_jump,
-         proceed_to_stage4, gate_fail_reason, features_json
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+         chess_com_uuid, ply_index, san_move, turn, sac_type, deep_eval_cp,
+         depth_slope, depth_gain, depth_variance, early_eval_avg, late_eval_avg,
+         is_rising_curve, is_sound, is_non_obvious,
+         rank_at_depth8, rank_at_depth22, rank_jump,
+         good_defenses, defense_difficulty, counterfactual_delta, non_obvious_score,
+         classification_if_unsound, proceed_to_stage4, gate_fail_reason,
+         engine_depth, depth_evals_json, eval_perspective, features_json
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)`,
       [
         uuid,
         m.ply_index,
         m.san_move,
         m.turn,
+        m.sac_type ?? null,
         m.deep_eval_cp,
+        m.depth_slope ?? null,
+        m.depth_gain ?? null,
+        m.depth_variance ?? null,
+        m.early_eval_avg ?? null,
+        m.late_eval_avg ?? null,
+        Boolean(m.is_rising_curve),
         Boolean(m.is_sound),
-        m.non_obvious_score,
+        Boolean(m.is_non_obvious),
         m.rank_at_depth8,
         m.rank_at_depth22,
         m.rank_jump,
-        Boolean(m.proceed_to_stage4),
+        m.good_defenses ?? null,
+        m.defense_difficulty ?? null,
+        m.counterfactual_delta ?? null,
+        m.non_obvious_score,
+        m.classification_if_unsound ?? null,
+        m.proceed_to_stage4 == null ? 1 : Boolean(m.proceed_to_stage4),
         m.gate_fail_reason,
-        JSON.stringify(features),
+        m.engine_depth ?? 25,
+        m.depth_evals ? JSON.stringify(m.depth_evals) : m.depth_evals_json ?? null,
+        m.eval_perspective || 'white',
+        moveSnapshotJson(m),
       ]
     );
   });
@@ -231,14 +284,14 @@ async function syncStage3(chessComUuid, moves) {
 
 async function syncStage4(chessComUuid, moves) {
   await replaceStageRows('chess_com_brilliance_stage4', chessComUuid, moves, async (uuid, m) => {
-    const features = m.features || m;
     await pgDb.query(
       `INSERT INTO chess_com_brilliance_stage4 (
          chess_com_uuid, ply_index, san_move, turn, sac_type, player_rating,
-         surprise_score, pb_score, pb_category, archetype,
+         surprise_score, info_surprise_bits, brilliant_for_rating,
+         pb_score, pb_category, obj_quality, practical_value, is_tal_zone, archetype,
          brilliance_score, brilliance_score_raw, novelty_score,
          classification, is_brilliant, features_json, sqlite_stage4_id
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
       [
         uuid,
         m.ply_index,
@@ -247,15 +300,20 @@ async function syncStage4(chessComUuid, moves) {
         m.sac_type,
         m.player_rating,
         m.surprise_score,
+        m.info_surprise_bits ?? null,
+        Boolean(m.brilliant_for_rating),
         m.pb_score,
         m.pb_category,
+        m.obj_quality ?? null,
+        m.practical_value ?? null,
+        Boolean(m.is_tal_zone),
         m.archetype,
         m.brilliance_score,
-        features?.brilliance_score_raw ?? m.brilliance_score_raw ?? null,
-        features?.novelty_score ?? m.novelty_score ?? null,
+        m.brilliance_score_raw ?? m.features?.brilliance_score_raw ?? null,
+        m.novelty_score ?? m.features?.novelty_score ?? null,
         m.classification,
         Boolean(m.is_brilliant),
-        JSON.stringify(features),
+        moveSnapshotJson(m),
         m.id ?? null,
       ]
     );
@@ -274,19 +332,15 @@ async function syncBrillianceGameToSupabase(sqliteGameId, chessComUuid = null) {
   const stage3 = getStage3Features(sqliteGameId);
   const stage4 = getStage4Features(sqliteGameId);
 
-  await pgDb.query('BEGIN');
-  try {
+  // Serialize on the shared SQLite connection (parallel All Games analysis used to nest BEGIN).
+  await pgDb.withTransaction(async () => {
     await upsertBrillianceRun(uuid, sqliteGameId, { stage0, stage1, stage2, stage3, stage4 });
     await syncStage0(uuid, stage0.moves || []);
     await syncStage1(uuid, stage1.moves || []);
     await syncStage2(uuid, stage2.moves || []);
     await syncStage3(uuid, stage3.moves || []);
     await syncStage4(uuid, stage4.moves || []);
-    await pgDb.query('COMMIT');
-  } catch (err) {
-    await pgDb.query('ROLLBACK');
-    throw err;
-  }
+  });
 
   return { chessComUuid: uuid, sqliteGameId };
 }
@@ -299,102 +353,173 @@ async function getBrillianceRun(chessComUuid) {
   return rows[0] || null;
 }
 
+function parseJsonField(raw) {
+  if (raw == null) return {};
+  if (typeof raw === 'object') return raw;
+  if (typeof raw !== 'string') return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Restore the exact test-page move object when features_json is a full snapshot.
+ * Falls back to slim column mapping for older rows.
+ */
+function mapFromSnapshotOrColumns(row, legacyMapper) {
+  const snap = parseJsonField(row.features_json);
+  if (snap && snap._snapshot === 1) {
+    const { _snapshot, ...move } = snap;
+    return {
+      ...move,
+      id: Number(row.id),
+      ply_index: row.ply_index ?? move.ply_index,
+    };
+  }
+  return legacyMapper(row, snap);
+}
+
 function mapPgStage0Row(row) {
-  const features = row.features_json || {};
-  return {
-    id: Number(row.id),
-    ply_index: row.ply_index,
-    san_move: row.san_move,
-    turn: row.turn,
-    game_phase: row.game_phase,
-    see_value: row.see_value,
-    is_capture: row.is_capture,
-    is_sacrifice_candidate: row.is_sacrifice_candidate,
-    proceed_to_stage1: row.proceed_to_stage1,
-    king_safety_delta: row.king_safety_delta,
-    multiplexing_score: row.multiplexing_score,
-    ev_score: row.ev_score,
-    harmony_score: row.harmony_score,
-    novelty_score: row.novelty_score,
-    early_game_blocked: row.early_game_blocked,
+  return mapFromSnapshotOrColumns(row, (r, features) => ({
+    id: Number(r.id),
+    ply_index: r.ply_index,
+    san_move: r.san_move,
+    turn: r.turn,
+    game_phase: r.game_phase,
+    see_value: r.see_value,
+    is_capture: r.is_capture,
+    is_sacrifice_candidate: r.is_sacrifice_candidate,
+    was_piece_hanging: r.was_piece_hanging,
+    proceed_to_stage1: r.proceed_to_stage1,
+    king_safety_delta: r.king_safety_delta,
+    multiplexing_score: r.multiplexing_score,
+    ev_score: r.ev_score,
+    harmony_score: r.harmony_score,
+    control_delta: r.control_delta,
+    activity_delta: r.activity_delta,
+    is_check: r.is_check,
+    moving_piece_type: r.moving_piece_type,
+    dest_attackers: r.dest_attackers,
+    dest_defenders: r.dest_defenders,
+    novelty_score: r.novelty_score,
+    early_game_blocked: r.early_game_blocked,
     features,
-  };
+  }));
 }
 
 function mapPgStage1Row(row) {
-  const features = row.features_json || {};
-  return {
-    id: Number(row.id),
-    ply_index: row.ply_index,
-    san_move: row.san_move,
-    turn: row.turn,
-    sac_type: row.sac_type,
-    is_valid_sacrifice: row.is_valid_sacrifice,
-    is_forced: row.is_forced,
-    proceed_to_stage2: row.proceed_to_stage2,
-    gate_fail_reason: row.gate_fail_reason,
-    material_loss_cp: row.material_loss_cp,
-    disqualifiers: features.disqualifiers || [],
-    features,
-  };
+  return mapFromSnapshotOrColumns(row, (r, features) => {
+    let disq = features.disqualifiers || [];
+    if (r.disqualifiers_json) {
+      const parsed = parseJsonField(r.disqualifiers_json);
+      if (Array.isArray(parsed)) disq = parsed;
+    }
+    return {
+      id: Number(r.id),
+      ply_index: r.ply_index,
+      san_move: r.san_move,
+      turn: r.turn,
+      sac_type: r.sac_type,
+      is_valid_sacrifice: r.is_valid_sacrifice,
+      is_pseudo: r.is_pseudo,
+      is_forced: r.is_forced,
+      proceed_to_stage2: r.proceed_to_stage2,
+      gate_fail_reason: r.gate_fail_reason,
+      material_loss_cp: r.material_loss_cp,
+      sacrifice_uncertainty: r.sacrifice_uncertainty,
+      recapture_options: r.recapture_options,
+      forced_reason: r.forced_reason,
+      n_legal: r.n_legal,
+      disqualifiers: disq,
+      features,
+    };
+  });
 }
 
 function mapPgStage2Row(row) {
-  const features = row.features_json || {};
-  return {
-    id: Number(row.id),
-    ply_index: row.ply_index,
-    san_move: row.san_move,
-    turn: row.turn,
-    cpl_shallow: row.cpl_shallow,
-    ep_delta_shallow: row.ep_delta_shallow,
-    our_rank_in_top5: row.our_rank_in_top5,
-    is_best_or_near_best: row.is_best_or_near_best,
-    proceed_to_stage3: row.proceed_to_stage3,
-    gate_fail_reason: row.gate_fail_reason,
+  return mapFromSnapshotOrColumns(row, (r, features) => ({
+    id: Number(r.id),
+    ply_index: r.ply_index,
+    san_move: r.san_move,
+    turn: r.turn,
+    sac_type: r.sac_type,
+    best_move: r.best_move,
+    best_score_cp: r.best_score_cp,
+    our_score_cp: r.our_score_cp,
+    cpl_shallow: r.cpl_shallow,
+    ep_delta_shallow: r.ep_delta_shallow,
+    our_rank_in_top5: r.our_rank_in_top5,
+    is_forced_engine: r.is_forced_engine,
+    n_reasonable_moves: r.n_reasonable_moves,
+    response_width: r.response_width,
+    is_best_or_near_best: r.is_best_or_near_best,
+    proceed_to_stage3: r.proceed_to_stage3,
+    gate_fail_reason: r.gate_fail_reason,
+    classification_if_fail: r.classification_if_fail,
+    engine_depth: r.engine_depth,
     features,
-  };
+  }));
 }
 
 function mapPgStage3Row(row) {
-  const features = row.features_json || {};
-  return {
-    id: Number(row.id),
-    ply_index: row.ply_index,
-    san_move: row.san_move,
-    turn: row.turn,
-    deep_eval_cp: row.deep_eval_cp,
-    is_sound: row.is_sound,
-    non_obvious_score: row.non_obvious_score,
-    rank_at_depth8: row.rank_at_depth8,
-    rank_at_depth22: row.rank_at_depth22,
-    rank_jump: row.rank_jump,
-    proceed_to_stage4: row.proceed_to_stage4,
-    gate_fail_reason: row.gate_fail_reason,
+  return mapFromSnapshotOrColumns(row, (r, features) => ({
+    id: Number(r.id),
+    ply_index: r.ply_index,
+    san_move: r.san_move,
+    turn: r.turn,
+    sac_type: r.sac_type,
+    deep_eval_cp: r.deep_eval_cp,
+    depth_slope: r.depth_slope,
+    depth_gain: r.depth_gain,
+    depth_variance: r.depth_variance,
+    early_eval_avg: r.early_eval_avg,
+    late_eval_avg: r.late_eval_avg,
+    is_rising_curve: r.is_rising_curve,
+    is_sound: r.is_sound,
+    is_non_obvious: r.is_non_obvious,
+    non_obvious_score: r.non_obvious_score,
+    rank_at_depth8: r.rank_at_depth8,
+    rank_at_depth22: r.rank_at_depth22,
+    rank_jump: r.rank_jump,
+    good_defenses: r.good_defenses,
+    defense_difficulty: r.defense_difficulty,
+    counterfactual_delta: r.counterfactual_delta,
+    classification_if_unsound: r.classification_if_unsound,
+    proceed_to_stage4: r.proceed_to_stage4,
+    gate_fail_reason: r.gate_fail_reason,
+    engine_depth: r.engine_depth,
+    depth_evals: parseJsonField(r.depth_evals_json),
+    eval_perspective: r.eval_perspective || 'white',
     features,
-  };
+  }));
 }
 
 function mapPgStage4Row(row) {
-  const features = row.features_json || {};
-  return {
-    id: Number(row.id),
-    ply_index: row.ply_index,
-    san_move: row.san_move,
-    turn: row.turn,
-    sac_type: row.sac_type,
-    player_rating: row.player_rating,
-    surprise_score: row.surprise_score,
-    pb_score: row.pb_score,
-    pb_category: row.pb_category,
-    archetype: row.archetype,
-    brilliance_score: row.brilliance_score,
-    brilliance_score_raw: row.brilliance_score_raw,
-    novelty_score: row.novelty_score,
-    classification: row.classification,
-    is_brilliant: row.is_brilliant,
+  return mapFromSnapshotOrColumns(row, (r, features) => ({
+    id: Number(r.id),
+    ply_index: r.ply_index,
+    san_move: r.san_move,
+    turn: r.turn,
+    sac_type: r.sac_type,
+    player_rating: r.player_rating,
+    surprise_score: r.surprise_score,
+    info_surprise_bits: r.info_surprise_bits,
+    brilliant_for_rating: r.brilliant_for_rating,
+    pb_score: r.pb_score,
+    pb_category: r.pb_category,
+    obj_quality: r.obj_quality,
+    practical_value: r.practical_value,
+    is_tal_zone: r.is_tal_zone,
+    archetype: r.archetype,
+    brilliance_score: r.brilliance_score,
+    brilliance_score_raw: r.brilliance_score_raw,
+    novelty_score: r.novelty_score,
+    classification: r.classification,
+    is_brilliant: r.is_brilliant,
     features,
-  };
+  }));
 }
 
 function runSummaryFromPg(run, stageKey, extra = {}) {
@@ -457,6 +582,7 @@ async function getBrillianceStagesFromSupabase(chessComUuid) {
       ...runSummaryFromPg(run, 'stage1', {
         candidate_count: run.stage1_candidate_count,
         proceed_to_stage2_count: run.stage1_proceed_stage2_count,
+        valid_sacrifice_count: run.stage1_valid_count ?? 0,
         features_saved: stage1Moves.length,
       }),
       moves: stage1Moves,
@@ -563,7 +689,18 @@ async function remapPuzzleStage4Ids(oldSqliteId, newPgId) {
   );
 }
 
-async function migrateAllSqliteBrillianceToSupabase() {
+async function hasTestPageSnapshot(chessComUuid) {
+  const { rows } = await pgDb.query(
+    `SELECT features_json FROM chess_com_brilliance_stage0
+     WHERE chess_com_uuid = $1 LIMIT 1`,
+    [chessComUuid]
+  );
+  if (!rows[0]) return false;
+  const snap = parseJsonField(rows[0].features_json);
+  return snap?._snapshot === 1;
+}
+
+async function migrateAllSqliteBrillianceToSupabase({ forceRefresh = false } = {}) {
   const games = sqliteDb
     .prepare(
       `SELECT id, lichess_game_id, stage4_status
@@ -584,12 +721,28 @@ async function migrateAllSqliteBrillianceToSupabase() {
 
   const uniqueGames = [...latestByUuid.values()];
   let synced = 0;
+  let skipped = 0;
   let failed = 0;
 
   for (const game of uniqueGames) {
     try {
+      // Only mirror into app DB when the Chess.com game row exists (FK).
+      const { rows: gameRows } = await pgDb.query(
+        `SELECT 1 AS ok FROM chess_com_games WHERE chess_com_uuid = $1 LIMIT 1`,
+        [game.lichess_game_id]
+      );
+      if (!gameRows[0]) {
+        skipped += 1;
+        continue;
+      }
+
       const existingRun = await getBrillianceRun(game.lichess_game_id);
-      if (existingRun?.sqlite_game_id === game.id && existingRun?.stage4_status === 'completed') {
+      const alreadyFresh =
+        existingRun?.sqlite_game_id === game.id &&
+        existingRun?.stage4_status === 'completed' &&
+        (await hasTestPageSnapshot(game.lichess_game_id));
+
+      if (alreadyFresh && !forceRefresh) {
         synced += 1;
         continue;
       }
@@ -622,7 +775,7 @@ async function migrateAllSqliteBrillianceToSupabase() {
     }
   }
 
-  return { synced, failed, total: uniqueGames.length };
+  return { synced, skipped, failed, total: uniqueGames.length };
 }
 
 module.exports = {

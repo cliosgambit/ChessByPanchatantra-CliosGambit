@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
+const { Mutex } = require('async-mutex');
 require('dotenv').config();
 
 const dataDir = path.join(__dirname, '..', '..', 'data');
@@ -20,6 +21,11 @@ const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sqlite.s
 if (fs.existsSync(schemaPath)) {
   sqlite.exec(fs.readFileSync(schemaPath, 'utf8'));
 }
+
+/** Serialize writes / transactions on the single SQLite connection. */
+const writeMutex = new Mutex();
+let txRelease = null;
+let txDepth = 0;
 
 function tableHasColumn(table, column) {
   const cols = sqlite.prepare(`PRAGMA table_info(${quoteIdent(table)})`).all();
@@ -125,8 +131,8 @@ function expandAnyClauses(sql, values) {
         for (const item of list) newValues.push(serializeParam(item));
       }
     } else {
-      result.push('?');
       newValues.push(serializeParam(values[v++]));
+      result.push('?');
     }
     cursor = m.index + token.length;
   }
@@ -147,45 +153,170 @@ function mapSqliteError(err) {
   return e;
 }
 
-function query(text, params = []) {
+function releaseTxLock() {
+  if (txRelease) {
+    const release = txRelease;
+    txRelease = null;
+    release();
+  }
+  txDepth = 0;
+}
+
+function execTxnControl(command) {
+  const cmd = String(command || '')
+    .trim()
+    .split(/\s+/)[0]
+    .toUpperCase();
+
+  if (cmd === 'BEGIN') {
+    if (txDepth === 0) {
+      try {
+        sqlite.exec('ROLLBACK');
+      } catch {
+        // no open transaction
+      }
+      sqlite.exec('BEGIN');
+      txDepth = 1;
+    } else {
+      sqlite.exec(`SAVEPOINT nest_${txDepth}`);
+      txDepth += 1;
+    }
+    return { rows: [], rowCount: 0 };
+  }
+
+  if (cmd === 'COMMIT') {
+    if (txDepth <= 0) return { rows: [], rowCount: 0 };
+    txDepth -= 1;
+    if (txDepth === 0) {
+      sqlite.exec('COMMIT');
+      releaseTxLock();
+    } else {
+      sqlite.exec(`RELEASE SAVEPOINT nest_${txDepth}`);
+    }
+    return { rows: [], rowCount: 0 };
+  }
+
+  if (cmd === 'ROLLBACK') {
+    if (txDepth <= 0) {
+      try {
+        sqlite.exec('ROLLBACK');
+      } catch {
+        // ignore
+      }
+      releaseTxLock();
+      return { rows: [], rowCount: 0 };
+    }
+    txDepth -= 1;
+    if (txDepth === 0) {
+      try {
+        sqlite.exec('ROLLBACK');
+      } catch {
+        // ignore
+      }
+      releaseTxLock();
+    } else {
+      try {
+        sqlite.exec(`ROLLBACK TO SAVEPOINT nest_${txDepth}`);
+      } catch {
+        // ignore
+      }
+      try {
+        sqlite.exec(`RELEASE SAVEPOINT nest_${txDepth}`);
+      } catch {
+        // ignore
+      }
+    }
+    return { rows: [], rowCount: 0 };
+  }
+
+  return null;
+}
+
+function runQuerySync(text, params = []) {
+  let sql = translateSql(String(text));
+
+  if ((!params || params.length === 0) && isMultiStatement(sql)) {
+    sqlite.exec(sql);
+    return { rows: [], rowCount: 0 };
+  }
+
+  const addCol = sql.match(
+    /^\s*ALTER\s+TABLE\s+("?[\w]+"?)\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+(\w+)\s+([\s\S]+)$/i
+  );
+  if (addCol) {
+    const table = addCol[1].replace(/"/g, '');
+    const column = addCol[2];
+    const rest = addCol[3].replace(/;?\s*$/, '');
+    addColumnIfNotExists(table, column, `${column} ${rest}`);
+    return { rows: [], rowCount: 0 };
+  }
+
+  const converted = convertPlaceholders(sql, params || []);
+  const expanded = expandAnyClauses(converted.sql, converted.values);
+  const stmt = sqlite.prepare(expanded.sql);
+  const isSelect = /^\s*(SELECT|WITH|PRAGMA)\b/i.test(expanded.sql);
+  const hasReturning = /\bRETURNING\b/i.test(expanded.sql);
+
+  if (isSelect || hasReturning) {
+    const rows = stmt.all(...expanded.values);
+    return { rows, rowCount: rows.length };
+  }
+
+  const info = stmt.run(...expanded.values);
+  return {
+    rows: [],
+    rowCount: Number(info.changes) || 0,
+    lastInsertRowid: info.lastInsertRowid,
+  };
+}
+
+async function query(text, params = []) {
   try {
-    let sql = translateSql(String(text));
+    const trimmed = String(text || '').trim();
+    const isTxn =
+      (!params || params.length === 0) && /^(BEGIN|COMMIT|ROLLBACK)\b/i.test(trimmed);
 
-    if ((!params || params.length === 0) && isMultiStatement(sql)) {
-      sqlite.exec(sql);
-      return Promise.resolve({ rows: [], rowCount: 0 });
+    if (isTxn) {
+      const cmd = trimmed.split(/\s+/)[0].toUpperCase();
+      if (cmd === 'BEGIN' && txDepth === 0) {
+        txRelease = await writeMutex.acquire();
+        try {
+          return execTxnControl('BEGIN');
+        } catch (err) {
+          releaseTxLock();
+          throw err;
+        }
+      }
+      return execTxnControl(cmd);
     }
 
-    const addCol = sql.match(
-      /^\s*ALTER\s+TABLE\s+("?[\w]+"?)\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+(\w+)\s+([\s\S]+)$/i
-    );
-    if (addCol) {
-      const table = addCol[1].replace(/"/g, '');
-      const column = addCol[2];
-      const rest = addCol[3].replace(/;?\s*$/, '');
-      addColumnIfNotExists(table, column, `${column} ${rest}`);
-      return Promise.resolve({ rows: [], rowCount: 0 });
+    if (txDepth > 0) {
+      // Already inside a held transaction lock
+      return runQuerySync(text, params);
     }
 
-    const converted = convertPlaceholders(sql, params || []);
-    const expanded = expandAnyClauses(converted.sql, converted.values);
-    const stmt = sqlite.prepare(expanded.sql);
-    const isSelect = /^\s*(SELECT|WITH|PRAGMA)\b/i.test(expanded.sql);
-    const hasReturning = /\bRETURNING\b/i.test(expanded.sql);
-
-    if (isSelect || hasReturning) {
-      const rows = stmt.all(...expanded.values);
-      return Promise.resolve({ rows, rowCount: rows.length });
-    }
-
-    const info = stmt.run(...expanded.values);
-    return Promise.resolve({
-      rows: [],
-      rowCount: Number(info.changes) || 0,
-      lastInsertRowid: info.lastInsertRowid,
-    });
+    return await writeMutex.runExclusive(() => runQuerySync(text, params));
   } catch (err) {
     return Promise.reject(mapSqliteError(err));
+  }
+}
+
+/**
+ * Run fn inside a single SQLite transaction (serialized).
+ */
+async function withTransaction(fn) {
+  await query('BEGIN');
+  try {
+    const result = await fn();
+    await query('COMMIT');
+    return result;
+  } catch (err) {
+    try {
+      await query('ROLLBACK');
+    } catch {
+      // ignore
+    }
+    throw err;
   }
 }
 
@@ -195,4 +326,5 @@ module.exports = {
   dbPath,
   addColumnIfNotExists,
   tableHasColumn,
+  withTransaction,
 };

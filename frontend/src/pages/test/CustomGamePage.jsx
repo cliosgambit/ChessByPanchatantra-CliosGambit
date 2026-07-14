@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   stage0Summary,
   stage1Summary,
@@ -14,8 +14,8 @@ import {
 } from '../../utils/testPageDownloadFilter';
 import DownloadReportFilterModal from '../../components/testPage/DownloadReportFilterModal';
 import { useChessGame } from '../../hooks/useChessGame';
-import api from '../../services/authService';
 import { importCustomPgn } from '../../services/lichessPgnService';
+import api from '../../services/authService';
 import LeftSidebar from '../../components/testPage/LeftSidebar';
 import RightSidebar from '../../components/testPage/RightSidebar';
 import PlayerBadge from '../../components/testPage/PlayerBadge';
@@ -36,6 +36,17 @@ export default function CustomGamePage({
   boardId = 'CustomGameBoard',
   inputSource = 'custom_game',
   hideBrilliancePanel = false,
+  /** Auto-load this PGN on mount (Chess.com review). */
+  initialPgn = null,
+  /** Hide PGN import UI when reviewing an existing game. */
+  hideImport = false,
+  /** Chess.com game UUID — used as brilliance game key + sync target. */
+  chessComUuid = null,
+  profileUsername = null,
+  /** Prefer board orientation for the profile player. */
+  defaultOrientation = 'white',
+  /** Override player badge names/ratings from Chess.com game object. */
+  playerOverride = null,
 }) {
   const [importError, setImportError] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -64,10 +75,35 @@ export default function CustomGamePage({
     if (loading !== undefined) setEngineEvalLoading(loading);
   }, []);
 
-  const runAllStages = useCallback(async (id) => {
+  const runAllStages = useCallback(async (id, { force = true } = {}) => {
     if (!id || !hideBrilliancePanel) return;
 
     setImportError(null);
+
+    // Reuse completed stage results when reopening a reviewed game
+    if (!force) {
+      try {
+        const [{ data: statusGame }, s0, s1, s2, s3, s4] = await Promise.all([
+          api.get(`/lichess-pgns/games/${id}`),
+          api.get(`/lichess-pgns/games/${id}/stage0`),
+          api.get(`/lichess-pgns/games/${id}/stage1`),
+          api.get(`/lichess-pgns/games/${id}/stage2`),
+          api.get(`/lichess-pgns/games/${id}/stage3`),
+          api.get(`/lichess-pgns/games/${id}/stage4`),
+        ]);
+        if (statusGame?.stage4_status === 'completed' || s4?.data?.status === 'completed') {
+          setStage0(s0.data);
+          setStage1(s1.data);
+          setStage2(s2.data);
+          setStage3(s3.data);
+          setStage4(s4.data);
+          return;
+        }
+      } catch {
+        // fall through to full run
+      }
+    }
+
     setStage0Loading(true);
     setStage1Loading(true);
     setStage2Loading(true);
@@ -114,6 +150,7 @@ export default function CustomGamePage({
     navIndex,
     setNavIndex,
     orientation,
+    setOrientation,
     boardWidth,
     boardContainerRef,
     onSquareClick,
@@ -150,7 +187,11 @@ export default function CustomGamePage({
       setStageFilter(null);
 
       try {
-        const data = await importCustomPgn(text);
+        const data = await importCustomPgn(
+          text,
+          chessComUuid ? `chesscom_${chessComUuid}.pgn` : 'Custom PGN',
+          { lichessGameId: chessComUuid || null }
+        );
         const ok = loadPGN(data.clean_pgn, {
           skipSessionCreate: true,
           input_source: inputSource,
@@ -158,11 +199,26 @@ export default function CustomGamePage({
         });
         if (!ok) throw new Error('Could not parse imported PGN');
 
+        if (defaultOrientation === 'black' || defaultOrientation === 'white') {
+          setOrientation(defaultOrientation);
+        }
+
         setGameId(data.id);
         setGameInfo(data);
 
         if (hideBrilliancePanel) {
-          await runAllStages(data.id);
+          // Prefer cached stages on review open; Re-run button still forces
+          await runAllStages(data.id, { force: !chessComUuid });
+
+          // Persist stage results into chess_com brilliance tables for Brilliant Moves list
+          if (chessComUuid && profileUsername) {
+            try {
+              const { runChessComGameBrilliance } = await import('../../services/chessComDbService');
+              await runChessComGameBrilliance(profileUsername, chessComUuid, { syncOnly: true });
+            } catch {
+              // Non-fatal — analysis UI already has stage data
+            }
+          }
         }
 
         return true;
@@ -178,8 +234,35 @@ export default function CustomGamePage({
         setStage4Loading(false);
       }
     },
-    [loadPGN, inputSource, hideBrilliancePanel, runAllStages]
+    [
+      loadPGN,
+      inputSource,
+      hideBrilliancePanel,
+      runAllStages,
+      chessComUuid,
+      profileUsername,
+      defaultOrientation,
+      setOrientation,
+    ]
   );
+
+  // Auto-load PGN when opening a Chess.com game via Review
+  const autoLoadKeyRef = useRef(null);
+  useEffect(() => {
+    const text = String(initialPgn || '').trim();
+    if (!text) return undefined;
+    const key = `${chessComUuid || ''}:${text.slice(0, 80)}`;
+    if (autoLoadKeyRef.current === key) return undefined;
+    autoLoadKeyRef.current = key;
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await handleImportPGN(text);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPgn, chessComUuid, handleImportPGN]);
 
   useEffect(() => {
     if (!hideBrilliancePanel || stage1Loading || !stage1?.moves?.length) return;
@@ -202,10 +285,10 @@ export default function CustomGamePage({
   }, [stage4, navIndex]);
 
   const meta = pgnMetadata || gameInfo?.pgn_metadata || {};
-  const whitePlayer = meta.White;
-  const whiteRating = meta.WhiteElo;
-  const blackPlayer = meta.Black;
-  const blackRating = meta.BlackElo;
+  const whitePlayer = playerOverride?.white || meta.White;
+  const whiteRating = playerOverride?.whiteRating ?? meta.WhiteElo;
+  const blackPlayer = playerOverride?.black || meta.Black;
+  const blackRating = playerOverride?.blackRating ?? meta.BlackElo;
 
   const getLatestClock = (color) => {
     for (let i = navIndex - 1; i >= 0; i--) {
@@ -443,6 +526,7 @@ export default function CustomGamePage({
               boardWidth={boardWidth}
               importing={importing}
               hideOverview
+              hideImport={hideImport || Boolean(initialPgn)}
             />
           </div>
 
@@ -555,7 +639,9 @@ export default function CustomGamePage({
               <span className="tp-analysis-toolbar-hint">
                 {moveListLabels.length
                   ? `${moveListLabels.length} moves · full stage cascade`
-                  : 'Import a PGN to enable report download'}
+                  : initialPgn
+                    ? 'Loading game PGN…'
+                    : 'Import a PGN to enable report download'}
               </span>
               <div className="tp-download-report-actions">
                 <button

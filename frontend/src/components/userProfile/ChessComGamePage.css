@@ -30,6 +30,29 @@
   margin: 0 auto;
 }
 
+.chess-game-page--test {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.chess-game-page--test .chess-game-page-topbar {
+  border-bottom-color: #e2e8f0;
+}
+
+.chess-game-page--test .chess-game-topbar-btn {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.chess-game-page--test .chess-game-page-meta {
+  color: #64748b;
+}
+
+.chess-game-page-inner--test .test-page {
+  padding: 0;
+}
+
 .chess-game-page-topbar {
   display: flex;
   align-items: center;

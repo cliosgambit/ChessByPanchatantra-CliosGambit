@@ -234,6 +234,16 @@ exports.runBrilliance = async (req, res) => {
 
     const brillianceService = require('../services/chessComBrillianceService');
     const force = req.body?.force === true || req.query.force === 'true';
+    const syncOnly = req.body?.syncOnly === true || req.query.syncOnly === 'true';
+
+    if (syncOnly) {
+      const result = await brillianceService.syncBrillianceForChessComGame({
+        pgn: game.pgn,
+        chessComUuid: uuid,
+      });
+      return res.json(result);
+    }
+
     const result = await brillianceService.runBrillianceForChessComGame({
       pgn: game.pgn,
       chessComUuid: uuid,

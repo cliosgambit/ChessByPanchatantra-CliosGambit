@@ -29,7 +29,7 @@ import './AllGames.css';
 
 const POLL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 80;
-const ANALYSIS_CONCURRENCY = 2;
+const ANALYSIS_CONCURRENCY = 1;
 const GAMES_PER_PAGE = 100;
 
 const DAY_FILTERS = DAY_FILTER_OPTIONS;
