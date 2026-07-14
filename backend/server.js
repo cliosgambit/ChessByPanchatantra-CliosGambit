@@ -14,6 +14,7 @@ const dataRoutes = require('./routes/dataRoutes');
 const tableBrowserRoutes = require('./routes/tableBrowserRoutes');
 const libraryRoutes = require('./routes/libraryRoutes');
 const puzzleRoutes = require('./routes/puzzleRoutes');
+const studentRoutes = require('./routes/studentRoutes');
 const { migrateUsersToLogin } = require('./scripts/migrateUsersToLogin');
 const { ensureChessPuzzleColumns } = require('./scripts/ensureChessPuzzleColumns');
 const { ensureChessPuzzlePollTable } = require('./scripts/ensureChessPuzzlePollTable');
@@ -27,6 +28,7 @@ const {
 const {
   ensureMoralPuzzleTables,
 } = require('./scripts/ensureMoralPuzzleTables');
+const { ensureStudentsTable } = require('./scripts/ensureStudentsTable');
 const accessRoutes = require('./api/routes/accessRoutes'); // <-- NEW: Import access routes
 const trackerRoutes = require('./api/routes/trackerRoutes');
 const automationRoutes = require('./api/routes/automationRoutes');
@@ -75,6 +77,7 @@ app.use('/api', dataRoutes);
 app.use('/api', tableBrowserRoutes);
 app.use('/api', libraryRoutes);
 app.use('/api', puzzleRoutes);
+app.use('/api', studentRoutes);
 app.use('/api', accessRoutes); // <-- NEW: Add access control routes
 app.use('/api', courseRoutes); // Your existing course routes
 app.use(trackerRoutes);
@@ -105,6 +108,7 @@ const startServerAndServices = async () => {
     ensure3000RatedPuzzlesTable();
     ensureLichessPuzzlesTable();
     ensureMoralPuzzleTables();
+    ensureStudentsTable();
     await ensureChessPuzzleColumns();
     await ensureChessPuzzlePollTable();
     await ensureChessComSchema();

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBookOpen, FiGrid } from 'react-icons/fi';
+import { FiBookOpen, FiGrid, FiUsers } from 'react-icons/fi';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -18,6 +18,12 @@ function Dashboard() {
       title: 'Puzzles',
       icon: <FiGrid aria-hidden />,
       path: '/puzzles',
+    },
+    {
+      key: 'students',
+      title: 'Students',
+      icon: <FiUsers aria-hidden />,
+      path: '/students',
     },
   ];
 

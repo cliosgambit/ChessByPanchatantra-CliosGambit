@@ -19,6 +19,9 @@ import LichessPuzzles from '../pages/LichessPuzzles';
 import LichessPuzzleView from '../pages/LichessPuzzleView';
 import ChessComPuzzles from '../pages/ChessComPuzzles';
 import ViewPuzzle from '../pages/ViewPuzzle';
+import Students from '../pages/Students';
+import UserProfilePage from '../pages/UserProfilePage';
+import ChessComGamePage from '../pages/ChessComGamePage';
 import CatchAllRedirect from './CatchAllRedirect';
 
 function RoleHomeRedirect() {
@@ -49,6 +52,9 @@ function AppRoutesContent() {
             <Route path="/puzzles/chesscom" element={<ChessComPuzzles />} />
             <Route path="/puzzles/chesscom/:puzzleId" element={<ViewPuzzle />} />
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/students" element={<Students />} />
+              <Route path="/players/:userId" element={<UserProfilePage />} />
+              <Route path="/players/:userId/game/:gameId" element={<ChessComGamePage />} />
               <Route path="/tables" element={<TablesBrowser />} />
               <Route path="/tables/:tableName" element={<TablesBrowser />} />
               <Route path="/library" element={<Library />} />

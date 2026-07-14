@@ -72,7 +72,13 @@ function shouldFetchArchiveMonth(meta, syncedArchives, { forceFull = false } = {
   if (!meta.year || !meta.monthNum) return true;
 
   const key = archiveKey(meta.year, meta.monthNum);
-  if (!syncedArchives.has(key)) return true;
+  const existing = syncedArchives.get(key);
+  if (!existing) return true;
+
+  // Prior sync marked the month but never stored games (SQLite JSON parse bug).
+  if (Number(existing.game_count) === 0 && existing.had_parse_bug) {
+    return true;
+  }
 
   const { year, month } = currentYearMonth();
   // Current month may still have new games played today
@@ -513,40 +519,13 @@ function archiveApiPath(apiUsername, year, month) {
   return `/pub/player/${encodeURIComponent(apiUsername)}/games/${year}/${String(month).padStart(2, '0')}`;
 }
 
-function enumerateMonthsFromLastSync(lastSyncedAt, { forceFull = false, maxRecentMonths = null } = {}) {
-  const { year: endYear, month: endMonth } = currentYearMonth();
-  let startYear;
-  let startMonth;
-
-  if (forceFull && maxRecentMonths == null) {
-    startYear = endYear - 15;
-    startMonth = 1;
-  } else if (forceFull) {
-    const d = new Date(endYear, endMonth - 1 - (maxRecentMonths - 1), 1);
-    startYear = d.getFullYear();
-    startMonth = d.getMonth() + 1;
-  } else if (lastSyncedAt) {
-    const d = new Date(lastSyncedAt);
-    startYear = d.getFullYear();
-    startMonth = d.getMonth() + 1;
-  } else {
-    const d = new Date(endYear, endMonth - 1 - (QUICK_SYNC_RECENT_ARCHIVES - 1), 1);
-    startYear = d.getFullYear();
-    startMonth = d.getMonth() + 1;
-  }
-
-  const months = [];
-  let y = startYear;
-  let m = startMonth;
-  while (y < endYear || (y === endYear && m <= endMonth)) {
-    months.push({ year: y, month: m, monthNum: m });
-    m += 1;
-    if (m > 12) {
-      m = 1;
-      y += 1;
-    }
-  }
-  return months;
+/** Official Chess.com archive month URLs for a player. */
+async function fetchPlayerArchiveUrls(apiUsername) {
+  const data = await fetchChessJson(
+    `/pub/player/${encodeURIComponent(apiUsername)}/games/archives`
+  );
+  if (data?.notFound) return [];
+  return Array.isArray(data?.archives) ? data.archives : [];
 }
 
 /** Single query: all tracked players + last_synced_at + synced archive months. */
@@ -564,11 +543,23 @@ async function loadBulkSyncContext(filterChessComIds = null) {
     [playerIds]
   );
   const { rows: archiveRows } = await db.query(
-    `SELECT chess_com_id, archive_year, archive_month, last_fetched_at AS archive_last_fetched
+    `SELECT chess_com_id, archive_year, archive_month, game_count,
+            last_fetched_at AS archive_last_fetched
      FROM chess_com_archives
      WHERE chess_com_id = ANY($1)
      ORDER BY chess_com_id, archive_year, archive_month`,
     [playerIds]
+  );
+
+  const { rows: gameCountRows } = await db.query(
+    `SELECT chess_com_id, COUNT(*) AS cnt
+     FROM chess_com_games
+     WHERE chess_com_id = ANY($1)
+     GROUP BY chess_com_id`,
+    [playerIds]
+  );
+  const gamesByPlayer = new Map(
+    gameCountRows.map((r) => [r.chess_com_id, Number(r.cnt) || 0])
   );
 
   const profileById = new Map(profileRows.map((r) => [r.chess_com_id, r]));
@@ -580,40 +571,70 @@ async function loadBulkSyncContext(filterChessComIds = null) {
       apiUsername: profile?.profile_username || chessComId,
       lastSyncedAt: profile?.last_synced_at || null,
       syncedArchives: new Map(),
+      gamesInDb: gamesByPlayer.get(chessComId) || 0,
     });
   }
   for (const row of archiveRows) {
     const player = players.get(row.chess_com_id);
     if (!player) continue;
     if (row.archive_year != null && row.archive_month != null) {
+      // Archives with game_count=0 while player has no games at all → incomplete sync
+      const hadParseBug =
+        Number(row.game_count) === 0 && (player.gamesInDb || 0) === 0;
       player.syncedArchives.set(archiveKey(row.archive_year, row.archive_month), {
         last_fetched_at: row.archive_last_fetched,
+        game_count: row.game_count,
+        had_parse_bug: hadParseBug,
       });
     }
   }
   return [...players.values()];
 }
 
-function buildBulkFetchTasks(players, { forceFull = false, maxRecentMonths = null } = {}) {
+/**
+ * Build archive fetch tasks from Chess.com's real archives list.
+ * - forceFull: re-fetch every month
+ * - maxRecentMonths: only the last N months (quick / background sync)
+ * - default: every missing month + always the current calendar month
+ */
+async function buildBulkFetchTasks(players, { forceFull = false, maxRecentMonths = null } = {}) {
   const tasks = [];
   let archivesSkipped = 0;
 
   for (const player of players) {
-    const months = enumerateMonthsFromLastSync(player.lastSyncedAt, { forceFull, maxRecentMonths });
-    for (const { year, month, monthNum } of months) {
-      const meta = {
-        year,
-        monthNum,
-        path: archiveApiPath(player.apiUsername, year, month),
-      };
-      if (!forceFull && !shouldFetchArchiveMonth(meta, player.syncedArchives, { forceFull: false })) {
+    let archiveUrls = [];
+    try {
+      archiveUrls = await fetchPlayerArchiveUrls(player.apiUsername);
+    } catch (err) {
+      console.error(
+        `[chess-com] archives list failed for ${player.apiUsername}:`,
+        err.message
+      );
+      continue;
+    }
+
+    if (!archiveUrls.length) continue;
+
+    let urls = archiveUrls;
+    if (maxRecentMonths != null && !forceFull) {
+      urls = archiveUrls.slice(-Math.max(1, Number(maxRecentMonths) || 1));
+    }
+
+    for (const archiveUrl of urls) {
+      const meta = archiveMetaFromUrl(archiveUrl);
+      if (!meta.year || !meta.monthNum) continue;
+      meta.path = archiveApiPath(player.apiUsername, meta.year, meta.monthNum);
+
+      if (!shouldFetchArchiveMonth(meta, player.syncedArchives, { forceFull })) {
         archivesSkipped += 1;
         continue;
       }
+
       tasks.push({
         chessComId: player.chessComId,
         apiUsername: player.apiUsername,
-        archiveUrl: `${CHESS_API}${meta.path}`,
+        archiveUrl:
+          archiveUrl.startsWith('http') ? archiveUrl : `${CHESS_API}${meta.path}`,
         meta,
       });
     }
@@ -764,7 +785,15 @@ async function phase2ParseAndStoreGames(batchId, { skipExisting = true, chessCom
 
   for (const row of rawRows) {
     try {
-      const games = row.raw_json?.games || [];
+      let rawJson = row.raw_json;
+      if (typeof rawJson === 'string') {
+        try {
+          rawJson = JSON.parse(rawJson);
+        } catch {
+          rawJson = { games: [] };
+        }
+      }
+      const games = rawJson?.games || [];
       const apiUsername = row.api_username;
       if (!gamesByPlayer.has(row.chess_com_id)) {
         gamesByPlayer.set(row.chess_com_id, []);
@@ -903,42 +932,47 @@ async function phase3SyncProfilesAndClubs(players) {
 async function finalizeBulkSync(chessComIds) {
   if (!chessComIds.length) return;
 
-  await db.query(
-    `UPDATE chess_com_profiles p SET
-       total_games_estimate = sub.cnt,
-       last_synced_at = NOW(),
-       sync_status = 'complete',
-       sync_error = NULL,
-       updated_at = NOW()
-     FROM (
-       SELECT chess_com_id, COUNT(*)::int AS cnt
-       FROM chess_com_games
-       WHERE chess_com_id = ANY($1::text[])
-       GROUP BY chess_com_id
-     ) sub
-     WHERE p.chess_com_id = sub.chess_com_id`,
-    [chessComIds]
-  );
+  for (const rawId of chessComIds) {
+    const chessComId = String(rawId || '').trim().toLowerCase();
+    if (!chessComId) continue;
 
-  await db.query(
-    `UPDATE chess_com_profiles SET
-       last_synced_at = NOW(),
-       sync_status = 'complete',
-       sync_error = NULL,
-       updated_at = NOW()
-     WHERE chess_com_id = ANY($1::text[])
-       AND chess_com_id NOT IN (
-         SELECT chess_com_id FROM chess_com_games WHERE chess_com_id = ANY($1::text[])
-       )`,
-    [chessComIds]
-  );
+    const { rows } = await db.query(
+      `SELECT COUNT(*) AS cnt FROM chess_com_games WHERE chess_com_id = $1`,
+      [chessComId]
+    );
+    const cnt = Number(rows[0]?.cnt || 0);
+
+    await db.query(
+      `UPDATE chess_com_profiles
+       SET total_games_estimate = $1,
+           last_synced_at = datetime('now'),
+           sync_status = 'complete',
+           sync_error = NULL,
+           updated_at = datetime('now')
+       WHERE chess_com_id = $2`,
+      [cnt, chessComId]
+    );
+
+    // Ensure a profile row exists even if games are empty (upsert-lite)
+    const existing = await db.query(
+      `SELECT chess_com_id FROM chess_com_profiles WHERE chess_com_id = $1`,
+      [chessComId]
+    );
+    if (!existing.rows[0]) {
+      await db.query(
+        `INSERT INTO chess_com_profiles
+           (chess_com_id, username, total_games_estimate, last_synced_at, sync_status, updated_at)
+         VALUES ($1, $2, $3, datetime('now'), 'complete', datetime('now'))`,
+        [chessComId, chessComId, cnt]
+      );
+    }
+  }
 }
 
 /**
- * Two-phase bulk sync:
- * 1) One DB query for all players' last sync + archive state
- * 2) Parallel fetch → chess_com_sync_raw
- * 3) Batch parse → chess_com_games
+ * Sync flow:
+ * 1) Live profile + stats from Chess.com API → chess_com_profiles (always)
+ * 2) Monthly archives list → fetch missing months (all by default) → chess_com_games
  */
 async function runBulkSync({
   chessComIds = null,
@@ -962,10 +996,28 @@ async function runBulkSync({
 
   const ids = players.map((p) => p.chessComId);
 
-  // Profiles must exist before chess_com_games / chess_com_archives inserts (FK).
+  // Profile stubs so FK inserts succeed
   await ensureProfileStubs(players);
 
-  const { tasks, archivesSkipped } = buildBulkFetchTasks(players, { forceFull, maxRecentMonths });
+  // 1) LIVE stats first — frontend reads these from DB after sync
+  const profileSync = await phase3SyncProfilesAndClubs(players);
+  if (profileSync.errors.length && chessComIds?.length === 1) {
+    throw new Error(profileSync.errors[0]);
+  }
+  // Prefer Chess.com's canonical username for archive paths
+  for (const synced of profileSync.synced) {
+    const player = players.find((p) => p.chessComId === synced.chessComId);
+    if (player && synced.apiUsername) {
+      player.apiUsername = synced.apiUsername;
+      player.chessComId = synced.chessComId;
+    }
+  }
+
+  // 2) ALL archive months from Chess.com (or recent N for quick sync)
+  const { tasks, archivesSkipped } = await buildBulkFetchTasks(players, {
+    forceFull,
+    maxRecentMonths,
+  });
 
   console.log(
     `[chess-com bulk sync] batch ${batchId}: ${players.length} player(s), ${tasks.length} archive fetch(es), ${archivesSkipped} skipped`
@@ -980,10 +1032,6 @@ async function runBulkSync({
     chessComIds: ids,
   });
 
-  const profileSync = await phase3SyncProfilesAndClubs(players);
-  if (profileSync.errors.length && chessComIds?.length === 1) {
-    throw new Error(profileSync.errors[0]);
-  }
   await finalizeBulkSync(ids);
 
   const durationMs = Date.now() - startedAt;
@@ -1001,6 +1049,7 @@ async function runBulkSync({
     archivesProcessed: parseStats.archivesProcessed,
     durationMs,
     incremental: !forceFull,
+    liveStatsSynced: profileSync.synced.length,
   };
 }
 
@@ -1014,7 +1063,7 @@ async function syncPlayerFromChessCom(username, { forceFull = false, maxRecentAr
 
   const profileRow = await getProfileRow(chessComId);
   const { rows: countRows } = await db.query(
-    'SELECT COUNT(*)::int AS count FROM chess_com_games WHERE chess_com_id = $1',
+    'SELECT COUNT(*) AS count FROM chess_com_games WHERE chess_com_id = $1',
     [chessComId]
   );
 
@@ -1266,32 +1315,21 @@ async function getMonthlyGames(
 
   if (!archiveRows.length) return [];
 
-  const { rows: gameRows } = await db.query(
-    `SELECT ${GAME_LIST_COLUMNS}, archive_year, archive_month FROM (
-       SELECT ${gameListColumns('g')},
-         a.archive_year,
-         a.archive_month,
-         ROW_NUMBER() OVER (
-           PARTITION BY a.archive_year, a.archive_month
-           ORDER BY g.played_at DESC NULLS LAST
-         ) AS rn
-       FROM chess_com_archives a
-       JOIN chess_com_games g ON g.chess_com_id = a.chess_com_id
-         AND EXTRACT(YEAR FROM g.played_at) = a.archive_year
-         AND EXTRACT(MONTH FROM g.played_at) = a.archive_month
-       WHERE a.chess_com_id = $1
-     ) ranked
-     WHERE rn <= $2
-     ORDER BY archive_year DESC, archive_month DESC, played_at DESC NULLS LAST`,
-    [id, perMonth]
-  );
-
+  // SQLite-safe: query each archive month separately (no EXTRACT / window PARTITION).
   const grouped = new Map();
-
-  for (const row of gameRows) {
-    const monthKey = `${row.archive_year}-${String(row.archive_month).padStart(2, '0')}`;
-    if (!grouped.has(monthKey)) grouped.set(monthKey, []);
-    grouped.get(monthKey).push(mapDbGameRow(row));
+  for (const archive of archiveRows) {
+    const monthKey = `${archive.archive_year}-${String(archive.archive_month).padStart(2, '0')}`;
+    const { rows: gameRows } = await db.query(
+      `SELECT ${GAME_LIST_COLUMNS}
+       FROM chess_com_games
+       WHERE chess_com_id = $1
+         AND CAST(strftime('%Y', played_at) AS INTEGER) = $2
+         AND CAST(strftime('%m', played_at) AS INTEGER) = $3
+       ORDER BY played_at DESC
+       LIMIT $4`,
+      [id, archive.archive_year, archive.archive_month, perMonth]
+    );
+    grouped.set(monthKey, gameRows.map(mapDbGameRow));
   }
 
   let months = archiveRows.map((archive) => {

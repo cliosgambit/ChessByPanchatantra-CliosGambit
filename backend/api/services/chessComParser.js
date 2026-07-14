@@ -356,8 +356,26 @@ function mapDbMoveRow(row) {
 
 function mapDbProfileRow(row) {
   if (!row) return null;
-  const profileJson = row.profile_json || {};
-  const statsJson = row.stats_json || {};
+  const profileJson =
+    typeof row.profile_json === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(row.profile_json);
+          } catch {
+            return {};
+          }
+        })()
+      : row.profile_json || {};
+  const statsJson =
+    typeof row.stats_json === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(row.stats_json);
+          } catch {
+            return {};
+          }
+        })()
+      : row.stats_json || {};
   const statusLabels = {
     premium: 'Diamond Member',
     gold: 'Gold Member',

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Box, Link } from '@chakra-ui/react';
 import {
   FiArrowLeft,
@@ -30,6 +30,7 @@ import { openChessComGame } from '../utils/chessComGameNavigation';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
 import PlayerWinStreakReport from '../components/userProfile/PlayerWinStreakReport';
 import YesterdayGamesChart from '../components/userProfile/YesterdayGamesChart';
+import RatingProgressChart from '../components/userProfile/RatingProgressChart';
 import '../components/userProfile/ChessComProfilePage.css';
 
 const MAIN_TABS = [
@@ -352,14 +353,18 @@ function SidebarWidgets({ profile, stats, clubs, totalGames }) {
 function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const chessUsername = decodeURIComponent(userId || '');
+  const backPath = location.state?.from || '/students';
+  const backLabel = location.state?.fromLabel || 'Back to Students';
+  const initialTab = location.state?.tab || 'report';
   const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, profileLoading, gamesLoading, syncing, monthlyLoading, backgroundSync, pending, error, refetch, syncFromChessCom, loadMonthlyGames, lastSyncedAt } =
     useChessComUserData(chessUsername);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
-    if (activeTab === 'games') {
+    if (activeTab === 'games' || activeTab === 'report') {
       loadMonthlyGames();
     }
   }, [activeTab, loadMonthlyGames]);
@@ -385,10 +390,10 @@ function UserProfilePage() {
         <button
           type="button"
           className="chess-btn chess-btn-secondary"
-          onClick={() => navigate('/players')}
+          onClick={() => navigate(backPath)}
         >
           <FiArrowLeft className="chess-icon chess-icon-md" aria-hidden="true" />
-          Back to Players
+          {backLabel}
         </button>
         <div className="chess-profile-top-actions">
           <button
@@ -718,6 +723,13 @@ function UserProfilePage() {
           {activeTab === 'report' && (
             <div className="chess-profile-report">
               <div className="chess-profile-panel">
+                <div className="chess-profile-panel-header">Last 3 months — rating</div>
+                <div className="chess-profile-panel-body chess-profile-report-body">
+                  <RatingProgressChart username={chessUsername} />
+                </div>
+              </div>
+
+              <div className="chess-profile-panel">
                 <div className="chess-profile-panel-header">Player Report</div>
                 <div className="chess-profile-panel-body chess-profile-report-body">
                   <PlayerWinStreakReport username={chessUsername} />
@@ -727,6 +739,40 @@ function UserProfilePage() {
               <div className="chess-profile-panel chess-profile-report-chart-panel">
                 <div className="chess-profile-panel-body">
                   <YesterdayGamesChart username={chessUsername} />
+                </div>
+              </div>
+
+              <div className="chess-profile-panel">
+                <div className="chess-profile-panel-header">Games by month (last 3 months)</div>
+                <div className="chess-profile-panel-body">
+                  {monthlyLoading ? (
+                    <div className="chess-profile-empty">Loading monthly games…</div>
+                  ) : monthlyGames.length > 0 ? (
+                    monthlyGames.map((month) => (
+                      <div key={month.month || month.label} className="chess-month-block">
+                        <div className="chess-month-title">
+                          <h4>{month.label || month.month}</h4>
+                          <span>
+                            {month.gameCount ?? month.games?.length ?? 0} game
+                            {(month.gameCount ?? month.games?.length ?? 0) === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        {(month.games || []).length ? (
+                          <GameHistoryList
+                            games={month.games}
+                            onSelect={handleGameSelect}
+                            profileUsername={chessUsername}
+                          />
+                        ) : (
+                          <div className="chess-profile-empty">No games this month.</div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="chess-profile-empty">
+                      No monthly games yet. Click Sync Games to pull from Chess.com.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

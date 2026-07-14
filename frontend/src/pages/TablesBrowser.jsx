@@ -74,15 +74,27 @@ function TablesBrowser() {
   }, [preview]);
 
   const HIGHLIGHT_TABLES = [
+    // Auth / students
     'Login',
+    'Students',
+    'players',
+    // Library
     'Stories',
     'Story_Images',
     'Morals',
     'story_moral_mapping',
+    'moral_puzzle_assignments',
+    // Puzzle sources
     '3000_rated_puzzles',
     'lichess_puzzles',
     'chesscom_random_puzzles',
-    'moral_puzzle_assignments',
+    // Chess.com sync / reports
+    'chess_com_profiles',
+    'chess_com_games',
+    'chess_com_archives',
+    'chess_com_moves',
+    'chess_com_clubs',
+    'chess_com_sync_raw',
   ];
 
   const sortedTables = useMemo(() => {
@@ -127,7 +139,10 @@ function TablesBrowser() {
                     .join(' ')}
                   onClick={() => navigate(`/tables/${encodeURIComponent(t.name)}`)}
                 >
-                  <span className="tables-nav-name">{t.name}</span>
+                  <span className="tables-nav-name">
+                    {t.name}
+                    {isHighlight ? <em className="tables-nav-badge">active</em> : null}
+                  </span>
                   <span className="tables-nav-rows">{t.rowCount}</span>
                 </button>
               );

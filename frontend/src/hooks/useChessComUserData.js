@@ -139,7 +139,8 @@ export function useChessComUserData(username) {
 
       if (forceSync) {
         try {
-          await syncChessComPlayer(safeUsername);
+          // Live stats + every archive month from Chess.com
+          await syncChessComPlayer(safeUsername, { full: false });
         } catch (err) {
           setError(err.message || 'Sync failed.');
         } finally {
@@ -175,8 +176,8 @@ export function useChessComUserData(username) {
     setMonthlyLoading(true);
     try {
       const data = await fetchChessComMonthlyGamesFromDb(safeUsername, {
-        months: 12,
-        perMonth: 8,
+        months: 3,
+        perMonth: 12,
       });
       setMonthlyGames(data.monthlyGames || []);
       monthlyLoadedRef.current = true;

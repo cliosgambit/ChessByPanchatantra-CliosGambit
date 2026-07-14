@@ -79,6 +79,13 @@ function translateSql(sql) {
   s = s.replace(/'\{\}'::jsonb/gi, "'{}'");
   s = s.replace(/\{\}::jsonb/gi, "'{}'");
 
+  // Postgres date helpers → SQLite
+  s = s.replace(/EXTRACT\s*\(\s*YEAR\s+FROM\s+([^)]+)\)/gi, "CAST(strftime('%Y', $1) AS INTEGER)");
+  s = s.replace(/EXTRACT\s*\(\s*MONTH\s+FROM\s+([^)]+)\)/gi, "CAST(strftime('%m', $1) AS INTEGER)");
+  s = s.replace(/EXTRACT\s*\(\s*DAY\s+FROM\s+([^)]+)\)/gi, "CAST(strftime('%d', $1) AS INTEGER)");
+  s = s.replace(/\s+NULLS\s+LAST\b/gi, '');
+  s = s.replace(/\s+NULLS\s+FIRST\b/gi, '');
+
   // Strip PG casts (::int, ::text[], etc.)
   s = s.replace(/::\s*(int|integer|bigint|text|jsonb|uuid|boolean|float|real|numeric)(\[\])?/gi, '');
 

@@ -102,9 +102,31 @@
 }
 
 .tables-nav-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tables-nav-badge {
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9a3412;
+  background: #ffedd5;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  flex-shrink: 0;
+}
+
+.tables-nav-item--highlight.tables-nav-item--active .tables-nav-badge {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .tables-nav-rows {
