@@ -129,6 +129,58 @@ export async function fetchBrilliantPuzzlesFromDb({ limit = 2000 } = {}) {
   return apiFetch(`${API_BASE}/brilliant-puzzles?limit=${limit}`);
 }
 
+/** Random daily puzzle from Chess.com — saves unique FEN to DB on fetch. */
+export async function fetchChessComRandomPuzzle() {
+  let raw = null;
+  try {
+    const res = await fetch('https://api.chess.com/pub/puzzle/random', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      throw new Error(`Chess.com API returned ${res.status}.`);
+    }
+    raw = await res.json();
+    if (!raw?.fen) throw new Error('Chess.com puzzle response missing FEN.');
+  } catch (directErr) {
+    try {
+      // Backend proxy also upserts into chesscom_random_puzzles
+      return await apiFetch(`${API_BASE}/puzzle/random`, { cache: 'no-store' });
+    } catch {
+      throw directErr instanceof Error
+        ? directErr
+        : new Error('Failed to fetch Chess.com random puzzle.');
+    }
+  }
+
+  // Persist unique FEN via backend (required — do not swallow failures)
+  const saved = await apiFetch(`${API_BASE}/puzzle/ingest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(raw),
+  });
+  return {
+    ...(saved.puzzle || {}),
+    created: saved.created,
+    url: saved.puzzle?.url || saved.puzzle?.source_url || raw.url,
+    image: saved.puzzle?.image || saved.puzzle?.image_url || raw.image,
+    fen: saved.puzzle?.fen || raw.fen,
+    title: saved.puzzle?.title || raw.title,
+    pgn: saved.puzzle?.pgn || raw.pgn,
+    publish_time: saved.puzzle?.publish_time ?? raw.publish_time,
+  };
+}
+
+export async function fetchSavedChessComPuzzles({ unused = false, q = '', limit = 100 } = {}) {
+  const params = new URLSearchParams();
+  if (unused) params.set('unused', '1');
+  if (q) params.set('q', q);
+  if (limit != null) params.set('limit', String(limit));
+  return apiFetch(`${API_BASE}/puzzle/saved?${params.toString()}`, {
+    cache: 'no-store',
+  });
+}
+
 export async function fetchBrilliantPuzzleFromDb(puzzleId) {
   return apiFetch(`${API_BASE}/brilliant-puzzles/by-id/${encodeURIComponent(puzzleId)}`);
 }

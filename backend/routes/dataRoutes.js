@@ -8,32 +8,21 @@ const router = express.Router();
 const TABLE_SQL = {
   Login: '"Login"',
   players: 'players',
+  Stories: 'Stories',
+  Story_Images: 'Story_Images',
+  Morals: 'Morals',
+  story_moral_mapping: 'story_moral_mapping',
   chess_com_profiles: 'chess_com_profiles',
   chess_com_games: 'chess_com_games',
   chess_com_moves: 'chess_com_moves',
   chess_com_archives: 'chess_com_archives',
   chess_com_clubs: 'chess_com_clubs',
-  module: 'module',
-  chapter: 'chapter',
-  story: 'story',
-  principles: 'principles',
-  principle_position: 'principle_position',
   chess_puzzle: 'chess_puzzle',
   chess_puzzle_poll_response: 'chess_puzzle_poll_response',
-  '3000_rated_puzzles': '"3000_rated_puzzles"',
   roles_control: 'roles_control',
-  story_mapping: 'story_mapping',
 };
 
-const WRITE_TABLES = new Set([
-  'module',
-  'chapter',
-  'story',
-  'principles',
-  'principle_position',
-  'chess_puzzle',
-  'chess_puzzle_poll_response',
-]);
+const WRITE_TABLES = new Set(['chess_puzzle', 'chess_puzzle_poll_response']);
 
 function sqlTable(table) {
   return TABLE_SQL[table] || null;
@@ -44,7 +33,7 @@ function quoteCol(col) {
   return `"${col}"`;
 }
 
-// Reads — no JWT required (same DB as Supabase; admin UI is behind login)
+// Reads — no JWT required (local SQLite; admin UI is behind login)
 router.get('/data/:table', async (req, res) => {
   const sqlFrom = sqlTable(req.params.table);
   if (!sqlFrom) {

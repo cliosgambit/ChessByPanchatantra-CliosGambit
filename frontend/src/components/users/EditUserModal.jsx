@@ -67,7 +67,7 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
         Role: resolveLoginRole(role, status),
       };
       if (password.trim()) payload.password = password.trim();
-      await updateLoginUser(user.chessComId || user.id, payload);
+      await updateLoginUser(user.email, payload);
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -92,10 +92,6 @@ function EditUserModal({ isOpen, onClose, user, onSuccess }) {
             <FormControl isRequired>
               <FormLabel fontSize="sm">Email</FormLabel>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </FormControl>
-            <FormControl isDisabled>
-              <FormLabel fontSize="sm">Chess.com ID</FormLabel>
-              <Input value={user?.chessComId || user?.id || ''} />
             </FormControl>
             <FormControl isRequired>
               <FormLabel fontSize="sm">Role</FormLabel>

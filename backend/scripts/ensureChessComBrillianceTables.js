@@ -1,20 +1,17 @@
-const fs = require('fs');
-const path = require('path');
 const db = require('../api/config/database');
-const { migrateAllSqliteBrillianceToSupabase } = require('../api/services/brillianceSupabaseService');
 
 async function ensureChessComBrillianceTables() {
-  const sqlPath = path.join(__dirname, '../database/chess_com_brilliance_schema.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
-  await db.query(sql);
+  await db.query('SELECT 1 FROM chess_com_brilliance_runs LIMIT 1');
   console.log('✅ chess_com_brilliance tables ready');
 }
 
+/** Optional: sync brilliance compute DB → app SQLite (no cloud). */
 async function migrateExistingBrillianceToSupabase() {
+  const { migrateAllSqliteBrillianceToSupabase } = require('../api/services/brillianceSupabaseService');
   const result = await migrateAllSqliteBrillianceToSupabase();
   if (result.total > 0) {
     console.log(
-      `✅ Brilliance SQLite → Supabase: ${result.synced}/${result.total} games synced` +
+      `✅ Brilliance compute → app DB: ${result.synced}/${result.total} games synced` +
         (result.failed ? ` (${result.failed} failed)` : '')
     );
   }

@@ -7,33 +7,37 @@ exports.getDashboardStats = async (_req, res) => {
     const [
       totalUsersRes,
       usersByRoleRes,
-      modulesRes,
       storiesRes,
       puzzlesRes,
       playersRes,
       principlesRes,
       growthRes,
     ] = await Promise.all([
-      db.query(`SELECT COUNT(*)::int AS count FROM "Login" WHERE ${activeLoginFilter}`),
+      db.query(`SELECT COUNT(*) AS count FROM "Login" WHERE ${activeLoginFilter}`),
       db.query(
-        `SELECT LOWER("Role") AS role, COUNT(*)::int AS count
+        `SELECT LOWER("Role") AS role, COUNT(*) AS count
          FROM "Login"
          WHERE ${activeLoginFilter}
          GROUP BY LOWER("Role")`
       ),
-      db.query('SELECT COUNT(*)::int AS count FROM module'),
-      db.query('SELECT COUNT(*)::int AS count FROM story'),
-      db.query('SELECT COUNT(*)::int AS count FROM chess_puzzle'),
-      db.query('SELECT COUNT(*)::int AS count FROM players'),
-      db.query('SELECT COUNT(*)::int AS count FROM principles'),
+      db.query('SELECT COUNT(*) AS count FROM Stories'),
+      db.query('SELECT COUNT(*) AS count FROM chess_puzzle'),
+      db.query('SELECT COUNT(*) AS count FROM players'),
+      db.query('SELECT COUNT(*) AS count FROM Morals'),
       db.query(
-        `SELECT TO_CHAR(created_at, 'Mon') AS month,
-                COUNT(*)::int AS users
+        `SELECT strftime('%m', created_at) AS month_num,
+                CASE strftime('%m', created_at)
+                  WHEN '01' THEN 'Jan' WHEN '02' THEN 'Feb' WHEN '03' THEN 'Mar'
+                  WHEN '04' THEN 'Apr' WHEN '05' THEN 'May' WHEN '06' THEN 'Jun'
+                  WHEN '07' THEN 'Jul' WHEN '08' THEN 'Aug' WHEN '09' THEN 'Sep'
+                  WHEN '10' THEN 'Oct' WHEN '11' THEN 'Nov' WHEN '12' THEN 'Dec'
+                END AS month,
+                COUNT(*) AS users
          FROM "Login"
-         WHERE created_at >= NOW() - INTERVAL '6 months'
+         WHERE created_at >= datetime('now', '-6 months')
            AND ${activeLoginFilter}
-         GROUP BY DATE_TRUNC('month', created_at), TO_CHAR(created_at, 'Mon')
-         ORDER BY DATE_TRUNC('month', created_at)`
+         GROUP BY strftime('%Y-%m', created_at)
+         ORDER BY strftime('%Y-%m', created_at)`
       ),
     ]);
 
@@ -48,7 +52,7 @@ exports.getDashboardStats = async (_req, res) => {
       totalStories: storiesRes.rows[0]?.count || 0,
       totalPuzzles: puzzlesRes.rows[0]?.count || 0,
       achievementsUnlocked: principlesRes.rows[0]?.count || 0,
-      totalModules: modulesRes.rows[0]?.count || 0,
+      totalModules: 0,
       totalPlayers: playersRes.rows[0]?.count || 0,
     };
 
@@ -61,7 +65,7 @@ exports.getDashboardStats = async (_req, res) => {
 
     const userGrowth =
       growthRes.rows.length > 0
-        ? growthRes.rows
+        ? growthRes.rows.map((r) => ({ month: r.month, users: r.users }))
         : [
             { month: 'Jan', users: 8 },
             { month: 'Feb', users: 12 },

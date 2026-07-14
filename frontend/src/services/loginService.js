@@ -5,10 +5,10 @@ import api from './authService';
 
 export const LOGIN_TABLE = 'Login';
 
-const LOGIN_SELECT = 'Chess_com_ID, Player_Name, email, Role, created_at';
+const LOGIN_SELECT = 'id, Player_Name, email, Role, created_at';
 
 const LOGIN_KEY_MAP = {
-  Chess_com_ID: ['Chess_com_ID', 'chess_com_id'],
+  id: ['id'],
   Player_Name: ['Player_Name', 'player_name'],
   email: ['email'],
   Role: ['Role', 'role'],
@@ -32,19 +32,18 @@ export function normalizeLoginRow(row) {
   return normalizeKeys(row, LOGIN_KEY_MAP);
 }
 
-/** Maps Login table row → Players page shape. */
+/** Maps Login table row → app user shape (email is the account key). */
 export function mapLoginToAppUser(row) {
   const n = normalizeLoginRow(row);
-  if (!n?.Chess_com_ID) return null;
+  if (!n?.email) return null;
 
   const roleRaw = (n.Role || 'student').toLowerCase();
   const isPaused = roleRaw === 'paused';
 
   return {
-    id: n.Chess_com_ID,
-    chessComId: n.Chess_com_ID,
-    name: n.Player_Name || n.Chess_com_ID,
-    email: n.email || `${n.Chess_com_ID}@chess.com`,
+    id: n.id != null ? String(n.id) : n.email,
+    name: n.Player_Name || n.email,
+    email: n.email,
     role: isPaused ? 'Student' : formatRoleLabel(n.Role),
     roleRaw: isPaused ? 'student' : roleRaw,
     status: isPaused ? 'PAUSED' : 'ACTIVE',
@@ -64,7 +63,7 @@ export function subscribeToLoginUsers({ onInsert, onUpdate, onDelete, onError })
   return subscribeToTable(LOGIN_TABLE, 'public:login-admin', {
     onInsert: (raw) => onInsert?.(mapLoginToAppUser(raw)),
     onUpdate: (raw) => onUpdate?.(mapLoginToAppUser(raw)),
-    onDelete: (old) => onDelete?.(col(old, 'Chess_com_ID', 'chess_com_id')),
+    onDelete: (old) => onDelete?.(col(old, 'email')),
     onError,
   });
 }
@@ -77,15 +76,15 @@ export async function createLoginUser(payload) {
   return data;
 }
 
-export async function updateLoginUser(chessComId, payload) {
-  const { data } = await api.put(`/admin/login-users/${encodeURIComponent(chessComId)}`, payload);
+export async function updateLoginUser(email, payload) {
+  const { data } = await api.put(`/admin/login-users/${encodeURIComponent(email)}`, payload);
   return data;
 }
 
-export async function deleteLoginUser(chessComId) {
-  await api.delete(`/admin/login-users/${encodeURIComponent(chessComId)}`);
+export async function deleteLoginUser(email) {
+  await api.delete(`/admin/login-users/${encodeURIComponent(email)}`);
 }
 
-export async function pauseLoginUser(chessComId, paused = true) {
-  return updateLoginUser(chessComId, { Role: paused ? 'paused' : 'student' });
+export async function pauseLoginUser(email, paused = true) {
+  return updateLoginUser(email, { Role: paused ? 'paused' : 'student' });
 }

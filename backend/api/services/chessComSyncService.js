@@ -557,36 +557,38 @@ async function loadBulkSyncContext(filterChessComIds = null) {
   }
   if (!playerIds.length) return [];
 
-  const { rows } = await db.query(
-    `SELECT
-       t.chess_com_id,
-       p.username AS profile_username,
-       p.last_synced_at,
-       a.archive_year,
-       a.archive_month,
-       a.last_fetched_at AS archive_last_fetched
-     FROM UNNEST($1::text[]) AS t(chess_com_id)
-     LEFT JOIN chess_com_profiles p ON p.chess_com_id = t.chess_com_id
-     LEFT JOIN chess_com_archives a ON a.chess_com_id = t.chess_com_id
-     ORDER BY t.chess_com_id, a.archive_year NULLS LAST, a.archive_month NULLS LAST`,
+  const { rows: profileRows } = await db.query(
+    `SELECT chess_com_id, username AS profile_username, last_synced_at
+     FROM chess_com_profiles
+     WHERE chess_com_id = ANY($1)`,
+    [playerIds]
+  );
+  const { rows: archiveRows } = await db.query(
+    `SELECT chess_com_id, archive_year, archive_month, last_fetched_at AS archive_last_fetched
+     FROM chess_com_archives
+     WHERE chess_com_id = ANY($1)
+     ORDER BY chess_com_id, archive_year, archive_month`,
     [playerIds]
   );
 
+  const profileById = new Map(profileRows.map((r) => [r.chess_com_id, r]));
   const players = new Map();
-  for (const row of rows) {
-    if (!players.has(row.chess_com_id)) {
-      players.set(row.chess_com_id, {
-        chessComId: row.chess_com_id,
-        apiUsername: row.profile_username || row.chess_com_id,
-        lastSyncedAt: row.last_synced_at,
-        syncedArchives: new Map(),
-      });
-    }
+  for (const chessComId of playerIds) {
+    const profile = profileById.get(chessComId);
+    players.set(chessComId, {
+      chessComId,
+      apiUsername: profile?.profile_username || chessComId,
+      lastSyncedAt: profile?.last_synced_at || null,
+      syncedArchives: new Map(),
+    });
+  }
+  for (const row of archiveRows) {
+    const player = players.get(row.chess_com_id);
+    if (!player) continue;
     if (row.archive_year != null && row.archive_month != null) {
-      players.get(row.chess_com_id).syncedArchives.set(
-        archiveKey(row.archive_year, row.archive_month),
-        { last_fetched_at: row.archive_last_fetched }
-      );
+      player.syncedArchives.set(archiveKey(row.archive_year, row.archive_month), {
+        last_fetched_at: row.archive_last_fetched,
+      });
     }
   }
   return [...players.values()];
@@ -1342,7 +1344,7 @@ async function getClubs(chessComId) {
 async function getTrackedPlayerIds() {
   const { rows } = await db.query(
     `SELECT DISTINCT LOWER(TRIM("Chess_com_ID")) AS chess_com_id
-     FROM "Login"
+     FROM players
      WHERE "Chess_com_ID" IS NOT NULL AND TRIM("Chess_com_ID") <> ''`
   );
   return rows.map((row) => row.chess_com_id).filter(Boolean);
@@ -1403,6 +1405,47 @@ function dayFilterToDaysAgo(dayFilter) {
   return null;
 }
 
+/** YYYY-MM-DD for a calendar day in the given IANA timezone. */
+function localDateString(timeZone = DEFAULT_YESTERDAY_TZ, daysAgo = 0) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type) => Number(parts.find((p) => p.type === type)?.value);
+  const dt = new Date(get('year'), get('month') - 1, get('day') - daysAgo);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const d = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** UTC ISO bounds covering one local calendar day in `timeZone`. */
+function localDayBounds(timeZone, daysAgo) {
+  const day = localDateString(timeZone, daysAgo);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const localYmd = (ms) => formatter.format(new Date(ms)); // en-CA → YYYY-MM-DD
+
+  let startMs = Date.UTC(...day.split('-').map(Number).map((n, i) => (i === 1 ? n - 1 : n))) - 14 * 3600 * 1000;
+  while (localYmd(startMs) < day) startMs += 15 * 60 * 1000;
+  while (localYmd(startMs) > day) startMs -= 15 * 60 * 1000;
+  while (localYmd(startMs) === day) startMs -= 60 * 1000;
+  startMs += 60 * 1000;
+  let endMs = startMs;
+  while (localYmd(endMs) === day) endMs += 60 * 1000;
+
+  return {
+    startIso: new Date(startMs).toISOString(),
+    endIso: new Date(endMs).toISOString(),
+  };
+}
+
 function formatYesterdayLabel(timeZone = DEFAULT_YESTERDAY_TZ) {
   return formatDayLabelInTz(timeZone, 1);
 }
@@ -1459,15 +1502,15 @@ async function getTrackedGamesByDay({
   let dateClause = '';
 
   if (daysAgo != null) {
-    params.push(timeZone);
-    dateClause = `AND (g.played_at AT TIME ZONE $2)::date =
-           ((NOW() AT TIME ZONE $2)::date - INTERVAL '${daysAgo} day')`;
+    const { startIso, endIso } = localDayBounds(timeZone, daysAgo);
+    params.push(startIso, endIso);
+    dateClause = 'AND g.played_at >= $2 AND g.played_at < $3';
   }
 
   const { rows } = await db.query(
     `SELECT ${GAME_LIST_COLUMNS}
      FROM chess_com_games g
-     WHERE g.chess_com_id = ANY($1::text[])
+     WHERE g.chess_com_id = ANY($1)
        AND g.played_at IS NOT NULL
        ${dateClause}
      ORDER BY g.played_at DESC`,
@@ -1532,31 +1575,31 @@ async function getBrilliancePipelineStats({
   let dateClause = '';
 
   if (daysAgo != null) {
-    params.push(timeZone);
-    dateClause = `AND (g.played_at AT TIME ZONE $2)::date =
-           ((NOW() AT TIME ZONE $2)::date - INTERVAL '${daysAgo} day')`;
+    const { startIso, endIso } = localDayBounds(timeZone, daysAgo);
+    params.push(startIso, endIso);
+    dateClause = 'AND g.played_at >= $2 AND g.played_at < $3';
   }
 
   const { rows } = await db.query(
     `SELECT
-       COUNT(DISTINCT g.chess_com_uuid)::int AS games_fetched,
-       COUNT(DISTINCT g.chess_com_uuid) FILTER (
-         WHERE r.stage0_status = 'running' OR r.stage1_status = 'running'
-            OR r.stage2_status = 'running' OR r.stage3_status = 'running'
-            OR r.stage4_status = 'running'
-       )::int AS analysis_running,
-       COUNT(DISTINCT g.chess_com_uuid) FILTER (WHERE r.stage4_status = 'completed')::int AS analysis_completed,
-       COUNT(DISTINCT g.chess_com_uuid) FILTER (
-         WHERE (r.stage0_status = 'failed' OR r.stage1_status = 'failed'
+       COUNT(DISTINCT g.chess_com_uuid) AS games_fetched,
+       COUNT(DISTINCT CASE
+         WHEN r.stage0_status = 'running' OR r.stage1_status = 'running'
+           OR r.stage2_status = 'running' OR r.stage3_status = 'running'
+           OR r.stage4_status = 'running'
+         THEN g.chess_com_uuid END) AS analysis_running,
+       COUNT(DISTINCT CASE WHEN r.stage4_status = 'completed' THEN g.chess_com_uuid END) AS analysis_completed,
+       COUNT(DISTINCT CASE
+         WHEN (r.stage0_status = 'failed' OR r.stage1_status = 'failed'
             OR r.stage2_status = 'failed' OR r.stage3_status = 'failed'
             OR r.stage4_status = 'failed')
            AND COALESCE(r.stage4_status, '') <> 'completed'
-       )::int AS analysis_failed,
-       COUNT(DISTINCT s4.id) FILTER (WHERE s4.is_brilliant = TRUE)::int AS brilliant_moves_found
+         THEN g.chess_com_uuid END) AS analysis_failed,
+       COUNT(DISTINCT CASE WHEN s4.is_brilliant = 1 THEN s4.id END) AS brilliant_moves_found
      FROM chess_com_games g
      LEFT JOIN chess_com_brilliance_runs r ON r.chess_com_uuid = g.chess_com_uuid
      LEFT JOIN chess_com_brilliance_stage4 s4 ON s4.chess_com_uuid = g.chess_com_uuid
-     WHERE g.chess_com_id = ANY($1::text[])
+     WHERE g.chess_com_id = ANY($1)
        AND g.played_at IS NOT NULL
        ${dateClause}`,
     params
@@ -1565,7 +1608,7 @@ async function getBrilliancePipelineStats({
   const { rows: uuidRows } = await db.query(
     `SELECT g.chess_com_uuid
      FROM chess_com_games g
-     WHERE g.chess_com_id = ANY($1::text[])
+     WHERE g.chess_com_id = ANY($1)
        AND g.played_at IS NOT NULL
        ${dateClause}`,
     params
@@ -1723,15 +1766,15 @@ async function getPlayerWinStreaks(chessComId, timeZone = DEFAULT_YESTERDAY_TZ) 
     [id]
   );
 
+  const { startIso, endIso } = localDayBounds(timeZone, 1);
   const { rows: yesterdayRows } = await db.query(
     `SELECT self_result_type
      FROM chess_com_games
      WHERE chess_com_id = $1
        AND played_at IS NOT NULL
-       AND (played_at AT TIME ZONE $2)::date =
-           ((NOW() AT TIME ZONE $2)::date - INTERVAL '1 day')
+       AND played_at >= $2 AND played_at < $3
      ORDER BY played_at ASC`,
-    [id, timeZone]
+    [id, startIso, endIso]
   );
 
   return {
@@ -1767,15 +1810,15 @@ async function getPlayerGamesByDay(
     };
   }
 
+  const { startIso, endIso } = localDayBounds(timeZone, daysAgo);
   const { rows } = await db.query(
     `SELECT ${GAME_LIST_COLUMNS}
      FROM chess_com_games g
      WHERE g.chess_com_id = $1
        AND g.played_at IS NOT NULL
-       AND (g.played_at AT TIME ZONE $2)::date =
-           ((NOW() AT TIME ZONE $2)::date - INTERVAL '${daysAgo} day')
+       AND g.played_at >= $2 AND g.played_at < $3
      ORDER BY g.played_at ASC`,
-    [id, timeZone]
+    [id, startIso, endIso]
   );
 
   const games = rows.map((row) => {

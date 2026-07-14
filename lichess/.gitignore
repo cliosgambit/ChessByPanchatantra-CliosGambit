@@ -1,0 +1,14 @@
+# Lichess puzzle dumps (too large for git)
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.zip
+*.gz
+
+# Keep the split helper
+!split_lichess_csv.py
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

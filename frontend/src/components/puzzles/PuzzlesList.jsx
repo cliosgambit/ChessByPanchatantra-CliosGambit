@@ -71,7 +71,7 @@ function PuzzlesList({ rows }) {
       setPreviewVisible(false);
       setPreviewMounted(false);
       setHoveredRow(null);
-      navigate(`/puzzles/${row.id}`);
+      navigate(`/puzzles/chesscom/${row.id}`);
     },
     [clearTimers, navigate]
   );

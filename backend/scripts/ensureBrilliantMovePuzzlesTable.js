@@ -1,11 +1,7 @@
-const fs = require('fs');
-const path = require('path');
 const db = require('../api/config/database');
 
 async function ensureBrilliantMovePuzzlesTable() {
-  const sqlPath = path.join(__dirname, '../database/brilliant_move_puzzles_schema.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
-  await db.query(sql);
+  await db.query('SELECT 1 FROM brilliant_move_puzzles LIMIT 1');
   console.log('✅ brilliant_move_puzzles table ready');
 }
 

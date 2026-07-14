@@ -29,7 +29,7 @@ function AdminLayout() {
         role="main"
         aria-label="Admin content"
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           <PageTransition key={location.pathname}>
             <Outlet />
           </PageTransition>

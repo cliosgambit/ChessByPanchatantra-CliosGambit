@@ -165,7 +165,7 @@ function ChroniclesPuzzlesTab() {
       }
 
       if (activeSource === 'brilliant' && puzzle.id != null) {
-        navigate(`/puzzles/${encodeURIComponent(puzzle.id)}`);
+        navigate(`/puzzles/chesscom/${encodeURIComponent(puzzle.id)}`);
         return;
       }
 

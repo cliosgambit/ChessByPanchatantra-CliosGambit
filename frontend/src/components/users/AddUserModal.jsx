@@ -14,7 +14,6 @@ import {
   Select,
   FormErrorMessage,
   VStack,
-  Text,
 } from '@chakra-ui/react';
 import { createLoginUser } from '../../services/usersService';
 
@@ -25,7 +24,6 @@ const ROLES = [
 ];
 
 function AddUserModal({ isOpen, onClose, onSuccess }) {
-  const [chessComId, setChessComId] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +32,6 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
 
   const reset = () => {
-    setChessComId('');
     setPlayerName('');
     setEmail('');
     setPassword('');
@@ -46,24 +43,22 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setError('');
 
-    const normalizedChessId = chessComId.trim().toLowerCase();
     const normalizedName = playerName.trim();
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!normalizedChessId || !normalizedName || !normalizedEmail || !password.trim()) {
-      setError('Chess.com ID, player name, email, and password are required.');
+    if (!normalizedName || !normalizedEmail || !password.trim()) {
+      setError('Player name, email, and password are required.');
       return;
     }
 
-    if (password.trim().length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.trim().length < 4) {
+      setError('Password must be at least 4 characters.');
       return;
     }
 
     setLoading(true);
     try {
       await createLoginUser({
-        Chess_com_ID: normalizedChessId,
         Player_Name: normalizedName,
         email: normalizedEmail,
         password: password.trim(),
@@ -88,18 +83,6 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
         <ModalBody>
           <VStack spacing={4} align="stretch">
             <FormControl isRequired>
-              <FormLabel fontSize="sm">Chess.com ID</FormLabel>
-              <Input
-                value={chessComId}
-                onChange={(e) => setChessComId(e.target.value)}
-                placeholder="e.g. raghavendra_k"
-                autoComplete="off"
-              />
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Exact Chess.com username — stored separately from the display name.
-              </Text>
-            </FormControl>
-            <FormControl isRequired>
               <FormLabel fontSize="sm">Player Name</FormLabel>
               <Input
                 value={playerName}
@@ -117,7 +100,7 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                minLength={6}
+                minLength={4}
                 autoComplete="new-password"
               />
             </FormControl>
@@ -131,11 +114,11 @@ function AddUserModal({ isOpen, onClose, onSuccess }) {
                 ))}
               </Select>
             </FormControl>
-            {error && (
+            {error ? (
               <FormControl isInvalid>
                 <FormErrorMessage>{error}</FormErrorMessage>
               </FormControl>
-            )}
+            ) : null}
           </VStack>
         </ModalBody>
         <ModalFooter>

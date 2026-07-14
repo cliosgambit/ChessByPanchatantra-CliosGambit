@@ -86,7 +86,7 @@ exports.getPuzzleAnswer = async (req, res) => {
 exports.get3000RatedPuzzles = async (req, res) => {
     const { principleId } = req.params;
     // Note: Quoted table name because it starts with a number
-    const sql = 'SELECT "Fen" FROM "3000_rated_puzzles" WHERE "principle_id" = $1';
+    const sql = 'SELECT "Fen" FROM "3000_rated_puzzles" WHERE "moral_id" = $1';
     try {
       const result = await db.query(sql, [principleId]);
       res.json(result.rows);

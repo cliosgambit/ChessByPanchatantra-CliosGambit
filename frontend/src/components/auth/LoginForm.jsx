@@ -51,8 +51,8 @@ function LoginForm() {
     if (!password) {
       setPasswordError('Password is required');
       valid = false;
-    } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+    } else if (password.length < 4) {
+      setPasswordError('Password must be at least 4 characters');
       valid = false;
     }
 

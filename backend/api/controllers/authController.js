@@ -1,4 +1,3 @@
-// NEW IMPORT for JWT
 const { signToken } = require('../../utils/jwt');
 const { spawn } = require('child_process');
 const otpGenerator = require('otp-generator');
@@ -7,213 +6,197 @@ const db = require('../config/database');
 
 const SALT_ROUNDS = 10;
 
-// Helper to run the Python email script (Your working version)
 const executeSendEmail = (toEmail, otp) => {
-    return new Promise((resolve, reject) => {
-        // NOTE: Make sure this path is correct relative to your server's root.
-        // If server.js is in backend/, and services is in backend/api/services, this path is correct.
-        const pythonProcess = spawn('python', ['./api/services/send_email.py', toEmail, otp], {
-            env: { ...process.env },
-        });
-        pythonProcess.stdout.on('data', (data) => console.log(`Python Script: ${data}`));
-        pythonProcess.stderr.on('data', (data) => {
-            console.error(`Python Script Error: ${data}`);
-            reject(new Error('Failed to send email due to an internal error.'));
-        });
-        pythonProcess.on('close', (code) => {
-            if (code === 0) resolve();
-            else reject(new Error('Email sending script failed.'));
-        });
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python', ['./api/services/send_email.py', toEmail, otp], {
+      env: { ...process.env },
     });
+    pythonProcess.stdout.on('data', (data) => console.log(`Python Script: ${data}`));
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`Python Script Error: ${data}`);
+      reject(new Error('Failed to send email due to an internal error.'));
+    });
+    pythonProcess.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error('Email sending script failed.'));
+    });
+  });
 };
 
-// 1. Send OTP (Your working version - UNCHANGED)
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+/** OTP by email (Login no longer uses Chess.com ID). */
 exports.sendOtp = async (req, res) => {
-    const { chess_com_id: id, email: userEmailInput } = req.body;
+  const email = normalizeEmail(req.body.email || req.body.chess_com_id);
 
-    if (!id) {
-        return res.status(400).json({ message: "Chess.com ID is required." });
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ message: 'Email is required.' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT * FROM "Login" WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: 'This email is not registered.' });
     }
 
-    try {
-        const { rows } = await db.query('SELECT * FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1)', [id]);
-        const user = rows[0];
+    const otp = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      specialChars: false,
+      lowerCaseAlphabets: false,
+      digits: true,
+    });
+    const otp_expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-        if (!user) {
-            return res.status(404).json({ message: "This Chess.com ID is not registered in our program." });
-        }
-
-        const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
-        const otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
-
-        if (user.email === null && user.password === null) {
-            if (!userEmailInput) {
-                return res.status(400).json({ message: "Email is required for your first-time login." });
-            }
-            await db.query(
-                'UPDATE "Login" SET email = $1, otp = $2, otp_expires_at = $3 WHERE LOWER("Chess_com_ID") = LOWER($4)',
-                [userEmailInput, otp, otp_expires_at, id]
-            );
-            await executeSendEmail(userEmailInput, otp);
-            return res.status(200).json({ message: `OTP sent to ${userEmailInput} for first-time login.` });
-        }
-
-        // --- EMAIL VERIFICATION FOR PASSWORD RESET ---
-        if (user.email && userEmailInput && user.email !== userEmailInput) {
-            return res.status(400).json({ message: "Email does not match our records. Please use your registered email address." });
-        }
-
-        await db.query(
-            'UPDATE "Login" SET otp = $1, otp_expires_at = $2 WHERE LOWER("Chess_com_ID") = LOWER($3)',
-            [otp, otp_expires_at, id]
-        );
-        await executeSendEmail(user.email, otp);
-        return res.status(200).json({ message: `Password reset OTP sent to your registered email.` });
-
-    } catch (err) {
-        console.error("Error in sendOtp controller:", err.message);
-        return res.status(500).json({ message: "An internal server error occurred. Please check server logs." });
-    }
+    await db.query(
+      'UPDATE "Login" SET otp = $1, otp_expires_at = $2 WHERE LOWER(email) = LOWER($3)',
+      [otp, otp_expires_at, email]
+    );
+    await executeSendEmail(user.email, otp);
+    return res.status(200).json({ message: 'Password reset OTP sent to your registered email.' });
+  } catch (err) {
+    console.error('Error in sendOtp controller:', err.message);
+    return res.status(500).json({ message: 'An internal server error occurred. Please check server logs.' });
+  }
 };
 
-// 2. Verify OTP and Set/Reset Password (Your working version - UNCHANGED)
 exports.verifyAndSetPassword = async (req, res) => {
-    const { chess_com_id: id, otp, password } = req.body;
+  const email = normalizeEmail(req.body.email || req.body.chess_com_id);
+  const { otp, password } = req.body;
 
-    if (!otp || !password) {
-        return res.status(400).json({ message: "OTP and password are required." });
+  if (!email || !otp || !password) {
+    return res.status(400).json({ message: 'Email, OTP and password are required.' });
+  }
+  if (password.length < 4) {
+    return res.status(400).json({ message: 'Password must be at least 4 characters long.' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT otp, otp_expires_at FROM "Login" WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
     }
-    if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters long." });
+    if (user.otp !== otp || new Date() > new Date(user.otp_expires_at)) {
+      return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
     }
 
-    try {
-        const { rows } = await db.query('SELECT otp, otp_expires_at FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1)', [id]);
-        const user = rows[0];
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    await db.query(
+      'UPDATE "Login" SET password = $1, otp = NULL, otp_expires_at = NULL WHERE LOWER(email) = LOWER($2)',
+      [hashedPassword, email]
+    );
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found." });
-        }
-        if (user.otp !== otp || new Date() > new Date(user.otp_expires_at)) {
-            return res.status(400).json({ message: "Invalid or expired OTP. Please request a new one." });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-        await db.query(
-            'UPDATE "Login" SET password = $1, otp = NULL, otp_expires_at = NULL WHERE LOWER("Chess_com_ID") = LOWER($2)',
-            [hashedPassword, id]
-        );
-
-        res.status(200).json({ message: "Password has been set successfully! You can now proceed." });
-
-    } catch (err) {
-        console.error("Error in verifyAndSetPassword controller:", err);
-        res.status(500).json({ message: "Could not update password due to a server error." });
-    }
+    res.status(200).json({ message: 'Password has been set successfully! You can now proceed.' });
+  } catch (err) {
+    console.error('Error in verifyAndSetPassword controller:', err);
+    res.status(500).json({ message: 'Could not update password due to a server error.' });
+  }
 };
 
-// --- NEW FUNCTION ---
-// 3. Check chess.com ID status
 exports.checkChessId = async (req, res) => {
-    const { chess_com_id: id } = req.body;
+  const email = normalizeEmail(req.body.email || req.body.chess_com_id);
 
-    if (!id) {
-        return res.status(400).json({ message: "Chess.com ID is required." });
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ message: 'Email is required.' });
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT * FROM "Login" WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'This email is not registered.',
+        status: 'not_found',
+      });
     }
 
-    try {
-        const { rows } = await db.query('SELECT * FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1)', [id]);
-        const user = rows[0];
-
-        if (!user) {
-            return res.status(404).json({ 
-                message: "This Chess.com ID is not registered in our program.",
-                status: "not_found"
-            });
-        }
-
-        // Check if user has email and password set
-        if (user.email && user.password) {
-            return res.status(200).json({ 
-                message: "User found with email and password.",
-                status: "has_credentials",
-                hasEmail: true,
-                hasPassword: true
-            });
-        }
-
-        // Check if user has email but no password
-        if (user.email && !user.password) {
-            return res.status(200).json({ 
-                message: "User found with email but no password set.",
-                status: "needs_password",
-                hasEmail: true,
-                hasPassword: false
-            });
-        }
-
-        // User exists but has no email or password
-        return res.status(200).json({ 
-            message: "User found but needs email and password setup.",
-            status: "needs_setup",
-            hasEmail: false,
-            hasPassword: false
-        });
-
-    } catch (err) {
-        console.error("Error in checkChessId controller:", err.message);
-        return res.status(500).json({ message: "An internal server error occurred." });
+    if (user.email && user.password) {
+      return res.status(200).json({
+        message: 'User found with email and password.',
+        status: 'has_credentials',
+        hasEmail: true,
+        hasPassword: true,
+      });
     }
+
+    if (user.email && !user.password) {
+      return res.status(200).json({
+        message: 'User found with email but no password set.',
+        status: 'needs_password',
+        hasEmail: true,
+        hasPassword: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: 'User found but needs email and password setup.',
+      status: 'needs_setup',
+      hasEmail: false,
+      hasPassword: false,
+    });
+  } catch (err) {
+    console.error('Error in checkChessId controller:', err.message);
+    return res.status(500).json({ message: 'An internal server error occurred.' });
+  }
 };
 
-// 4. Login for existing users with a password
+/** Legacy chess_com_id login body → treat as email if it looks like one. */
 exports.login = async (req, res) => {
-    const { chess_com_id: id, password } = req.body;
+  const id = req.body.chess_com_id || req.body.email;
+  const { password } = req.body;
 
-    if (!id || !password) {
-        return res.status(400).json({ message: "Chess.com ID and password are required." });
+  if (!id || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error('JWT_SECRET is not configured in environment variables');
+    return res.status(500).json({ message: 'Server configuration error. Please contact administrator.' });
+  }
+
+  try {
+    const email = normalizeEmail(id);
+    const { rows } = await db.query(
+      'SELECT * FROM "Login" WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    const user = rows[0];
+
+    if (!user || !user.password) {
+      return res.status(401).json({ message: 'Invalid credentials or account setup is not complete.' });
     }
 
-    // Check if JWT_SECRET is configured
-    if (!process.env.JWT_SECRET) {
-        console.error("JWT_SECRET is not configured in environment variables");
-        return res.status(500).json({ message: "Server configuration error. Please contact administrator." });
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    try {
-        console.log(`Login attempt for chess.com ID: ${id}`);
-        
-        // Fetch the user, including their Role
-        const { rows } = await db.query('SELECT * FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1)', [id]);
-        const user = rows[0];
+    const safeUser = {
+      id: user.id != null ? String(user.id) : user.email,
+      full_name: user.Player_Name || user.email,
+      email: user.email || null,
+      role: (user.Role || 'student').toLowerCase(),
+    };
 
-        // Check if user exists and has a password set
-        if (!user || !user.password) {
-            console.log(`Login failed: User not found or no password set for ID: ${id}`);
-            return res.status(401).json({ message: "Invalid credentials or account setup is not complete." });
-        }
-
-        // Compare provided password with the stored hashed password
-        const isPasswordMatch = await bcrypt.compare(password, user.password);
-        if (!isPasswordMatch) {
-            console.log(`Login failed: Invalid password for ID: ${id}`);
-            return res.status(401).json({ message: "Invalid credentials." });
-        }
-
-        console.log(`Login successful for ID: ${id}, Role: ${user.Role}`);
-
-        const safeUser = {
-          id: user.Chess_com_ID,
-          full_name: user.Player_Name || user.Chess_com_ID,
-          email: user.email || null,
-          role: (user.Role || 'student').toLowerCase(),
-        };
-
-        const token = signToken(safeUser, false);
-        return res.json({ token, user: safeUser });
-
-    } catch (err) {
-        console.error("Error in login controller:", err.message);
-        res.status(500).json({ message: "Server error" });
-    }
+    const token = signToken(safeUser, false);
+    return res.json({ token, user: safeUser });
+  } catch (err) {
+    console.error('Error in login controller:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
 };

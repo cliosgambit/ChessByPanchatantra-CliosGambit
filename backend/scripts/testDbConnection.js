@@ -1,19 +1,11 @@
 require('dotenv').config();
-const { Pool } = require('pg');
+const db = require('../api/config/database');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
-
-pool
-  .query('SELECT NOW()')
+db.query("SELECT datetime('now') AS now")
   .then((r) => {
-    console.log('Database connection OK:', r.rows[0]);
-    return pool.end();
+    console.log('SQLite connection OK:', r.rows[0], 'path=', db.dbPath);
   })
   .catch((e) => {
     console.error('Database connection FAILED:', e.message);
-    pool.end();
     process.exit(1);
   });

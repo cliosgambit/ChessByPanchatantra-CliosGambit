@@ -1,28 +1,35 @@
 const db = require('../api/config/database');
+const { addColumnIfNotExists } = require('../api/config/database');
 
 async function ensureModuleColumns() {
-  await db.query('ALTER TABLE module ADD COLUMN IF NOT EXISTS module_number INTEGER');
-  await db.query('ALTER TABLE module ADD COLUMN IF NOT EXISTS theme_key TEXT');
-  await db.query('ALTER TABLE module ADD COLUMN IF NOT EXISTS status TEXT DEFAULT \'active\'');
+  addColumnIfNotExists('module', 'module_number', 'module_number INTEGER');
+  addColumnIfNotExists('module', 'theme_key', 'theme_key TEXT');
+  addColumnIfNotExists('module', 'status', "status TEXT DEFAULT 'active'");
 
-  // Clear invalid values from legacy mod-{timestamp} ids (INTEGER overflow)
-  await db.query(`
-    UPDATE module
-    SET module_number = NULL
-    WHERE module_number IS NOT NULL
-      AND (
-        module_number > 2147483647
-        OR module_id !~* '^MOD[0-9]+$'
-      )
-  `);
+  const { rows } = await db.query(
+    'SELECT module_id, module_number FROM module WHERE module_id IS NOT NULL'
+  );
 
-  // Backfill only canonical MOD{n} rows — never parse timestamp-style ids
-  await db.query(`
-    UPDATE module
-    SET module_number = CAST(SUBSTRING(module_id FROM '([0-9]+)$') AS INTEGER)
-    WHERE module_number IS NULL
-      AND module_id ~* '^MOD[0-9]+$'
-  `);
+  for (const row of rows) {
+    const id = String(row.module_id || '');
+    const canonical = /^MOD[0-9]+$/i.test(id);
+    let nextNumber = row.module_number;
+
+    if (nextNumber != null && (nextNumber > 2147483647 || !canonical)) {
+      nextNumber = null;
+    }
+    if (nextNumber == null && canonical) {
+      const m = id.match(/([0-9]+)$/);
+      nextNumber = m ? Number(m[1]) : null;
+    }
+
+    if (nextNumber !== row.module_number) {
+      await db.query('UPDATE module SET module_number = $1 WHERE module_id = $2', [
+        nextNumber,
+        row.module_id,
+      ]);
+    }
+  }
 
   console.log('✅ module columns ready');
 }

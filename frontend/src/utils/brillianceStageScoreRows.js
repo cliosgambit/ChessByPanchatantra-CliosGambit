@@ -952,13 +952,44 @@ export function buildStage4Rows(s0Move, s3Move, s4Move) {
     },
     stage4ComponentRow('NOB score', 'non_obvious_score', breakdown, '×0.27'),
     stage4ComponentRow('Surprise', 'surprise_score', breakdown, '×0.23'),
+  ];
+
+  const surpriseDetail = s4Move?.features?.surprise ?? s4Move?.surprise ?? null;
+  if (surpriseDetail) {
+    const good = surpriseDetail.good_moves_top5;
+    const legal = surpriseDetail.legal_moves;
+    const rank = surpriseDetail.rank_at_depth8;
+    if (good != null && legal != null) {
+      rows.push({
+        label: 'Surprise inputs',
+        got: `good ${good}/5 · rank ${rank ?? '—'} · legal ${legal}`,
+        need: '—',
+        pass: null,
+        na: true,
+      });
+    }
+    if (surpriseDetail.product_term != null || surpriseDetail.ev_term != null) {
+      const inner = surpriseDetail.inner_sum
+        ?? ((surpriseDetail.engine_term ?? surpriseDetail.product_term ?? 0)
+          + (surpriseDetail.ev_term ?? 0));
+      rows.push({
+        label: 'Surprise formula',
+        got: `1 − (${inner}) → ×10 = ${surpriseDetail.surprise_score ?? '—'}`,
+        need: '1 − (g/5×r×RF + 0.15×EV)',
+        pass: null,
+        na: true,
+      });
+    }
+  }
+
+  rows.push(
     stage4ComponentRow('PB score', 'pb_score', breakdown, '×0.18'),
     stage4ComponentRow('Defense diff', 'defense_difficulty', breakdown, '×1.0'),
     stage4ComponentRow('Sound score', 'deep_eval_sound_score', breakdown, '×0.06'),
     stage4ComponentRow('Span score', 'depth_eval_span_score', breakdown, '×0.04'),
     stage4ComponentRow('TM', 'multiplexing_score', breakdown, '×0.08'),
     stage4ComponentRow('EV', 'ev_score', breakdown, '×0.04'),
-  ];
+  );
 
   if (breakdown.quiet_bonus > 0) {
     rows.push({

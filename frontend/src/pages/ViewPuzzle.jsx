@@ -53,7 +53,7 @@ function ViewPuzzle() {
   }, [puzzleList, puzzleId]);
 
   const goToPuzzle = (id) => {
-    if (id != null) navigate(`/puzzles/${id}`);
+    if (id != null) navigate(`/puzzles/chesscom/${id}`);
   };
 
   useEffect(() => {
@@ -85,10 +85,10 @@ function ViewPuzzle() {
           <button
             type="button"
             className="chess-btn-secondary view-brilliant-move-back"
-            onClick={() => navigate('/puzzles')}
+            onClick={() => navigate('/puzzles/chesscom')}
           >
             <FiArrowLeft />
-            <span>Back to Puzzles</span>
+            <span>Back to Chess.com puzzles</span>
           </button>
         </div>
       </div>

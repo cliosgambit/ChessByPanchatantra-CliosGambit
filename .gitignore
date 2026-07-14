@@ -14,10 +14,13 @@ frontend/.vite/
 frontend/node_modules/.cache/
 frontend/node_modules/.vite/
 frontend/node_modules/src/
-frontend/public/story_images/
+frontend/public/story_images/*
+!frontend/public/story_images/.gitkeep
 
 # --- Backend (Node / Express) ---
 backend/.env
+backend/data/*
+!backend/data/.gitkeep
 
 # --- Logs ---
 *.log
@@ -81,5 +84,9 @@ backend/brilliance/data/*
 
 # --- Local reference project (not part of CLIO) ---
 Last Shot/
+
+# --- Large local data / archived trees ---
+lichess/*.csv
+_version_1/
 
 

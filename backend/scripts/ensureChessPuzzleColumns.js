@@ -1,9 +1,9 @@
-const db = require('../api/config/database');
+const { addColumnIfNotExists } = require('../api/config/database');
 
 async function ensureChessPuzzleColumns() {
-  await db.query('ALTER TABLE chess_puzzle ADD COLUMN IF NOT EXISTS difficulty TEXT');
-  await db.query('ALTER TABLE chess_puzzle ADD COLUMN IF NOT EXISTS notes TEXT');
-  await db.query('ALTER TABLE chess_puzzle ADD COLUMN IF NOT EXISTS title TEXT');
+  addColumnIfNotExists('chess_puzzle', 'difficulty', 'difficulty TEXT');
+  addColumnIfNotExists('chess_puzzle', 'notes', 'notes TEXT');
+  addColumnIfNotExists('chess_puzzle', 'title', 'title TEXT');
   console.log('✅ chess_puzzle columns ready');
 }
 

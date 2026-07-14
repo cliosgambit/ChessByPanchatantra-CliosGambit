@@ -13,58 +13,55 @@ async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-function normalizeChessComId(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
 function normalizePlayerName(value) {
   return String(value || '').trim();
+}
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
 }
 
 router.use('/admin', authenticate, authorizeRoles('admin'));
 
 router.post('/admin/login-users', async (req, res) => {
-  const { Chess_com_ID, Player_Name, email, password, Role } = req.body;
+  const { Player_Name, email, password, Role } = req.body;
 
-  const chessComId = normalizeChessComId(Chess_com_ID);
   const playerName = normalizePlayerName(Player_Name);
-  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
-  if (!chessComId || !normalizedEmail || !password) {
-    return res.status(400).json({ message: 'Chess.com ID, email, and password are required.' });
+  if (!normalizedEmail || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
   }
 
   if (!playerName) {
     return res.status(400).json({ message: 'Player name is required.' });
   }
 
-  if (password.length < 6) {
-    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  if (password.length < 4) {
+    return res.status(400).json({ message: 'Password must be at least 4 characters.' });
   }
 
   try {
     const passwordHash = await hashPassword(password);
     const { rows } = await db.query(
-      `INSERT INTO "Login" ("Chess_com_ID", "Player_Name", email, password, "Role", created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING "Chess_com_ID", "Player_Name", email, "Role"`,
-      [chessComId, playerName, normalizedEmail, passwordHash, Role || 'student']
+      `INSERT INTO "Login" ("Player_Name", email, password, "Role", created_at)
+       VALUES ($1, $2, $3, $4, datetime('now'))
+       RETURNING id, "Player_Name", email, "Role"`,
+      [playerName, normalizedEmail, passwordHash, Role || 'student']
     );
-
-    await syncPlayersTableRow(rows[0]);
 
     return res.status(201).json({ user: rows[0] });
   } catch (err) {
     console.error('Create login user error:', err.message);
     if (err.code === '23505') {
-      return res.status(409).json({ message: 'A player with this Chess.com ID or email already exists.' });
+      return res.status(409).json({ message: 'A user with this email already exists.' });
     }
-    return res.status(500).json({ message: 'Failed to create player.' });
+    return res.status(500).json({ message: 'Failed to create user.' });
   }
 });
 
-router.put('/admin/login-users/:chessComId', async (req, res) => {
-  const chessComId = normalizeChessComId(req.params.chessComId);
+router.put('/admin/login-users/:email', async (req, res) => {
+  const targetEmail = normalizeEmail(req.params.email);
   const { Player_Name, email, password, Role } = req.body;
 
   const playerName = Player_Name != null ? normalizePlayerName(Player_Name) : null;
@@ -81,64 +78,46 @@ router.put('/admin/login-users/:chessComId', async (req, res) => {
            email = COALESCE($3, email),
            password = COALESCE($4, password),
            "Role" = COALESCE($5, "Role")
-       WHERE LOWER("Chess_com_ID") = LOWER($1)
-       RETURNING "Chess_com_ID", "Player_Name", email, "Role", password`,
+       WHERE LOWER(email) = LOWER($1)
+       RETURNING id, "Player_Name", email, "Role"`,
       [
-        chessComId,
+        targetEmail,
         playerName || null,
-        email ? String(email).trim().toLowerCase() : null,
+        email ? normalizeEmail(email) : null,
         passwordHash,
         Role || null,
       ]
     );
 
     if (!rows[0]) {
-      return res.status(404).json({ message: 'Player not found.' });
+      return res.status(404).json({ message: 'User not found.' });
     }
 
-    await syncPlayersTableRow(rows[0]);
     return res.json({ user: rows[0] });
   } catch (err) {
     console.error('Update login user error:', err.message);
     if (err.code === '23505') {
-      return res.status(409).json({ message: 'A player with this email already exists.' });
+      return res.status(409).json({ message: 'A user with this email already exists.' });
     }
-    return res.status(500).json({ message: 'Failed to update player.' });
+    return res.status(500).json({ message: 'Failed to update user.' });
   }
 });
 
-router.delete('/admin/login-users/:chessComId', async (req, res) => {
-  const chessComId = normalizeChessComId(req.params.chessComId);
+router.delete('/admin/login-users/:email', async (req, res) => {
+  const targetEmail = normalizeEmail(req.params.email);
   try {
     const loginRes = await db.query(
-      `DELETE FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1) RETURNING "Chess_com_ID"`,
-      [chessComId]
+      `DELETE FROM "Login" WHERE LOWER(email) = LOWER($1) RETURNING id, email`,
+      [targetEmail]
     );
     if (!loginRes.rows[0]) {
-      return res.status(404).json({ message: 'Player not found.' });
+      return res.status(404).json({ message: 'User not found.' });
     }
-    await db.query('DELETE FROM players WHERE LOWER("Chess_com_ID") = LOWER($1)', [
-      loginRes.rows[0].Chess_com_ID,
-    ]);
-    return res.json({ message: 'Player deleted.' });
+    return res.json({ message: 'User deleted.' });
   } catch (err) {
     console.error('Delete login user error:', err.message);
-    return res.status(500).json({ message: 'Failed to delete player.' });
+    return res.status(500).json({ message: 'Failed to delete user.' });
   }
 });
-
-async function syncPlayersTableRow(row) {
-  const chessComId = normalizeChessComId(row?.Chess_com_ID);
-  const playerName = normalizePlayerName(row?.Player_Name);
-  if (!chessComId || !playerName) return;
-
-  await db.query(
-    `INSERT INTO players ("Chess_com_ID", "Player_Name")
-     VALUES ($1, $2)
-     ON CONFLICT ("Chess_com_ID") DO UPDATE SET
-       "Player_Name" = EXCLUDED."Player_Name"`,
-    [chessComId, playerName]
-  );
-}
 
 module.exports = router;

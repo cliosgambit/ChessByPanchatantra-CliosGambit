@@ -1,11 +1,7 @@
-const fs = require('fs');
-const path = require('path');
 const db = require('../api/config/database');
 
 async function ensureChessPuzzlePollTable() {
-  const sqlPath = path.join(__dirname, '../database/chess_puzzle_poll_schema.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
-  await db.query(sql);
+  await db.query('SELECT 1 FROM chess_puzzle_poll_response LIMIT 1');
   console.log('✅ chess_puzzle_poll_response table ready');
 }
 

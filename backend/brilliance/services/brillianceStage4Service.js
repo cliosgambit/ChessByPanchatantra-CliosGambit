@@ -87,6 +87,8 @@ function buildStage4Inputs(gameId) {
     let sacrificedPieceType = null;
     let movingPieceType = null;
     let sacrificeMode = null;
+    let goodMovesTop5 = null;
+    let legalMoves = null;
 
     if (s1.features_json) {
       try {
@@ -116,7 +118,10 @@ function buildStage4Inputs(gameId) {
     if (s2.features_json) {
       try {
         const s2Features = JSON.parse(s2.features_json);
-        preMoveEvalMover = s2Features?.engine?.pre_move_eval_mover_cp ?? null;
+        const eng = s2Features?.engine ?? {};
+        preMoveEvalMover = eng.pre_move_eval_mover_cp ?? null;
+        goodMovesTop5 = eng.n_reasonable_moves ?? s2Features.n_reasonable_moves ?? null;
+        legalMoves = eng.n_legal ?? s2Features.n_legal ?? null;
       } catch {
         preMoveEvalMover = null;
       }
@@ -164,6 +169,8 @@ function buildStage4Inputs(gameId) {
       material_deficit: materialDeficit,
       pre_move_eval_mover_cp: preMoveEvalMover,
       rank_at_depth8: s3.rank_at_depth8,
+      good_moves_top5: goodMovesTop5,
+      legal_moves: legalMoves,
       non_obvious_score: s3.non_obvious_score,
       defense_difficulty: s3.defense_difficulty,
       is_sound: Boolean(s3.is_sound),

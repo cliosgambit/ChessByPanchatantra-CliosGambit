@@ -7,8 +7,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function mapLoginUser(row) {
   const roleRaw = (row.Role || 'student').toLowerCase();
   return {
-    id: row.Chess_com_ID,
-    full_name: row.Player_Name || row.Chess_com_ID,
+    id: row.id != null ? String(row.id) : row.email,
+    full_name: row.Player_Name || row.email,
     email: row.email,
     role: roleRaw === 'paused' ? 'student' : roleRaw,
   };
@@ -31,7 +31,7 @@ exports.login = async (req, res) => {
 
   try {
     const { rows } = await db.query(
-      `SELECT "Chess_com_ID", "Player_Name", email, password, "Role"
+      `SELECT id, "Player_Name", email, password, "Role"
        FROM "Login"
        WHERE LOWER(email) = LOWER($1)
        LIMIT 1`,
@@ -66,10 +66,10 @@ exports.logout = async (req, res) => {
   return res.status(200).json({ message: 'Logged out successfully.' });
 };
 
-async function fetchLoginIdentity({ email, chessComId }) {
+async function fetchLoginIdentity({ email, id }) {
   if (email) {
     const { rows } = await db.query(
-      `SELECT "Chess_com_ID", "Player_Name", email, "Role", password
+      `SELECT id, "Player_Name", email, "Role", password
        FROM "Login"
        WHERE LOWER(email) = LOWER($1)
        LIMIT 1`,
@@ -78,13 +78,13 @@ async function fetchLoginIdentity({ email, chessComId }) {
     return rows[0] || null;
   }
 
-  if (chessComId) {
+  if (id != null && id !== '') {
     const { rows } = await db.query(
-      `SELECT "Chess_com_ID", "Player_Name", email, "Role", password
+      `SELECT id, "Player_Name", email, "Role", password
        FROM "Login"
-       WHERE LOWER("Chess_com_ID") = LOWER($1)
+       WHERE id = $1
        LIMIT 1`,
-      [String(chessComId)]
+      [id]
     );
     return rows[0] || null;
   }
@@ -96,7 +96,7 @@ exports.me = async (req, res) => {
   try {
     const loginUser = await fetchLoginIdentity({
       email: req.user?.email,
-      chessComId: req.user?.id,
+      id: req.user?.id,
     });
 
     if (isLoginActive(loginUser)) {

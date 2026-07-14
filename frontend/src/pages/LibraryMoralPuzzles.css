@@ -1,0 +1,328 @@
+.moral-puzzles-page {
+  --ink: #141414;
+  --muted: #6b7280;
+  --line: #e8e8e8;
+  --accent: #ea580c;
+
+  min-height: calc(100vh - 76px);
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr);
+  background: #fff;
+  color: var(--ink);
+}
+
+.moral-puzzles-left {
+  border-right: 1px solid var(--line);
+  padding: 1.5rem 1.75rem 2.5rem;
+  overflow: auto;
+}
+
+.moral-puzzles-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: linear-gradient(160deg, #fafafa 0%, #f3f4f6 100%);
+}
+
+.moral-puzzles-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.25rem;
+}
+
+.moral-puzzles-back:hover {
+  color: var(--accent);
+}
+
+.moral-puzzles-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.moral-puzzles-left h1 {
+  margin: 0.35rem 0 1.25rem;
+  font-size: 1.65rem;
+  line-height: 1.2;
+}
+
+.moral-puzzles-code {
+  color: var(--accent);
+}
+
+.moral-puzzles-story-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.moral-puzzles-sub {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.moral-puzzles-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.moral-puzzles-thumbs img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.moral-puzzles-assign {
+  margin-top: 1.75rem;
+}
+
+.moral-puzzles-assign h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.moral-puzzles-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.moral-puzzles-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #e4ddd0;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moral-puzzles-btn:hover:not(:disabled) {
+  border-color: #fdba74;
+  color: #c2410c;
+}
+
+.moral-puzzles-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.moral-puzzles-btn--primary {
+  background: #ea580c;
+  border-color: #ea580c;
+  color: #fff;
+}
+
+.moral-puzzles-btn--primary:hover:not(:disabled) {
+  background: #c2410c;
+  border-color: #c2410c;
+  color: #fff;
+}
+
+.moral-puzzles-muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.moral-puzzles-error {
+  color: #b91c1c;
+  margin: 0.75rem 0;
+}
+
+.moral-puzzles-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.moral-puzzles-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.25rem 0.35rem 0.25rem 0.15rem;
+}
+
+.moral-puzzles-list li.is-active {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.moral-puzzles-list-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+}
+
+.moral-puzzles-source {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.moral-puzzles-icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.4rem;
+  display: grid;
+  place-items: center;
+}
+
+.moral-puzzles-icon-btn:hover {
+  color: #b91c1c;
+}
+
+.moral-puzzles-board-wrap {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.moral-puzzles-board-hint {
+  margin: 0;
+  text-align: center;
+}
+
+.moral-puzzles-empty-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.moral-puzzles-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 80;
+  padding: 1rem;
+}
+
+.moral-puzzles-modal-card {
+  width: min(640px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.1rem 1.25rem 1.35rem;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+}
+
+.moral-puzzles-modal-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.moral-puzzles-modal-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.moral-puzzles-search-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.moral-puzzles-search-row input {
+  flex: 1;
+  border: 1px solid #e4ddd0;
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+}
+
+.moral-puzzles-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.moral-puzzles-picker-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.moral-puzzles-fen {
+  margin: 0.25rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.moral-puzzles-chesscom-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.moral-puzzles-draft {
+  border: 1px dashed #fdba74;
+  background: #fff7ed;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .moral-puzzles-page {
+    grid-template-columns: 1fr;
+  }
+
+  .moral-puzzles-left {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}

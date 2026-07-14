@@ -50,29 +50,65 @@ def _scoring_sac_type(sac_type, sacrificed_piece_type=None):
     return piece_map.get(sacrificed_piece_type, sac_type or "unknown")
 
 
-def rating_relative_surprise(player_rating, ev_score, rank_at_d8, sac_type, sacrificed_piece_type=None):
-    scoring_type = _scoring_sac_type(sac_type, sacrificed_piece_type)
-    base_surprise = min(rank_at_d8 or 99, 10) / 10.0
-
-    rating_factor = 0.2
+def _surprise_rating_factor(player_rating):
     for lo, hi, factor in RATING_BRACKETS:
         if lo <= player_rating < hi:
-            rating_factor = factor
-            break
+            return factor
+    return 0.2
 
-    type_mult = TYPE_MULTIPLIERS.get(scoring_type or "", 1.0)
-    ev_bonus = (ev_score or 0) * 0.15
-    surprise = min(10.0, (base_surprise + rating_factor + ev_bonus) * type_mult * 5.0)
+
+def rating_relative_surprise(
+    player_rating,
+    ev_score,
+    rank_at_d8,
+    good_moves_top5=None,
+    legal_moves=None,
+    sac_type=None,
+    sacrificed_piece_type=None,
+):
+    """
+    Recommended surprise formula:
+      1 − (good_moves_top5/5 × (rank−1)/(legal_moves−1) × rating_factor + 0.15 × EV)
+
+    Scaled to 0–10 for Stage 4: surprise_score = 10 × max(0, 1 − inner)
+    """
+    good = max(0, min(5, int(good_moves_top5 or 1)))
+    legal = max(2, int(legal_moves or 20))
+    rank = int(rank_at_d8 or 99)
+    if rank >= 99:
+        rank = legal
+
+    rating_factor = _surprise_rating_factor(int(player_rating or 1500))
+
+    good_ratio = good / 5.0
+    rank_ratio = (rank - 1) / max(legal - 1, 1)
+    rank_ratio = min(1.0, max(0.0, rank_ratio))
+
+    engine_term = good_ratio * rank_ratio * rating_factor
+    ev_term = 0.15 * (ev_score or 0)
+    inner_sum = engine_term + ev_term
+    surprise_unit = max(0.0, 1.0 - inner_sum)
+    surprise = min(10.0, round(surprise_unit * 10.0, 2))
 
     p_find = max(0.001, 1.0 - (surprise / 10.0))
     info_surprise = -math.log2(p_find)
 
     return {
-        "player_rating": player_rating,
-        "base_non_obvious": round(base_surprise, 3),
+        "player_rating": int(player_rating or 1500),
+        "good_moves_top5": good,
+        "legal_moves": legal,
+        "rank_at_depth8": rank if rank_at_d8 is not None and rank_at_d8 < 99 else rank_at_d8,
+        "good_ratio": round(good_ratio, 3),
+        "rank_ratio": round(rank_ratio, 3),
         "rating_factor": rating_factor,
-        "type_multiplier": type_mult,
-        "surprise_score": round(surprise, 2),
+        "engine_term": round(engine_term, 3),
+        "ev_term": round(ev_term, 3),
+        "inner_sum": round(inner_sum, 3),
+        "surprise_unit": round(surprise_unit, 3),
+        "product_term": round(engine_term, 3),
+        "base_non_obvious": round(rank_ratio, 3),
+        "type_multiplier": None,
+        "surprise_score": surprise,
         "info_surprise_bits": round(info_surprise, 2),
         "brilliant_for_rating": surprise > 6.0,
     }
@@ -378,7 +414,13 @@ def analyze_stage4_move(move_input):
     game_phase_val = move_input.get("game_phase") or "middlegame"
 
     surprise = rating_relative_surprise(
-        player_rating, ev_score, rank_at_d8, sac_type, sacrificed_piece_type
+        player_rating,
+        ev_score,
+        rank_at_d8,
+        good_moves_top5=move_input.get("good_moves_top5"),
+        legal_moves=move_input.get("legal_moves"),
+        sac_type=sac_type,
+        sacrificed_piece_type=sacrificed_piece_type,
     )
     pb = practical_brilliance_score(
         move_input.get("defense_difficulty"),

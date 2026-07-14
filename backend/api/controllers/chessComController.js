@@ -361,3 +361,84 @@ exports.unsaveBrilliantPuzzle = async (req, res) => {
     res.status(400).json({ error: err.message || 'Failed to remove puzzle.' });
   }
 };
+
+/** Proxy Chess.com public daily random puzzle: https://api.chess.com/pub/puzzle/random
+ *  Upserts by unique FEN into chesscom_random_puzzles.
+ */
+exports.getRandomDailyPuzzle = async (_req, res) => {
+  try {
+    const { upsertChesscomRandomPuzzle } = require('../services/moralPuzzleService');
+    const response = await fetch('https://api.chess.com/pub/puzzle/random', {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'CLIO-ChessAcademy/1.0',
+      },
+    });
+    if (!response.ok) {
+      res.status(response.status).json({ error: `Chess.com API returned ${response.status}.` });
+      return;
+    }
+    const data = await response.json();
+    if (!data?.fen) {
+      res.status(502).json({ error: 'Chess.com puzzle response missing FEN.' });
+      return;
+    }
+    const { puzzle, created } = await upsertChesscomRandomPuzzle(data);
+    res.json({
+      ...puzzle,
+      url: puzzle.source_url,
+      image: puzzle.image_url,
+      created,
+    });
+  } catch (err) {
+    console.error('Chess.com random puzzle error:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch Chess.com puzzle.' });
+  }
+};
+
+/** Persist a Chess.com puzzle payload (unique by FEN). Used after browser-side fetch. */
+exports.ingestRandomPuzzle = async (req, res) => {
+  try {
+    const { upsertChesscomRandomPuzzle } = require('../services/moralPuzzleService');
+    const { puzzle, created } = await upsertChesscomRandomPuzzle(req.body || {});
+    res.status(created ? 201 : 200).json({
+      puzzle: {
+        ...puzzle,
+        url: puzzle.source_url,
+        image: puzzle.image_url,
+      },
+      created,
+    });
+  } catch (err) {
+    console.error('Chess.com puzzle ingest error:', err);
+    res.status(400).json({ error: err.message || 'Failed to save Chess.com puzzle.' });
+  }
+};
+
+exports.listChesscomRandomPuzzles = async (req, res) => {
+  try {
+    const db = require('../config/database');
+    const unusedOnly = String(req.query.unused || '') === '1' || req.query.unused === 'true';
+    const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+    const q = String(req.query.q || '').trim();
+    const params = [];
+    let sql = `SELECT * FROM chesscom_random_puzzles WHERE 1=1`;
+    if (unusedOnly) sql += ` AND is_used = 0`;
+    if (q) {
+      const like = `%${q}%`;
+      params.push(like);
+      const a = params.length;
+      params.push(like);
+      const b = params.length;
+      sql += ` AND (fen LIKE $${a} OR IFNULL(title,'') LIKE $${b})`;
+    }
+    params.push(limit);
+    sql += ` ORDER BY id DESC LIMIT $${params.length}`;
+    const { rows } = await db.query(sql, params);
+    const { mapChesscomRow } = require('../services/moralPuzzleService');
+    res.json({ puzzles: rows.map(mapChesscomRow), count: rows.length });
+  } catch (err) {
+    console.error('Chess.com random list error:', err);
+    res.status(500).json({ error: err.message || 'Failed to list puzzles.' });
+  }
+};

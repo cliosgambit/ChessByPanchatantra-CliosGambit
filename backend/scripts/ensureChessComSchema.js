@@ -1,20 +1,9 @@
-const fs = require('fs');
-const path = require('path');
 const db = require('../api/config/database');
 
-const SCHEMA_FLAG = path.join(__dirname, '../database/.chess_com_schema_applied');
-
-async function ensureChessComSchema({ force = false } = {}) {
-  if (!force && fs.existsSync(SCHEMA_FLAG)) {
-    console.log('✅ chess.com schema already applied');
-    return;
-  }
-
-  const sqlPath = path.join(__dirname, '../database/chess_com_schema.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
-  await db.query(sql);
-  fs.writeFileSync(SCHEMA_FLAG, new Date().toISOString());
-  console.log('✅ chess.com schema applied (legacy game tables dropped, new tables created)');
+/** Schema is applied from database/schema.sqlite.sql on DB init. */
+async function ensureChessComSchema() {
+  await db.query('SELECT 1 FROM chess_com_profiles LIMIT 1');
+  console.log('✅ chess.com schema ready (local SQLite)');
 }
 
 module.exports = { ensureChessComSchema };

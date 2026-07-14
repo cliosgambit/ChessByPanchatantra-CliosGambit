@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const db = require('../api/config/database');
+const { addColumnIfNotExists, tableHasColumn, sqlite } = require('../api/config/database');
 
 const SALT_ROUNDS = 10;
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$/;
@@ -10,61 +11,79 @@ async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-function deriveChessComIdFromEmail(email, suffix = '') {
-  const local = String(email || '')
-    .split('@')[0]
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
-  const base = local || 'player';
-  return suffix ? `${base}_${suffix}` : base;
-}
-
-async function uniqueChessComId(email) {
-  let candidate = deriveChessComIdFromEmail(email);
-  let attempt = 0;
-
-  while (attempt < 100) {
-    const { rows } = await db.query(
-      `SELECT 1 FROM "Login" WHERE LOWER("Chess_com_ID") = LOWER($1) LIMIT 1`,
-      [candidate]
-    );
-    if (!rows[0]) return candidate;
-    attempt += 1;
-    candidate = deriveChessComIdFromEmail(email, String(attempt));
-  }
-
-  return `${deriveChessComIdFromEmail(email)}_${Date.now()}`;
-}
-
-async function syncPlayersRow(chessComId, playerName) {
-  if (!chessComId || !playerName) return;
-  await db.query(
-    `INSERT INTO players ("Chess_com_ID", "Player_Name")
-     VALUES ($1, $2)
-     ON CONFLICT ("Chess_com_ID") DO UPDATE SET
-       "Player_Name" = EXCLUDED."Player_Name"`,
-    [chessComId, playerName]
-  );
-}
-
 async function usersTableExists() {
   const { rows } = await db.query(`
     SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = 'users'
-    ) AS exists
+      SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'
+    ) AS "exists"
   `);
   return Boolean(rows[0]?.exists);
 }
 
-async function ensureLoginColumns() {
-  await db.query(
-    `ALTER TABLE "Login" ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`
+/** Rebuild Login without Chess_com_ID; keep existing rows by email. */
+async function migrateLoginDropChessComId() {
+  if (!tableHasColumn('Login', 'Chess_com_ID')) {
+    return;
+  }
+
+  const { rows: existing } = await db.query(
+    `SELECT "Player_Name", email, password, "Role", otp, otp_expires_at, created_at
+     FROM "Login"`
   );
-  await db.query(`UPDATE "Login" SET created_at = NOW() WHERE created_at IS NULL`);
+
+  sqlite.exec('PRAGMA foreign_keys = OFF;');
+  sqlite.exec('BEGIN;');
+  try {
+    sqlite.exec('DROP TABLE IF EXISTS "Login";');
+    sqlite.exec(`
+      CREATE TABLE "Login" (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        "Player_Name"    TEXT,
+        email            TEXT UNIQUE NOT NULL,
+        password         TEXT,
+        "Role"           TEXT DEFAULT 'student',
+        otp              TEXT,
+        otp_expires_at   TEXT,
+        created_at       TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
+    const insert = sqlite.prepare(
+      `INSERT INTO "Login" ("Player_Name", email, password, "Role", otp, otp_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    );
+
+    for (const row of existing) {
+      const email = String(row.email || '').trim().toLowerCase();
+      if (!email) continue;
+      insert.run(
+        row.Player_Name || null,
+        email,
+        row.password || null,
+        row.Role || 'student',
+        row.otp || null,
+        row.otp_expires_at || null,
+        row.created_at || new Date().toISOString()
+      );
+    }
+
+    sqlite.exec('COMMIT;');
+  } catch (err) {
+    try {
+      sqlite.exec('ROLLBACK;');
+    } catch {}
+    throw err;
+  } finally {
+    sqlite.exec('PRAGMA foreign_keys = ON;');
+  }
+
+  console.log(`✅ Login table migrated (dropped Chess_com_ID); kept ${existing.filter((r) => r.email).length} row(s)`);
+}
+
+async function ensureLoginColumns() {
+  await migrateLoginDropChessComId();
+  addColumnIfNotExists('Login', 'created_at', "created_at TEXT DEFAULT (datetime('now'))");
+  await db.query(`UPDATE "Login" SET created_at = datetime('now') WHERE created_at IS NULL`);
 }
 
 async function migrateUsersIntoLogin() {
@@ -92,7 +111,7 @@ async function migrateUsersIntoLogin() {
     const passwordHash = userRow.password_hash;
 
     const { rows: loginRows } = await db.query(
-      `SELECT "Chess_com_ID", "Player_Name", password, "Role", created_at
+      `SELECT id, "Player_Name", password, "Role", created_at
        FROM "Login"
        WHERE LOWER(email) = LOWER($1)
        LIMIT 1`,
@@ -102,8 +121,7 @@ async function migrateUsersIntoLogin() {
     if (loginRows[0]) {
       const login = loginRows[0];
       const playerName =
-        String(login.Player_Name || '').trim() &&
-        login.Player_Name !== login.Chess_com_ID
+        String(login.Player_Name || '').trim() && login.Player_Name !== email
           ? login.Player_Name
           : fullName;
 
@@ -120,45 +138,37 @@ async function migrateUsersIntoLogin() {
          WHERE LOWER(email) = LOWER($1)`,
         [email, playerName, passwordHash, role, userRow.created_at]
       );
-
-      await syncPlayersRow(login.Chess_com_ID, playerName);
       migrated += 1;
       continue;
     }
 
-    const chessComId = await uniqueChessComId(email);
     await db.query(
-      `INSERT INTO "Login" ("Chess_com_ID", "Player_Name", email, password, "Role", created_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [chessComId, fullName, email, passwordHash, role, userRow.created_at || new Date()]
+      `INSERT INTO "Login" ("Player_Name", email, password, "Role", created_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [fullName, email, passwordHash, role, userRow.created_at || new Date().toISOString()]
     );
-    await syncPlayersRow(chessComId, fullName);
     migrated += 1;
   }
 
-  await db.query('DROP TABLE IF EXISTS users CASCADE');
+  await db.query('DROP TABLE IF EXISTS users');
   return { migrated, skipped: false };
 }
 
 async function ensureDefaultAdminInLogin() {
-  const adminEmail = 'admin@cliosgambit.local';
+  const adminEmail = 'admin@gmail.com';
   const { rows } = await db.query(
     `SELECT 1 FROM "Login" WHERE LOWER(email) = LOWER($1) LIMIT 1`,
     [adminEmail]
   );
   if (rows[0]) return;
 
-  const passwordHash = await hashPassword('ChangeMe123!');
-  const chessComId = await uniqueChessComId(adminEmail);
+  const passwordHash = await hashPassword('1234');
   await db.query(
-    `INSERT INTO "Login" ("Chess_com_ID", "Player_Name", email, password, "Role", created_at)
-     VALUES ($1, $2, $3, $4, 'admin', NOW())`,
-    [chessComId, 'System Admin', adminEmail, passwordHash]
+    `INSERT INTO "Login" ("Player_Name", email, password, "Role", created_at)
+     VALUES ($1, $2, $3, 'admin', datetime('now'))`,
+    ['Admin', adminEmail, passwordHash]
   );
-  await syncPlayersRow(chessComId, 'System Admin');
-  console.log(
-    '⚠️  Seeded default admin in Login: admin@cliosgambit.local / ChangeMe123! — change this password immediately.'
-  );
+  console.log('⚠️  Seeded default admin in Login: admin@gmail.com / 1234');
 }
 
 async function migrateUsersToLogin() {
@@ -171,10 +181,10 @@ async function migrateUsersToLogin() {
     console.log(`✅ Migrated ${result.migrated} row(s) from users → Login and dropped users table`);
   }
 
-  const { rows: loginCount } = await db.query(`SELECT COUNT(*)::int AS count FROM "Login"`);
+  const { rows: loginCount } = await db.query(`SELECT COUNT(*) AS count FROM "Login"`);
   if ((loginCount[0]?.count || 0) === 0) {
     await ensureDefaultAdminInLogin();
   }
 }
 
-module.exports = { migrateUsersToLogin, ensureLoginColumns };
+module.exports = { migrateUsersToLogin, ensureLoginColumns, migrateLoginDropChessComId };

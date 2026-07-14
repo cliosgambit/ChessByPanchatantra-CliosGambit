@@ -86,11 +86,7 @@ export async function fetchCurrentUser() {
   return data.user;
 }
 
-export function getRoleHomePath(role) {
-  const r = (role || '').toLowerCase();
-  if (r === 'admin') return '/dashboard';
-  if (r === 'coach') return '/coach-dashboard';
-  if (r === 'student') return '/student-dashboard';
+export function getRoleHomePath(_role) {
   return '/dashboard';
 }
 
