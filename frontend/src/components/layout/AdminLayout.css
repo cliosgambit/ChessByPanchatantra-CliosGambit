@@ -1,0 +1,38 @@
+.admin-shell {
+  display: flex;
+  align-items: stretch;
+  background: #fdf8f5;
+  min-height: 100vh;
+}
+
+.admin-shell__sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+  transition: width 0.2s ease;
+}
+
+.admin-shell--nav-collapsed .admin-shell__sidebar {
+  position: sticky;
+}
+
+.admin-shell--nav-hover .admin-shell__sidebar {
+  z-index: 40;
+}
+
+.admin-shell__main {
+  background: #fdf8f5;
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .admin-shell__sidebar {
+    display: none;
+  }
+
+  .admin-shell__main {
+    width: 100%;
+    padding-top: 2.75rem;
+  }
+}

@@ -1,26 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Box, useColorModeValue } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 import { AnimatePresence } from 'framer-motion';
-import TopNavbar, { NAVBAR_HEIGHT } from './TopNavbar';
+import SideNav, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from './SideNav';
 import PageTransition from '../dashboard/PageTransition';
+import './AdminLayout.css';
+
+function isDashboardPath(pathname) {
+  return pathname === '/dashboard' || pathname === '/dashboard/';
+}
 
 function AdminLayout() {
   const location = useLocation();
-  const pageBg = useColorModeValue('#F9F7F2', 'navy.900');
+  const onDashboard = isDashboardPath(location.pathname);
+  const [collapsed, setCollapsed] = useState(!onDashboard);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    // Off-dashboard pages start minimized; dashboard starts open
+    setCollapsed(!isDashboardPath(location.pathname));
+    setHovered(false);
+  }, [location.pathname]);
+
+  const expanded = !collapsed || hovered;
+  const railWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   return (
-    <Box minH="100vh" bg={pageBg} w="100%">
-      <TopNavbar />
+    <Box
+      className={`admin-shell${collapsed ? ' admin-shell--nav-collapsed' : ''}${
+        collapsed && hovered ? ' admin-shell--nav-hover' : ''
+      }`}
+      minH="100vh"
+      w="100%"
+    >
+      <Box
+        className="admin-shell__sidebar"
+        style={{ width: railWidth }}
+        flexShrink={0}
+      >
+        <SideNav
+          collapsed={collapsed}
+          expanded={expanded}
+          onToggleCollapse={() => setCollapsed((v) => !v)}
+          onHoverChange={setHovered}
+        />
+      </Box>
+
       <Box
         as="main"
-        w="100%"
-        maxW="100%"
-        pt={`${NAVBAR_HEIGHT}px`}
-        minH={`calc(100vh - ${NAVBAR_HEIGHT}px)`}
-        px={{ base: 0, md: 0 }}
+        className="admin-shell__main"
         role="main"
         aria-label="Admin content"
+        flex="1"
+        minW={0}
+        minH="100vh"
       >
         <AnimatePresence initial={false}>
           <PageTransition key={location.pathname}>

@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus, FiX, FiUpload, FiClipboard } from 'react-icons/fi';
 import {
   createLibraryMoral,
   createLibraryStory,
-  fetchLibraryMorals,
   fetchLibraryStory,
   updateLibraryStory,
   uploadLibraryImages,
@@ -86,35 +85,24 @@ function LibraryStoryForm() {
       }
 
       try {
-        const moralsPromise = fetchLibraryMorals();
-        const storyPromise = isEdit ? fetchLibraryStory(storyId) : Promise.resolve(null);
-
-        const [moralsData, storyData] = await Promise.all([moralsPromise, storyPromise]);
-        if (cancelled) return;
-
-        const moralsList = Array.isArray(moralsData?.morals) ? moralsData.morals : [];
-        const story = storyData?.story || (isEdit ? storyData : null);
-
         if (isEdit) {
+          const storyData = await fetchLibraryStory(storyId);
+          if (cancelled) return;
+
+          const story = storyData?.story;
           if (!story || (story.id == null && !story.title)) {
             setError('Story not found.');
-            setMorals(moralsList);
+            setMorals([]);
             return;
           }
-          const nextForm = formFromStory(story);
-          const byId = new Map(
-            moralsList.map((m) => [Number(m.id), { ...m, id: Number(m.id) }])
-          );
-          for (const m of story.morals || []) {
-            const id = Number(m.id);
-            if (Number.isFinite(id)) {
-              byId.set(id, { ...m, id });
-            }
-          }
-          setMorals([...byId.values()].sort((a, b) => a.id - b.id));
-          setForm(nextForm);
+          const linked = (story.morals || []).map((m) => ({
+            ...m,
+            id: Number(m.id),
+          }));
+          setMorals(linked);
+          setForm(formFromStory(story));
         } else {
-          setMorals(moralsList.map((m) => ({ ...m, id: Number(m.id) })));
+          setMorals([]);
           setForm(EMPTY_FORM);
         }
       } catch (err) {
@@ -131,41 +119,18 @@ function LibraryStoryForm() {
     };
   }, [isEdit, storyId]);
 
-  const selectedSet = useMemo(
-    () => new Set(form.moral_ids.map((id) => Number(id)).filter(Number.isFinite)),
-    [form.moral_ids]
-  );
-
-  const selectedMorals = useMemo(
-    () => morals.filter((m) => selectedSet.has(Number(m.id))),
-    [morals, selectedSet]
-  );
-
-  const orderedMorals = useMemo(() => {
-    const selected = [];
-    const rest = [];
-    for (const m of morals) {
-      if (selectedSet.has(Number(m.id))) selected.push(m);
-      else rest.push(m);
-    }
-    return [...selected, ...rest];
-  }, [morals, selectedSet]);
-
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const toggleMoral = (id) => {
+  const removeMoralFromStory = (id) => {
     const moralId = Number(id);
     if (!Number.isFinite(moralId)) return;
-    setForm((prev) => {
-      const next = new Set(
-        prev.moral_ids.map(Number).filter(Number.isFinite)
-      );
-      if (next.has(moralId)) next.delete(moralId);
-      else next.add(moralId);
-      return { ...prev, moral_ids: [...next] };
-    });
+    setMorals((prev) => prev.filter((m) => Number(m.id) !== moralId));
+    setForm((prev) => ({
+      ...prev,
+      moral_ids: prev.moral_ids.map(Number).filter((mid) => mid !== moralId),
+    }));
   };
 
   const handleAddMoral = async () => {
@@ -388,45 +353,30 @@ function LibraryStoryForm() {
         <fieldset className="library-fieldset">
           <legend>Morals * (at least one)</legend>
           <p className="library-muted">
-            Check every moral for this story, then click <strong>Save changes</strong>.
-            Pressing Enter in the box below adds a moral — it does not save the story.
+            Add morals below — each one is linked to this story automatically when you click{' '}
+            <strong>Add</strong>. Press <strong>Save changes</strong> to keep them.
           </p>
-          {selectedMorals.length > 0 ? (
-            <div className="library-selected-morals">
-              {selectedMorals.map((m) => (
-                <span key={m.id} className="library-moral-chip">
-                  {m.moral_code || m.id}: {m.moral_name}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${m.moral_name}`}
-                    onClick={() => toggleMoral(m.id)}
-                  >
-                    <FiX aria-hidden />
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="library-error">No morals selected yet.</p>
-          )}
-          <div className="library-principle-list">
-            {orderedMorals.length === 0 ? (
-              <p className="library-muted">No morals yet. Create one below.</p>
-            ) : (
-              orderedMorals.map((m) => (
-                <label key={m.id} className="library-check">
-                  <input
-                    type="checkbox"
-                    checked={selectedSet.has(Number(m.id))}
-                    onChange={() => toggleMoral(m.id)}
-                  />
+          {morals.length > 0 ? (
+            <ul className="library-moral-list">
+              {morals.map((m) => (
+                <li key={m.id} className="library-moral-list-item">
                   <span>
                     <strong>{m.moral_code || m.id}</strong> — {m.moral_name}
                   </span>
-                </label>
-              ))
-            )}
-          </div>
+                  <button
+                    type="button"
+                    className="library-icon-btn"
+                    aria-label={`Remove ${m.moral_name}`}
+                    onClick={() => removeMoralFromStory(m.id)}
+                  >
+                    <FiX aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="library-error">No morals added yet.</p>
+          )}
           <div className="library-image-row">
             <input
               value={newMoral}

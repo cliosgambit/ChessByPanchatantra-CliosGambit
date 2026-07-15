@@ -6,6 +6,7 @@ import { getRoleHomePath } from '../services/authService';
 import AdminLayout from '../components/layout/AdminLayout';
 import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/Login';
+import ForgotPassword from '../pages/ForgotPassword';
 import Dashboard from '../pages/Dashboard';
 import ModulesPage from '../pages/ModulesPage';
 import ModuleDetailPage from '../pages/ModuleDetailPage';
@@ -28,6 +29,7 @@ import ChessComGamePage from '../pages/ChessComGamePage';
 import BrilliantMoves from '../pages/BrilliantMoves';
 import ViewBrilliantMove from '../pages/ViewBrilliantMove';
 import AllGames from '../pages/AllGames';
+import Settings from '../pages/Settings';
 import CatchAllRedirect from './CatchAllRedirect';
 
 function RoleHomeRedirect() {
@@ -45,11 +47,13 @@ function AppRoutesContent() {
     <Box>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/" element={<RoleHomeRedirect />} />
 
         <Route element={<ProtectedRoute requireAuth />}>
           <Route element={<AdminLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/modules" element={<ModulesPage />} />
             <Route path="/modules/:moduleId" element={<ModuleDetailPage />} />
             <Route

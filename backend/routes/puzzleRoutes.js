@@ -58,6 +58,27 @@ function mapLichessPuzzle(row) {
   };
 }
 
+function parseOptionalInt(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function lichessSortClause(sort) {
+  switch (String(sort || '').toLowerCase()) {
+    case 'rating_desc':
+      return 'rating DESC NULLS LAST, id ASC';
+    case 'rating_asc':
+      return 'rating ASC NULLS LAST, id ASC';
+    case 'popularity_desc':
+      return 'popularity DESC NULLS LAST, id ASC';
+    case 'nb_plays_desc':
+      return 'nb_plays DESC NULLS LAST, id ASC';
+    default:
+      return 'id ASC';
+  }
+}
+
 function normalizeHeader(value) {
   return String(value || '')
     .trim()
@@ -155,14 +176,73 @@ router.get('/puzzles/gm/:id', async (req, res) => {
   }
 });
 
+/** GET /api/puzzles/lichess/filters — facet data for picker UI */
+router.get('/puzzles/lichess/filters', async (req, res) => {
+  try {
+    const unusedOnly = String(req.query.unused || '') === '1' || req.query.unused === 'true';
+    const usedClause = unusedOnly ? ' AND COALESCE(is_used, 0) = 0' : '';
+
+    const ratingBounds = await db.query(
+      `SELECT MIN(rating) AS min_rating, MAX(rating) AS max_rating
+       FROM lichess_puzzles
+       WHERE rating IS NOT NULL${usedClause}`
+    );
+
+    const themeRows = await db.query(
+      `SELECT theme, COUNT(*)::int AS count
+       FROM lichess_puzzles,
+       LATERAL unnest(string_to_array(themes, ' ')) AS theme
+       WHERE themes IS NOT NULL AND themes <> ''${usedClause}
+       GROUP BY theme
+       ORDER BY count DESC, theme ASC
+       LIMIT 80`
+    );
+
+    const openingRows = await db.query(
+      `SELECT opening, COUNT(*)::int AS count
+       FROM lichess_puzzles,
+       LATERAL unnest(string_to_array(opening_tags, ' ')) AS opening
+       WHERE opening_tags IS NOT NULL AND opening_tags <> ''${usedClause}
+       GROUP BY opening
+       ORDER BY count DESC, opening ASC
+       LIMIT 50`
+    );
+
+    return res.json({
+      rating_min: ratingBounds.rows[0]?.min_rating != null
+        ? Number(ratingBounds.rows[0].min_rating)
+        : null,
+      rating_max: ratingBounds.rows[0]?.max_rating != null
+        ? Number(ratingBounds.rows[0].max_rating)
+        : null,
+      themes: themeRows.rows.map((row) => ({
+        value: row.theme,
+        count: Number(row.count) || 0,
+      })),
+      openings: openingRows.rows.map((row) => ({
+        value: row.opening,
+        count: Number(row.count) || 0,
+      })),
+    });
+  } catch (err) {
+    console.error('[puzzles] lichess filters:', err.message);
+    return res.status(500).json({ message: 'Failed to load Lichess puzzle filters.' });
+  }
+});
+
 /** GET /api/puzzles/lichess
- *  Query: unused=1, q=, limit= (default 200 when unused/q set, else all — capped at 2000)
+ *  Query: unused=1, q=, limit=, rating_min=, rating_max=, theme=, opening=, sort=
  */
 router.get('/puzzles/lichess', async (req, res) => {
   try {
     const unusedOnly = String(req.query.unused || '') === '1' || req.query.unused === 'true';
     const q = String(req.query.q || '').trim();
-    const hasFilter = unusedOnly || q;
+    const ratingMin = parseOptionalInt(req.query.rating_min);
+    const ratingMax = parseOptionalInt(req.query.rating_max);
+    const theme = String(req.query.theme || '').trim();
+    const opening = String(req.query.opening || '').trim();
+    const sort = String(req.query.sort || 'id_asc');
+    const hasFilter = unusedOnly || q || ratingMin != null || ratingMax != null || theme || opening;
     const limit = Math.min(
       Math.max(Number(req.query.limit) || (hasFilter ? 100 : 2000), 1),
       2000
@@ -174,6 +254,22 @@ router.get('/puzzles/lichess', async (req, res) => {
       FROM lichess_puzzles
       WHERE 1=1`;
     if (unusedOnly) sql += ` AND IFNULL(is_used, 0) = 0`;
+    if (ratingMin != null) {
+      params.push(ratingMin);
+      sql += ` AND rating >= $${params.length}`;
+    }
+    if (ratingMax != null) {
+      params.push(ratingMax);
+      sql += ` AND rating <= $${params.length}`;
+    }
+    if (theme) {
+      params.push(`%${theme}%`);
+      sql += ` AND IFNULL(themes,'') LIKE $${params.length}`;
+    }
+    if (opening) {
+      params.push(`%${opening}%`);
+      sql += ` AND IFNULL(opening_tags,'') LIKE $${params.length}`;
+    }
     if (q) {
       const like = `%${q}%`;
       params.push(like);
@@ -182,10 +278,12 @@ router.get('/puzzles/lichess', async (req, res) => {
       const b = params.length;
       params.push(like);
       const c = params.length;
-      sql += ` AND (fen LIKE $${a} OR IFNULL(themes,'') LIKE $${b} OR CAST(id AS TEXT) LIKE $${c})`;
+      params.push(like);
+      const d = params.length;
+      sql += ` AND (fen LIKE $${a} OR IFNULL(themes,'') LIKE $${b} OR IFNULL(opening_tags,'') LIKE $${c} OR CAST(id AS TEXT) LIKE $${d})`;
     }
     params.push(limit);
-    sql += ` ORDER BY id ASC LIMIT $${params.length}`;
+    sql += ` ORDER BY ${lichessSortClause(sort)} LIMIT $${params.length}`;
     const { rows } = await db.query(sql, params);
     return res.json({
       puzzles: rows.map(mapLichessPuzzle),

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { fetchStockfishMove } from '../../utils/stockfishClient';
-import PuzzlePlayModeToggle from './PuzzlePlayModeToggle';
 
 function findKingSquare(game) {
   if (!game) return null;
@@ -18,13 +17,27 @@ function findKingSquare(game) {
   return null;
 }
 
-function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }) {
+function rebuildFromSans(initialFen, sans) {
+  const nextGame = new Chess(initialFen);
+  for (const san of sans) {
+    if (!nextGame.move(san)) break;
+  }
+  return nextGame;
+}
+
+function ChroniclesPuzzleBoard({
+  initialFen,
+  onMoveHistoryChange,
+  resetKey = 0,
+  layout = 'default',
+}) {
   const [game, setGame] = useState(null);
   const [fen, setFen] = useState('');
   const [moveHistory, setMoveHistory] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [highlightedSquares, setHighlightedSquares] = useState([]);
-  const [boardWidth, setBoardWidth] = useState(480);
+  const [boardWidth, setBoardWidth] = useState(layout === 'moral' ? 420 : 480);
   const [playMode, setPlayMode] = useState('stockfish');
   const [isEngineThinking, setIsEngineThinking] = useState(false);
   const [statusText, setStatusText] = useState('');
@@ -41,6 +54,7 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
   const engineColor = humanColor === 'w' ? 'b' : 'w';
   const boardOrientation = humanColor === 'w' ? 'white' : 'black';
   const isStockfishMode = playMode === 'stockfish';
+  const isMoral = layout === 'moral';
 
   const updateStatus = useCallback((currentGame) => {
     if (!currentGame) {
@@ -56,19 +70,22 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
     } else if (currentGame.inCheck()) {
       setStatusText(`${currentGame.turn() === 'w' ? 'White' : 'Black'} is in check`);
     } else {
-      setStatusText(`${currentGame.turn() === 'w' ? 'White' : 'Black'} to move`);
+      setStatusText(`${currentGame.turn() === 'w' ? "White's" : "Black's"} Turn`);
     }
   }, []);
 
   useEffect(() => {
     const handleResize = () => {
-      const width = Math.min(560, Math.max(320, window.innerWidth - 520));
-      setBoardWidth(width);
+      if (isMoral) {
+        setBoardWidth(Math.min(460, Math.max(280, window.innerWidth - 720)));
+      } else {
+        setBoardWidth(Math.min(560, Math.max(320, window.innerWidth - 520)));
+      }
     };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isMoral]);
 
   useEffect(() => {
     if (!initialFen) return;
@@ -77,6 +94,7 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
       setGame(nextGame);
       setFen(nextGame.fen());
       setMoveHistory([]);
+      setRedoStack([]);
       setSelectedSquare(null);
       setHighlightedSquares([]);
       setPlayMode('stockfish');
@@ -86,6 +104,7 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
       setGame(null);
       setFen('');
       setMoveHistory([]);
+      setRedoStack([]);
       setStatusText('Invalid puzzle position.');
     }
   }, [initialFen, resetKey, updateStatus]);
@@ -104,6 +123,7 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
         setGame(workingGame);
         setFen(workingGame.fen());
         setMoveHistory((prev) => [...prev, result.san]);
+        setRedoStack([]);
         setSelectedSquare(null);
         setHighlightedSquares([]);
         updateStatus(workingGame);
@@ -201,12 +221,68 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
       setGame(nextGame);
       setFen(nextGame.fen());
       setMoveHistory([]);
+      setRedoStack([]);
       setSelectedSquare(null);
       setHighlightedSquares([]);
       setIsEngineThinking(false);
       updateStatus(nextGame);
     } catch {
       setStatusText('Invalid puzzle position.');
+    }
+  };
+
+  const handleUndo = () => {
+    if (!initialFen || !moveHistory.length || isEngineThinking) return;
+    try {
+      let nextHistory = [...moveHistory];
+      const undone = [];
+
+      const undoOne = () => {
+        if (!nextHistory.length) return false;
+        undone.unshift(nextHistory.pop());
+        return true;
+      };
+
+      // Always undo at least one ply
+      if (!undoOne()) return;
+
+      // vs AI: keep undoing until it is the human's turn to move
+      if (isStockfishMode) {
+        let probe = rebuildFromSans(initialFen, nextHistory);
+        while (nextHistory.length > 0 && probe.turn() !== humanColor) {
+          if (!undoOne()) break;
+          probe = rebuildFromSans(initialFen, nextHistory);
+        }
+      }
+
+      const nextGame = rebuildFromSans(initialFen, nextHistory);
+      setGame(nextGame);
+      setFen(nextGame.fen());
+      setMoveHistory(nextHistory);
+      setRedoStack((prev) => [...undone, ...prev]);
+      setSelectedSquare(null);
+      setHighlightedSquares([]);
+      updateStatus(nextGame);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRedo = () => {
+    if (!initialFen || !redoStack.length || isEngineThinking) return;
+    const [nextSan, ...rest] = redoStack;
+    try {
+      const nextHistory = [...moveHistory, nextSan];
+      const nextGame = rebuildFromSans(initialFen, nextHistory);
+      setGame(nextGame);
+      setFen(nextGame.fen());
+      setMoveHistory(nextHistory);
+      setRedoStack(rest);
+      setSelectedSquare(null);
+      setHighlightedSquares([]);
+      updateStatus(nextGame);
+    } catch {
+      // ignore
     }
   };
 
@@ -239,37 +315,139 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
     return styles;
   }, [game, highlightedSquares, selectedSquare]);
 
+  const movePairs = useMemo(() => {
+    const pairs = [];
+    for (let i = 0; i < moveHistory.length; i += 2) {
+      pairs.push({
+        number: Math.floor(i / 2) + 1,
+        white: moveHistory[i] || '',
+        black: moveHistory[i + 1] || '',
+      });
+    }
+    return pairs;
+  }, [moveHistory]);
+
   if (!game || !fen) {
     return <div className="chronicles-puzzle-board-empty">No valid board position.</div>;
   }
 
   const statusMeta = isEngineThinking ? 'Stockfish thinking…' : statusText;
+  const aiLabel = `vs AI (${humanColor === 'w' ? 'Black' : 'White'})`;
+
+  const board = (
+    <Chessboard
+      id={isMoral ? 'MoralPuzzleBoard' : 'ChroniclesPuzzleBoard'}
+      position={fen}
+      boardOrientation={boardOrientation}
+      boardWidth={boardWidth}
+      isDraggablePiece={isDraggablePiece}
+      onSquareClick={onSquareClick}
+      onPieceDrop={onPieceDrop}
+      customSquareStyles={customSquareStyles}
+      customDarkSquareStyle={{ backgroundColor: isMoral ? '#B58863' : '#A98A6E' }}
+      customLightSquareStyle={{ backgroundColor: isMoral ? '#F0D9B5' : '#F2E1CD' }}
+      animationDuration={150}
+      showBoardNotation
+    />
+  );
+
+  if (isMoral) {
+    return (
+      <div className="moral-play-board-stage">
+        <div className="moral-play-board-main">
+          <div className="moral-play-board-toolbar">
+            <span className="moral-play-board-status">{statusMeta}</span>
+            <label className="moral-play-ai-toggle">
+              <span>{aiLabel}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isStockfishMode}
+                className={`moral-play-switch${isStockfishMode ? ' is-on' : ''}`}
+                onClick={() => setPlayMode(isStockfishMode ? 'human' : 'stockfish')}
+              >
+                <span className="moral-play-switch-knob" />
+              </button>
+            </label>
+          </div>
+          <div className="moral-play-board-frame" style={{ width: boardWidth, height: boardWidth }}>
+            {board}
+          </div>
+        </div>
+
+        <aside className="moral-play-side">
+          <header className="moral-play-side-header">Move History</header>
+          <div className="moral-play-history-body">
+            {!movePairs.length ? (
+              <p className="moral-play-history-empty">No moves yet.</p>
+            ) : (
+              movePairs.map((pair) => (
+                <div key={pair.number} className="moral-play-move-line">
+                  <span className="moral-play-move-num">{pair.number}.</span>
+                  <span>{pair.white}</span>
+                  <span>{pair.black}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="moral-play-controls">
+            <p className="moral-play-controls-label">Controls</p>
+            <div className="moral-play-controls-row">
+              <button
+                type="button"
+                className="moral-play-ctrl-btn"
+                disabled={!moveHistory.length || isEngineThinking}
+                onClick={handleUndo}
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                className="moral-play-ctrl-btn"
+                disabled={!redoStack.length || isEngineThinking}
+                onClick={handleRedo}
+              >
+                Redo
+              </button>
+            </div>
+            <button type="button" className="moral-play-reset-btn" onClick={handleResetBoard}>
+              Reset Game
+            </button>
+          </div>
+        </aside>
+      </div>
+    );
+  }
 
   return (
     <div className="chronicles-puzzle-board-wrap">
       <div className="chronicles-puzzle-board-toolbar">
         <span className="chronicles-puzzle-board-status">{statusMeta}</span>
-        <PuzzlePlayModeToggle
-          playMode={playMode}
-          onSelectStockfish={() => setPlayMode('stockfish')}
-          onSelectHuman={() => setPlayMode('human')}
-        />
+        <div className="chronicles-puzzle-mode-toggle" role="group" aria-label="Play mode">
+          <button
+            type="button"
+            className={`chronicles-puzzle-mode-btn${
+              isStockfishMode ? ' chronicles-puzzle-mode-btn--active' : ''
+            }`}
+            aria-pressed={isStockfishMode}
+            onClick={() => setPlayMode('stockfish')}
+          >
+            vs Stockfish
+          </button>
+          <button
+            type="button"
+            className={`chronicles-puzzle-mode-btn${
+              !isStockfishMode ? ' chronicles-puzzle-mode-btn--active' : ''
+            }`}
+            aria-pressed={!isStockfishMode}
+            onClick={() => setPlayMode('human')}
+          >
+            Human vs Human
+          </button>
+        </div>
       </div>
 
-      <Chessboard
-        id="ChroniclesPuzzleBoard"
-        position={fen}
-        boardOrientation={boardOrientation}
-        boardWidth={boardWidth}
-        isDraggablePiece={isDraggablePiece}
-        onSquareClick={onSquareClick}
-        onPieceDrop={onPieceDrop}
-        customSquareStyles={customSquareStyles}
-        customDarkSquareStyle={{ backgroundColor: '#A98A6E' }}
-        customLightSquareStyle={{ backgroundColor: '#F2E1CD' }}
-        animationDuration={150}
-        showBoardNotation
-      />
+      {board}
 
       <div className="chronicles-puzzle-board-footer">
         <span className="chronicles-puzzle-board-mode-label">
@@ -277,9 +455,27 @@ function ChroniclesPuzzleBoard({ initialFen, onMoveHistoryChange, resetKey = 0 }
             ? `You play ${humanColor === 'w' ? 'White' : 'Black'} · Stockfish replies`
             : 'Both sides — pass & play'}
         </span>
-        <button type="button" className="chronicles-puzzle-board-reset" onClick={handleResetBoard}>
-          Reset board
-        </button>
+        <div className="chronicles-puzzle-board-footer-actions">
+          <button
+            type="button"
+            className="chronicles-puzzle-board-reset"
+            disabled={!moveHistory.length || isEngineThinking}
+            onClick={handleUndo}
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            className="chronicles-puzzle-board-reset"
+            disabled={!redoStack.length || isEngineThinking}
+            onClick={handleRedo}
+          >
+            Redo
+          </button>
+          <button type="button" className="chronicles-puzzle-board-reset" onClick={handleResetBoard}>
+            Reset board
+          </button>
+        </div>
       </div>
     </div>
   );

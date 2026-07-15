@@ -3,12 +3,408 @@
   --muted: #6b7280;
   --line: #e8e8e8;
   --accent: #ea580c;
+  --teal: #0d9488;
+  --card-blue: #e8f4f8;
+  --card-green: #e8f6ef;
 
   min-height: calc(100vh - 76px);
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr);
   background: #fff;
   color: var(--ink);
+}
+
+.moral-puzzles-page--play {
+  grid-template-columns: minmax(300px, 0.95fr) minmax(520px, 1.35fr);
+  background: #f3f4f6;
+  gap: 0;
+}
+
+.moral-puzzles-left--play {
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  padding: 1.25rem 1.5rem 2rem;
+  overflow: auto;
+}
+
+.moral-puzzles-right--play {
+  background: #f3f4f6;
+  padding: 1.25rem 1.5rem;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.moral-puzzles-board-wrap--play {
+  width: 100%;
+  max-width: none;
+  align-items: stretch;
+}
+
+.moral-play-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.55rem;
+  line-height: 1.25;
+  color: #1e3a5f;
+  font-weight: 800;
+}
+
+.moral-play-sub {
+  margin: 0 0 1.1rem;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.moral-play-card {
+  background: var(--card-blue);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.moral-play-card--solution {
+  background: var(--card-green);
+}
+
+.moral-play-card-label {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+}
+
+.moral-play-card--solution .moral-play-card-label {
+  color: var(--teal);
+}
+
+.moral-play-card-body {
+  margin: 0;
+  line-height: 1.55;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.moral-play-add-row {
+  margin-bottom: 0.75rem;
+}
+
+.moral-play-chip-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.moral-play-chip-group-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.moral-play-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.moral-play-chip {
+  min-width: 2.4rem;
+  height: 2.15rem;
+  padding: 0 0.55rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f3f4f6;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #374151;
+}
+
+.moral-play-chip--gm {
+  background: #fef9c3;
+  border-color: #fde047;
+}
+
+.moral-play-chip--lichess {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+.moral-play-chip--chesscom {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.moral-play-chip.is-active {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+
+.moral-play-chip-menu {
+  position: fixed;
+  z-index: 120;
+  min-width: 140px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+  padding: 0.25rem;
+}
+
+.moral-play-chip-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  color: #1f2937;
+}
+
+.moral-play-chip-menu-item:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.moral-play-chip-menu-item--danger {
+  color: #b91c1c;
+}
+
+.moral-play-chip-menu-item--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.moral-play-chip-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.moral-play-solution-btn {
+  border: none;
+  background: var(--teal);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moral-play-solution-btn:hover:not(:disabled) {
+  background: #0f766e;
+}
+
+.moral-play-solution-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.moral-play-solution-text {
+  margin: 0.65rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #115e59;
+}
+
+/* Right play board stage */
+.moral-play-board-stage {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 220px);
+  gap: 0.85rem;
+  align-items: start;
+  width: 100%;
+}
+
+.moral-play-board-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.85rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+}
+
+.moral-play-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.moral-play-board-status {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.moral-play-ai-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+}
+
+.moral-play-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background: #d1d5db;
+  padding: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.moral-play-switch.is-on {
+  background: var(--teal);
+}
+
+.moral-play-switch-knob {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.moral-play-switch.is-on .moral-play-switch-knob {
+  transform: translateX(20px);
+}
+
+.moral-play-board-frame {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.moral-play-side {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+}
+
+.moral-play-side-header {
+  padding: 0.7rem 0.85rem;
+  font-weight: 700;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.moral-play-history-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0.65rem 0.85rem;
+  min-height: 180px;
+}
+
+.moral-play-history-empty {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.88rem;
+}
+
+.moral-play-move-line {
+  display: grid;
+  grid-template-columns: 2rem 1fr 1fr;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  padding: 0.2rem 0;
+}
+
+.moral-play-move-num {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.moral-play-controls {
+  border-top: 1px solid #e5e7eb;
+  padding: 0.75rem 0.85rem 0.9rem;
+}
+
+.moral-play-controls-label {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.moral-play-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.moral-play-ctrl-btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.45rem 0.5rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moral-play-ctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.moral-play-reset-btn {
+  width: 100%;
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moral-play-reset-btn:hover {
+  background: #b91c1c;
+}
+
+@media (max-width: 1100px) {
+  .moral-puzzles-page--play {
+    grid-template-columns: 1fr;
+  }
+
+  .moral-play-board-stage {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .moral-play-side {
+    width: min(100%, 420px);
+    min-height: 280px;
+  }
 }
 
 .moral-puzzles-left {
@@ -217,9 +613,16 @@
   gap: 0.75rem;
 }
 
-.moral-puzzles-board-hint {
-  margin: 0;
+.chronicles-puzzle-board-empty {
+  padding: 2rem;
   text-align: center;
+  color: var(--muted);
+}
+
+.chronicles-puzzle-board-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .moral-puzzles-empty-board {
@@ -249,11 +652,47 @@
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
 }
 
+.moral-puzzles-modal-card--wide {
+  width: min(1100px, 96vw);
+  max-height: min(90vh, 760px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.2rem 1rem;
+}
+
+.moral-puzzles-modal-card--chesscom {
+  width: min(980px, 96vw);
+}
+
+.moral-puzzles-modal-body--chesscom {
+  gap: 0.85rem;
+}
+
+.moral-puzzles-modal-body--chesscom .moral-puzzles-modal-split {
+  grid-template-columns: 1fr;
+}
+
+.moral-puzzles-chesscom-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.moral-puzzles-chesscom-title {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
 .moral-puzzles-modal-card header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.85rem;
+  flex-shrink: 0;
 }
 
 .moral-puzzles-modal-card h2 {
@@ -261,10 +700,385 @@
   font-size: 1.15rem;
 }
 
+.moral-puzzles-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.moral-puzzles-modal-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.moral-puzzles-modal-body--lichess .moral-puzzles-modal-split {
+  grid-template-columns: minmax(280px, 0.95fr) minmax(480px, 1.2fr);
+}
+
+.moral-puzzles-modal-left {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.moral-puzzles-lichess-filters {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.moral-puzzles-lichess-filters-row {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 0.85fr)
+    minmax(110px, 0.85fr)
+    minmax(180px, 1.4fr)
+    minmax(120px, 0.9fr)
+    auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.moral-puzzles-lichess-apply {
+  align-self: end;
+  height: 2.15rem;
+  white-space: nowrap;
+}
+
+.moral-puzzles-filter-field--rating {
+  min-width: 0;
+  padding-inline: 0.35rem;
+}
+
+.moral-puzzles-rating-range-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.moral-puzzles-rating-range-head span {
+  font-weight: 600;
+}
+
+.moral-puzzles-rating-range-head strong {
+  color: #c2410c;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.moral-puzzles-rating-slider {
+  position: relative;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-inline: 0.35rem;
+}
+
+.moral-puzzles-rating-slider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.moral-puzzles-rating-slider::after {
+  content: '';
+  position: absolute;
+  left: var(--range-left, 0%);
+  right: calc(100% - var(--range-right, 100%));
+  height: 6px;
+  border-radius: 999px;
+  background: #ea580c;
+  pointer-events: none;
+}
+
+.moral-puzzles-rating-thumb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  pointer-events: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.moral-puzzles-filter-field--rating input[type='range'] {
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  width: 100%;
+  box-shadow: none !important;
+}
+
+.moral-puzzles-rating-thumb::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+  border: none;
+}
+
+.moral-puzzles-rating-thumb::-moz-range-track {
+  height: 6px;
+  background: transparent;
+  border: none;
+}
+
+.moral-puzzles-rating-thumb::-moz-range-progress {
+  background: transparent;
+}
+
+.moral-puzzles-rating-thumb::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #ea580c;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+  cursor: grab;
+  pointer-events: auto;
+  margin-top: -6px;
+  position: relative;
+  z-index: 2;
+}
+
+.moral-puzzles-rating-thumb::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #ea580c;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+  cursor: grab;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.moral-puzzles-rating-thumb:active::-webkit-slider-thumb,
+.moral-puzzles-rating-thumb:active::-moz-range-thumb {
+  cursor: grabbing;
+  transform: scale(1.08);
+}
+
+.moral-puzzles-rating-thumb--min {
+  z-index: 4;
+}
+
+.moral-puzzles-rating-thumb--max {
+  z-index: 3;
+}
+
+.moral-puzzles-rating-thumb:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.moral-puzzles-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.moral-puzzles-filter-field--sort {
+  min-width: 0;
+}
+
+.moral-puzzles-filter-field span {
+  font-weight: 600;
+}
+
+.moral-puzzles-filter-field input:not([type='range']),
+.moral-puzzles-filter-field select {
+  border: 1px solid #e4ddd0;
+  border-radius: 8px;
+  padding: 0.42rem 0.55rem;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: #fff;
+  width: 100%;
+}
+
+.moral-puzzles-filter-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+}
+
+.moral-puzzles-picker-item-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.moral-puzzles-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #c2410c;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.moral-puzzles-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.moral-puzzles-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.moral-puzzles-tag--opening {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.moral-puzzles-tag--more {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.moral-puzzles-lichess-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.15rem 0.1rem 0.15rem 0.35rem;
+  max-height: none;
+  overflow: auto;
+  align-self: stretch;
+}
+
+.moral-puzzles-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.75rem;
+}
+
+.moral-puzzles-detail-grid strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.moral-puzzles-detail-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.moral-puzzles-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.moral-puzzles-game-link {
+  align-self: flex-start;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #c2410c;
+  text-decoration: none;
+}
+
+.moral-puzzles-game-link:hover {
+  text-decoration: underline;
+}
+
+.moral-puzzles-modal-right {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.65rem 0.75rem;
+  background: linear-gradient(160deg, #fafafa 0%, #f3f4f6 100%);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  overflow: auto;
+}
+
+.moral-puzzles-modal-right--lichess {
+  align-items: stretch;
+}
+
+.moral-puzzles-preview-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.moral-puzzles-preview-main--split {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.9rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.moral-puzzles-picker-turn,
+.moral-puzzles-picker-turn-hint {
+  align-self: flex-start;
+  margin: 0;
+}
+
+.moral-puzzles-picker-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
 .moral-puzzles-search-row {
   display: flex;
   gap: 0.5rem;
-  margin: 0.75rem 0;
+  margin: 0.35rem 0 0.75rem;
+  flex-shrink: 0;
 }
 
 .moral-puzzles-search-row input {
@@ -281,17 +1095,109 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.45rem;
 }
 
 .moral-puzzles-picker-list li {
+  display: block;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.moral-puzzles-picker-item {
+  width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.3rem;
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 0.65rem 0.75rem;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.moral-puzzles-picker-item:hover:not(:disabled),
+.moral-puzzles-picker-item.is-hovered:not(:disabled) {
+  border-color: #fdba74;
+  background: #fffbeb;
+}
+
+.moral-puzzles-picker-item.is-selected {
+  border-color: #ea580c;
+  background: #fff7ed;
+  box-shadow: inset 3px 0 0 #ea580c;
+}
+
+.moral-puzzles-picker-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.moral-puzzles-picker-item .moral-puzzles-fen {
+  margin: 0;
+}
+
+.moral-puzzles-picker-turn {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.moral-puzzles-picker-turn.is-white {
+  color: #1f2937;
+}
+
+.moral-puzzles-picker-turn.is-black {
+  color: #111827;
+}
+
+.moral-puzzles-picker-turn-hint {
+  margin: 0;
+}
+
+.moral-puzzles-picker-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.moral-puzzles-picker-board .chess-game-hover-preview-board {
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.moral-puzzles-picker-board-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  opacity: 0.72;
+}
+
+.moral-puzzles-picker-preview-fen {
+  margin: 0;
+  max-width: 100%;
+  padding: 0 0.5rem;
+  text-align: center;
+}
+
+.moral-puzzles-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .moral-puzzles-fen {
@@ -307,6 +1213,7 @@
   flex-direction: column;
   gap: 0.65rem;
   margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
 .moral-puzzles-draft {
@@ -314,6 +1221,37 @@
   background: #fff7ed;
   border-radius: 10px;
   padding: 0.75rem;
+}
+
+@media (max-width: 1200px) {
+  .moral-puzzles-lichess-filters-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  }
+
+  .moral-puzzles-lichess-filters-row .moral-puzzles-filter-field--rating {
+    grid-column: 1 / -2;
+  }
+
+  .moral-puzzles-lichess-apply {
+    grid-row: 2;
+    grid-column: 3;
+  }
+}
+
+@media (max-width: 1100px) {
+  .moral-puzzles-modal-body--lichess .moral-puzzles-modal-split {
+    grid-template-columns: 1fr;
+  }
+
+  .moral-puzzles-preview-main--split {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .moral-puzzles-lichess-details {
+    width: 100%;
+    padding-left: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -324,5 +1262,33 @@
   .moral-puzzles-left {
     border-right: none;
     border-bottom: 1px solid var(--line);
+  }
+
+  .moral-puzzles-modal-split {
+    grid-template-columns: 1fr;
+  }
+
+  .moral-puzzles-lichess-filters-row {
+    grid-template-columns: 1fr;
+  }
+
+  .moral-puzzles-lichess-filters-row .moral-puzzles-filter-field--rating,
+  .moral-puzzles-lichess-apply {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .moral-puzzles-lichess-apply {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .moral-puzzles-modal-card--wide {
+    max-height: min(94vh, 900px);
+    overflow: auto;
+  }
+
+  .moral-puzzles-modal-right {
+    min-height: 320px;
   }
 }

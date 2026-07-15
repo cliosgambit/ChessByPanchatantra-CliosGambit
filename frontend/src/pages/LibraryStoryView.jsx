@@ -115,19 +115,27 @@ function LibraryStoryView() {
   }, [location.state]);
 
   const images = editing ? draft.images : imageUrlsFromStory(story);
-  const morals = useMemo(() => {
-    if (editing) {
-      return moralsCatalog.filter((m) =>
-        draft.moral_ids.map(Number).includes(Number(m.id))
-      );
-    }
-    return Array.isArray(story?.morals) ? story.morals : [];
-  }, [editing, moralsCatalog, draft.moral_ids, story]);
 
-  const selectedSet = useMemo(
-    () => new Set(draft.moral_ids.map(Number).filter(Number.isFinite)),
-    [draft.moral_ids]
-  );
+  const linkedMorals = useMemo(() => {
+    if (!editing) {
+      return Array.isArray(story?.morals) ? story.morals : [];
+    }
+    const idSet = new Set(draft.moral_ids.map(Number).filter(Number.isFinite));
+    const byId = new Map();
+    for (const m of story?.morals || []) {
+      byId.set(Number(m.id), m);
+    }
+    for (const m of moralsCatalog) {
+      if (idSet.has(Number(m.id))) {
+        byId.set(Number(m.id), m);
+      }
+    }
+    return draft.moral_ids
+      .map(Number)
+      .filter(Number.isFinite)
+      .map((id) => byId.get(id))
+      .filter(Boolean);
+  }, [editing, story, draft.moral_ids, moralsCatalog]);
 
   const goPrev = useCallback(() => {
     if (!images.length) return;
@@ -185,15 +193,13 @@ function LibraryStoryView() {
     setIndex(0);
   };
 
-  const toggleMoral = (id) => {
+  const removeMoralFromStory = (id) => {
     const moralId = Number(id);
     if (!Number.isFinite(moralId)) return;
-    setDraft((prev) => {
-      const next = new Set(prev.moral_ids.map(Number).filter(Number.isFinite));
-      if (next.has(moralId)) next.delete(moralId);
-      else next.add(moralId);
-      return { ...prev, moral_ids: [...next] };
-    });
+    setDraft((prev) => ({
+      ...prev,
+      moral_ids: prev.moral_ids.map(Number).filter((mid) => mid !== moralId),
+    }));
   };
 
   const handleAddMoral = async () => {
@@ -452,35 +458,38 @@ function LibraryStoryView() {
             <h2>Morals</h2>
             {editing ? (
               <>
-                <div className="story-view-moral-checks">
-                  {moralsCatalog.length === 0 ? (
-                    <p className="story-view-muted">No morals yet. Add one below.</p>
-                  ) : (
-                    moralsCatalog.map((m) => (
-                      <div key={m.id} className="story-view-moral-row">
-                        <label className="story-view-check">
-                          <input
-                            type="checkbox"
-                            checked={selectedSet.has(Number(m.id))}
-                            onChange={() => toggleMoral(m.id)}
-                          />
-                          <span>
-                            <strong>{m.moral_code || m.id}</strong> — {m.moral_name}
-                          </span>
-                        </label>
-                        <button
-                          type="button"
-                          className="story-view-moral-delete"
-                          aria-label={`Delete ${m.moral_name}`}
-                          disabled={deletingMoralId === Number(m.id) || saving}
-                          onClick={() => handleDeleteMoral(m)}
-                        >
-                          <FiTrash2 aria-hidden />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {linkedMorals.length > 0 ? (
+                  <ul className="story-view-moral-list">
+                    {linkedMorals.map((m) => (
+                      <li key={m.id} className="story-view-moral-row">
+                        <span>
+                          <strong>{m.moral_code || m.id}</strong> — {m.moral_name}
+                        </span>
+                        <div className="story-view-moral-row-actions">
+                          <button
+                            type="button"
+                            className="story-view-moral-unlink"
+                            aria-label={`Remove ${m.moral_name} from story`}
+                            onClick={() => removeMoralFromStory(m.id)}
+                          >
+                            <FiX aria-hidden />
+                          </button>
+                          <button
+                            type="button"
+                            className="story-view-moral-delete"
+                            aria-label={`Delete ${m.moral_name}`}
+                            disabled={deletingMoralId === Number(m.id) || saving}
+                            onClick={() => handleDeleteMoral(m)}
+                          >
+                            <FiTrash2 aria-hidden />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="story-view-muted">No morals yet. Add one below.</p>
+                )}
                 <div className="story-view-add-moral">
                   <input
                     value={newMoral}
@@ -498,9 +507,9 @@ function LibraryStoryView() {
                   </button>
                 </div>
               </>
-            ) : morals.length > 0 ? (
+            ) : linkedMorals.length > 0 ? (
               <ul>
-                {morals.map((m) => (
+                {linkedMorals.map((m) => (
                   <li key={m.id}>
                     <button
                       type="button"

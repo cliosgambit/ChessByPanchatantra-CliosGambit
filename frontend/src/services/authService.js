@@ -73,6 +73,16 @@ export async function loginRequest(email, password, rememberMe = false) {
   return data;
 }
 
+export async function sendPasswordResetOtp(email) {
+  const { data } = await api.post('/auth/send-otp', { email });
+  return data;
+}
+
+export async function resetPasswordWithOtp(email, otp, password) {
+  const { data } = await api.post('/auth/verify-set-password', { email, otp, password });
+  return data;
+}
+
 export async function logoutRequest() {
   try {
     await api.post('/auth/logout');

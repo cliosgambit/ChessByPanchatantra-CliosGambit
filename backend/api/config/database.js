@@ -54,6 +54,9 @@ function translateSqliteToPostgres(sql) {
   s = s.replace(/datetime\s*\(\s*'now'\s*\)/gi, '(now()::text)');
   s = s.replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, 'INSERT INTO');
 
+  // SQLite IFNULL → Postgres COALESCE
+  s = s.replace(/\bIFNULL\s*\(/gi, 'COALESCE(');
+
   // SQLite strftime on ISO text timestamps → Postgres EXTRACT
   s = s.replace(
     /CAST\s*\(\s*strftime\s*\(\s*'%Y'\s*,\s*([^)]+?)\s*\)\s+AS\s+INTEGER\s*\)/gi,

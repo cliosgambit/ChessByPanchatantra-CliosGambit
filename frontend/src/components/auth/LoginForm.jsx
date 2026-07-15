@@ -92,36 +92,34 @@ function LoginForm() {
       )}
 
       <FormControl isInvalid={!!emailError}>
-        <FormLabel color="navy.700" fontSize="sm">
+        <FormLabel className="login-label" fontSize="sm">
           Email
         </FormLabel>
         <Input
+          className="login-input"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           autoComplete="email"
           bg="white"
-          borderColor="gray.200"
-          _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px #c9a227' }}
         />
         <FormErrorMessage>{emailError}</FormErrorMessage>
       </FormControl>
 
       <FormControl isInvalid={!!passwordError}>
-        <FormLabel color="navy.700" fontSize="sm">
+        <FormLabel className="login-label" fontSize="sm">
           Password
         </FormLabel>
         <InputGroup>
           <Input
+            className="login-input"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             autoComplete="current-password"
             bg="white"
-            borderColor="gray.200"
-            _focus={{ borderColor: 'gold.500', boxShadow: '0 0 0 1px #c9a227' }}
           />
           <InputRightElement>
             <IconButton
@@ -129,6 +127,7 @@ function LoginForm() {
               icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
               variant="ghost"
               size="sm"
+              color="gray.600"
               onClick={() => setShowPassword((v) => !v)}
             />
           </InputRightElement>
@@ -137,9 +136,10 @@ function LoginForm() {
       </FormControl>
 
       <Checkbox
+        className="login-checkbox"
         isChecked={rememberMe}
         onChange={(e) => setRememberMe(e.target.checked)}
-        colorScheme="yellow"
+        colorScheme="red"
         size="sm"
       >
         Remember me
@@ -147,13 +147,10 @@ function LoginForm() {
 
       <Button
         as={motion.button}
+        className="login-submit"
         type="submit"
         w="100%"
         size="lg"
-        bg="navy.700"
-        color="white"
-        _hover={{ bg: 'navy.600' }}
-        _active={{ bg: 'navy.800' }}
         isLoading={isLoading}
         loadingText="Signing in"
         spinner={<Spinner size="sm" />}
@@ -164,10 +161,9 @@ function LoginForm() {
       </Button>
 
       <Text fontSize="sm" textAlign="center" color="gray.500">
-        <Link as={RouterLink} to="/login" color="gold.600" fontWeight="600">
+        <Link as={RouterLink} to="/forgot-password" className="login-link">
           Forgot password?
-        </Link>{' '}
-        — contact your administrator to reset your account.
+        </Link>
       </Text>
     </VStack>
   );

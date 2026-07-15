@@ -13,7 +13,7 @@ function PageShell({ title, subtitle, children, actions, layout = 'default' }) {
   const subColor = useColorModeValue('gray.600', 'gray.400');
   const cardBg = useColorModeValue('white', 'navy.800');
   const borderColor = useColorModeValue('gray.200', 'gold.700');
-  const pageBg = useColorModeValue('#f4f1e8', 'navy.900');
+  const pageBg = useColorModeValue('#fdf8f5', 'navy.900');
   const cardShadow = useColorModeValue('md', 'dark-lg');
 
   const header = (

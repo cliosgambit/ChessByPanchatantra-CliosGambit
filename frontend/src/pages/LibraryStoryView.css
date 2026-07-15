@@ -249,15 +249,52 @@
   margin-bottom: 0.75rem;
 }
 
-.story-view-moral-row {
+.story-view-moral-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 0.45rem;
 }
 
-.story-view-moral-row .story-view-check {
-  flex: 1;
-  min-width: 0;
+.story-view-moral-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: #fffaf5;
+  border: 1px solid var(--story-line);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.story-view-moral-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.story-view-moral-unlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid var(--story-line);
+  border-radius: 8px;
+  background: #fff;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+}
+
+.story-view-moral-unlink:hover {
+  color: #374151;
+  border-color: #d1d5db;
+  background: #f9fafb;
 }
 
 .story-view-moral-delete {

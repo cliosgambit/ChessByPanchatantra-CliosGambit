@@ -1,27 +1,10 @@
 const { signToken } = require('../../utils/jwt');
-const { spawn } = require('child_process');
 const otpGenerator = require('otp-generator');
 const bcrypt = require('bcrypt');
 const db = require('../config/database');
+const { sendOtpEmail } = require('../services/emailService');
 
 const SALT_ROUNDS = 10;
-
-const executeSendEmail = (toEmail, otp) => {
-  return new Promise((resolve, reject) => {
-    const pythonProcess = spawn('python', ['./api/services/send_email.py', toEmail, otp], {
-      env: { ...process.env },
-    });
-    pythonProcess.stdout.on('data', (data) => console.log(`Python Script: ${data}`));
-    pythonProcess.stderr.on('data', (data) => {
-      console.error(`Python Script Error: ${data}`);
-      reject(new Error('Failed to send email due to an internal error.'));
-    });
-    pythonProcess.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error('Email sending script failed.'));
-    });
-  });
-};
 
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
@@ -58,7 +41,21 @@ exports.sendOtp = async (req, res) => {
       'UPDATE "Login" SET otp = $1, otp_expires_at = $2 WHERE LOWER(email) = LOWER($3)',
       [otp, otp_expires_at, email]
     );
-    await executeSendEmail(user.email, otp);
+
+    try {
+      await sendOtpEmail(user.email, otp);
+    } catch (mailErr) {
+      console.error('OTP email send failed:', mailErr.message);
+      await db.query(
+        'UPDATE "Login" SET otp = NULL, otp_expires_at = NULL WHERE LOWER(email) = LOWER($1)',
+        [email]
+      );
+      return res.status(503).json({
+        message:
+          'Could not send the reset email. Check GMAIL_USER / GMAIL_APP_PASS (use a Google App Password) and try again.',
+      });
+    }
+
     return res.status(200).json({ message: 'Password reset OTP sent to your registered email.' });
   } catch (err) {
     console.error('Error in sendOtp controller:', err.message);
@@ -87,7 +84,11 @@ exports.verifyAndSetPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
-    if (user.otp !== otp || new Date() > new Date(user.otp_expires_at)) {
+    const submittedOtp = String(otp).trim();
+    if (!user.otp || String(user.otp) !== submittedOtp) {
+      return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
+    }
+    if (!user.otp_expires_at || new Date() > new Date(user.otp_expires_at)) {
       return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
     }
 
@@ -97,10 +98,10 @@ exports.verifyAndSetPassword = async (req, res) => {
       [hashedPassword, email]
     );
 
-    res.status(200).json({ message: 'Password has been set successfully! You can now proceed.' });
+    return res.status(200).json({ message: 'Password has been reset successfully. You can now sign in.' });
   } catch (err) {
     console.error('Error in verifyAndSetPassword controller:', err);
-    res.status(500).json({ message: 'Could not update password due to a server error.' });
+    return res.status(500).json({ message: 'Could not update password due to a server error.' });
   }
 };
 

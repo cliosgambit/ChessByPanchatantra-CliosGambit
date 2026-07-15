@@ -25,7 +25,7 @@ function StickyAdminPageLayout({
   titleSize = 'lg',
   animated = false,
 }) {
-  const pageBg = useColorModeValue('#f4f1e8', 'navy.900');
+  const pageBg = useColorModeValue('#fdf8f5', 'navy.900');
   const headingColor = useColorModeValue('navy.800', 'white');
   const subColor = useColorModeValue('gray.600', 'gray.400');
   const headerBorder = useColorModeValue('blackAlpha.100', 'whiteAlpha.150');
