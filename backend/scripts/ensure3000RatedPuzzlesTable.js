@@ -1,7 +1,9 @@
 const db = require('../api/config/database');
 const { sqlite } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 function ensure3000RatedPuzzlesTable() {
+  if (skipEnsureIfPostgres('3000_rated_puzzles table ready')) return;
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS "3000_rated_puzzles" (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,

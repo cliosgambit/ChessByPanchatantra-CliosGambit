@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const db = require('../api/config/database');
-const { addColumnIfNotExists, tableHasColumn, sqlite } = require('../api/config/database');
+const { addColumnIfNotExists, tableHasColumn, sqlite, isPostgres } = require('../api/config/database');
 
 const SALT_ROUNDS = 10;
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$/;
@@ -12,6 +12,15 @@ async function hashPassword(password) {
 }
 
 async function usersTableExists() {
+  if (isPostgres) {
+    const { rows } = await db.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'users'
+      ) AS "exists"
+    `);
+    return Boolean(rows[0]?.exists);
+  }
   const { rows } = await db.query(`
     SELECT EXISTS (
       SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'
@@ -22,6 +31,7 @@ async function usersTableExists() {
 
 /** Rebuild Login without Chess_com_ID; keep existing rows by email. */
 async function migrateLoginDropChessComId() {
+  if (isPostgres) return;
   if (!tableHasColumn('Login', 'Chess_com_ID')) {
     return;
   }
@@ -81,6 +91,7 @@ async function migrateLoginDropChessComId() {
 }
 
 async function ensureLoginColumns() {
+  if (isPostgres) return;
   await migrateLoginDropChessComId();
   addColumnIfNotExists('Login', 'created_at', "created_at TEXT DEFAULT (datetime('now'))");
   await db.query(`UPDATE "Login" SET created_at = datetime('now') WHERE created_at IS NULL`);
@@ -172,6 +183,14 @@ async function ensureDefaultAdminInLogin() {
 }
 
 async function migrateUsersToLogin() {
+  if (isPostgres) {
+    const { rows: loginCount } = await db.query(`SELECT COUNT(*) AS count FROM "Login"`);
+    const n = Number(loginCount[0]?.count) || 0;
+    if (n === 0) await ensureDefaultAdminInLogin();
+    console.log(`✅ Login table ready (Supabase, ${n} user(s))`);
+    return;
+  }
+
   await ensureLoginColumns();
   const result = await migrateUsersIntoLogin();
 

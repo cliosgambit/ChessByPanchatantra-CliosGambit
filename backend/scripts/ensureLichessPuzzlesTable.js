@@ -1,6 +1,8 @@
 const { sqlite } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 function ensureLichessPuzzlesTable() {
+  if (skipEnsureIfPostgres('lichess_puzzles table ready')) return;
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS lichess_puzzles (
       id                 INTEGER PRIMARY KEY AUTOINCREMENT,

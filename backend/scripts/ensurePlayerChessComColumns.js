@@ -1,6 +1,8 @@
 const { addColumnIfNotExists } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 async function ensurePlayerChessComColumns() {
+  if (skipEnsureIfPostgres('players chess.com columns ready')) return;
   addColumnIfNotExists('players', 'tactics_highest', 'tactics_highest INTEGER');
   addColumnIfNotExists('players', 'puzzle_rush_best', 'puzzle_rush_best INTEGER');
   addColumnIfNotExists('players', 'chess_profile_url', 'chess_profile_url TEXT');

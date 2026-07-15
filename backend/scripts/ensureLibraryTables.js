@@ -1,5 +1,6 @@
 const db = require('../api/config/database');
 const { sqlite } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 const LEGACY_TABLES = [
   'story_mapping',
@@ -15,6 +16,9 @@ const LEGACY_TABLES = [
 ];
 
 async function ensureLibraryTables() {
+  if (skipEnsureIfPostgres('Library tables ready (Stories, Story_Images, Morals, story_moral_mapping)')) {
+    return;
+  }
   sqlite.exec('PRAGMA foreign_keys = OFF;');
   try {
     for (const name of LEGACY_TABLES) {

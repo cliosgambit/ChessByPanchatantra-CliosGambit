@@ -49,9 +49,17 @@ export async function fetchChessComGamesFromDb(username, limit = 25) {
   );
 }
 
-export async function fetchChessComMonthlyGamesFromDb(username, { months = 12, perMonth = 8 } = {}) {
+export async function fetchChessComMonthlyGamesFromDb(
+  username,
+  { months = 12, perMonth = 8, previewPgn = true } = {}
+) {
+  const params = new URLSearchParams({
+    months: String(months),
+    perMonth: String(perMonth),
+    previewPgn: previewPgn ? 'true' : 'false',
+  });
   return apiFetch(
-    `${API_BASE}/${encodeURIComponent(username)}/monthly-games?months=${months}&perMonth=${perMonth}&previewPgn=true`
+    `${API_BASE}/${encodeURIComponent(username)}/monthly-games?${params.toString()}`
   );
 }
 

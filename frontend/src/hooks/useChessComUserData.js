@@ -175,9 +175,11 @@ export function useChessComUserData(username) {
 
     setMonthlyLoading(true);
     try {
+      // Full history: every archive month, every game (PGN loaded on hover)
       const data = await fetchChessComMonthlyGamesFromDb(safeUsername, {
-        months: 3,
-        perMonth: 12,
+        months: 'all',
+        perMonth: 'all',
+        previewPgn: false,
       });
       setMonthlyGames(data.monthlyGames || []);
       monthlyLoadedRef.current = true;

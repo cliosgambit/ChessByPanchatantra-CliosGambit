@@ -1,6 +1,8 @@
 const { sqlite } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 function ensureModulesTables() {
+  if (skipEnsureIfPostgres('modules tables ready (modules, module_stories)')) return;
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS modules (
       id                    INTEGER PRIMARY KEY AUTOINCREMENT,

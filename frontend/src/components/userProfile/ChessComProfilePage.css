@@ -803,6 +803,152 @@
   color: #f0a8a8;
 }
 
+.chess-streak-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--chess-border, #3a3835);
+}
+
+.chess-streak-scope:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.chess-streak-scope-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.chess-streak-scope-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--chess-text, #f2f0ed);
+}
+
+.chess-streak-scope-meta {
+  font-size: 0.78rem;
+  color: var(--chess-muted, #a8a6a3);
+}
+
+.chess-win-streak-grid--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chess-streak-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.chess-streak-block-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chess-muted, #a8a6a3);
+}
+
+.chess-streak-milestones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chess-streak-milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--chess-border, #3a3835);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.72rem;
+  color: var(--chess-muted, #a8a6a3);
+}
+
+.chess-streak-milestone--achieved {
+  border-color: rgba(247, 198, 49, 0.55);
+  background: rgba(247, 198, 49, 0.12);
+  color: #f7c631;
+}
+
+.chess-streak-milestone-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+}
+
+.chess-streak-milestone-times {
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.chess-streak-milestones-empty {
+  font-size: 0.8rem;
+  color: var(--chess-muted, #a8a6a3);
+}
+
+.chess-streak-class-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--chess-border, #3a3835);
+  border-radius: 0.5rem;
+}
+
+.chess-streak-class-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.chess-streak-class-table th,
+.chess-streak-class-table td {
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  border-bottom: 1px solid var(--chess-border, #3a3835);
+  white-space: nowrap;
+}
+
+.chess-streak-class-table th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--chess-muted, #a8a6a3);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.chess-streak-class-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.chess-streak-class-name {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.chess-streak-class-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+}
+
+.chess-streak-class-best .chess-win-streak-fire {
+  width: 1rem;
+  height: 1rem;
+}
+
+.chess-streak-class-achieved {
+  color: #f7c631;
+  font-weight: 600;
+}
+
 .chess-profile-report-stats {
   margin-top: 0.25rem;
 }

@@ -1,5 +1,5 @@
 /**
- * Migrate "3000_rated_puzzles" from Supabase (_version_1 DATABASE_URL)
+ * Migrate "3000_rated_puzzles" from Supabase (backend/.env DATABASE_URL)
  * into local SQLite clio.db.
  *
  * Usage (from backend/):
@@ -9,13 +9,18 @@ const path = require('path');
 const { createRequire } = require('module');
 
 require('dotenv').config({
-  path: path.join(__dirname, '..', '..', '_version_1', 'backend', '.env'),
+  path: path.join(__dirname, '..', '.env'),
 });
 
-const requireFromVersion1 = createRequire(
-  path.join(__dirname, '..', '..', '_version_1', 'backend', 'package.json')
-);
-const { Pool } = requireFromVersion1('pg');
+let Pool;
+try {
+  ({ Pool } = require('pg'));
+} catch {
+  const requireFromVersion1 = createRequire(
+    path.join(__dirname, '..', '..', '_version_1', 'backend', 'package.json')
+  );
+  ({ Pool } = requireFromVersion1('pg'));
+}
 
 const localDb = require('../api/config/database');
 const { ensure3000RatedPuzzlesTable } = require('./ensure3000RatedPuzzlesTable');
@@ -23,7 +28,7 @@ const { ensure3000RatedPuzzlesTable } = require('./ensure3000RatedPuzzlesTable')
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error('DATABASE_URL missing in _version_1/backend/.env');
+    throw new Error('DATABASE_URL missing in backend/.env');
   }
 
   ensure3000RatedPuzzlesTable();

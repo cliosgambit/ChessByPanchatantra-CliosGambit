@@ -1,6 +1,8 @@
 const { sqlite } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 function ensureStudentsTable() {
+  if (skipEnsureIfPostgres('Students table ready')) return;
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS Students (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,

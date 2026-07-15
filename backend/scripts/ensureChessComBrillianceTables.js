@@ -62,6 +62,11 @@ const STAGE_COLUMN_MIGRATIONS = {
 async function ensureChessComBrillianceTables() {
   await db.query('SELECT 1 FROM chess_com_brilliance_runs LIMIT 1');
 
+  if (require('../api/config/database').isPostgres) {
+    console.log('✅ chess_com_brilliance tables ready (Supabase)');
+    return;
+  }
+
   for (const [table, cols] of Object.entries(STAGE_COLUMN_MIGRATIONS)) {
     for (const [name, ddl] of cols) {
       try {

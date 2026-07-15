@@ -30,6 +30,7 @@ import { openChessComGame } from '../utils/chessComGameNavigation';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
 import PlayerWinStreakReport from '../components/userProfile/PlayerWinStreakReport';
 import YesterdayGamesChart from '../components/userProfile/YesterdayGamesChart';
+import YesterdayGamesList from '../components/userProfile/YesterdayGamesList';
 import RatingProgressChart from '../components/userProfile/RatingProgressChart';
 import '../components/userProfile/ChessComProfilePage.css';
 
@@ -388,7 +389,7 @@ function UserProfilePage() {
   }, [stats]);
 
   useEffect(() => {
-    if (activeTab === 'games' || activeTab === 'report') {
+    if (activeTab === 'games') {
       loadMonthlyGames();
     }
   }, [activeTab, loadMonthlyGames]);
@@ -624,7 +625,7 @@ function UserProfilePage() {
             </Box>
           )}
 
-          {(activeTab === 'overview' || activeTab === 'games') && (
+          {activeTab === 'overview' && (
             <div className="chess-profile-panel chess-games-panel">
               <div className="chess-profile-panel-header">
                 Game History <span>{formatNumber(totalGames)}</span>
@@ -639,9 +640,9 @@ function UserProfilePage() {
                 ) : visibleGames.length ? (
                   <>
                     <GameHistoryList games={visibleGames} onSelect={handleGameSelect} profileUsername={chessUsername} />
-                    {recentGames.length > visibleGames.length && (
+                    {totalGames > visibleGames.length && (
                       <button type="button" className="chess-see-more" onClick={() => setActiveTab('games')}>
-                        See more games
+                        See all {formatNumber(totalGames)} games
                       </button>
                     )}
                   </>
@@ -655,18 +656,22 @@ function UserProfilePage() {
           )}
 
           {activeTab === 'games' && (
-            <div className="chess-profile-panel" style={{ marginTop: monthlyGames.length ? '1rem' : 0 }}>
-              <div className="chess-profile-panel-header">Games by Month</div>
+            <div className="chess-profile-panel chess-games-panel">
+              <div className="chess-profile-panel-header">
+                Game History <span>{formatNumber(totalGames)}</span>
+              </div>
               <div className="chess-profile-panel-body">
                 {monthlyLoading ? (
-                  <div className="chess-profile-empty">Loading monthly games…</div>
+                  <div className="chess-profile-empty">Loading all games…</div>
                 ) : monthlyGames.length > 0 ? (
                   monthlyGames.map((month) => (
                     <div key={month.month} className="chess-month-block">
                       <div className="chess-month-title">
                         <h4>{month.label}</h4>
                         <span>
-                          {month.gameCount} game{month.gameCount === 1 ? '' : 's'}
+                          {month.games.length}
+                          {month.gameCount > month.games.length ? ` / ${month.gameCount}` : ''} game
+                          {month.games.length === 1 ? '' : 's'}
                         </span>
                       </div>
                       {month.games.length ? (
@@ -681,7 +686,11 @@ function UserProfilePage() {
                     </div>
                   ))
                 ) : (
-                  <div className="chess-profile-empty">No monthly games loaded yet.</div>
+                  <div className="chess-profile-empty">
+                    {pending || backgroundSync
+                      ? 'Games will appear after sync completes.'
+                      : 'No games found.'}
+                  </div>
                 )}
               </div>
             </div>
@@ -767,7 +776,9 @@ function UserProfilePage() {
               </div>
 
               <div className="chess-profile-panel">
-                <div className="chess-profile-panel-header">Player Report</div>
+                <div className="chess-profile-panel-header">
+                  Streak report — yesterday & all-time
+                </div>
                 <div className="chess-profile-panel-body chess-profile-report-body">
                   <PlayerWinStreakReport username={chessUsername} />
                 </div>
@@ -780,36 +791,9 @@ function UserProfilePage() {
               </div>
 
               <div className="chess-profile-panel">
-                <div className="chess-profile-panel-header">Games by month (last 3 months)</div>
+                <div className="chess-profile-panel-header">Yesterday’s games</div>
                 <div className="chess-profile-panel-body">
-                  {monthlyLoading ? (
-                    <div className="chess-profile-empty">Loading monthly games…</div>
-                  ) : monthlyGames.length > 0 ? (
-                    monthlyGames.map((month) => (
-                      <div key={month.month || month.label} className="chess-month-block">
-                        <div className="chess-month-title">
-                          <h4>{month.label || month.month}</h4>
-                          <span>
-                            {month.gameCount ?? month.games?.length ?? 0} game
-                            {(month.gameCount ?? month.games?.length ?? 0) === 1 ? '' : 's'}
-                          </span>
-                        </div>
-                        {(month.games || []).length ? (
-                          <GameHistoryList
-                            games={month.games}
-                            onSelect={handleGameSelect}
-                            profileUsername={chessUsername}
-                          />
-                        ) : (
-                          <div className="chess-profile-empty">No games this month.</div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="chess-profile-empty">
-                      No monthly games yet. Click Sync Games to pull from Chess.com.
-                    </div>
-                  )}
+                  <YesterdayGamesList username={chessUsername} onSelect={handleGameSelect} />
                 </div>
               </div>
             </div>

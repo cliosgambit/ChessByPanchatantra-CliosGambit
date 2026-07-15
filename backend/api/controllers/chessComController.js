@@ -155,8 +155,17 @@ exports.getGames = async (req, res) => {
 
 exports.getMonthlyGames = async (req, res) => {
   try {
-    const months = Math.min(Number(req.query.months) || 12, 24);
-    const perMonth = Math.min(Number(req.query.perMonth) || 8, 50);
+    // months=0 / all → every archive month; perMonth=0 / all → every game in month
+    const monthsRaw = String(req.query.months ?? '12').toLowerCase();
+    const perMonthRaw = String(req.query.perMonth ?? '8').toLowerCase();
+    const months =
+      monthsRaw === 'all' || monthsRaw === '0'
+        ? 0
+        : Math.min(Math.max(Number(monthsRaw) || 12, 1), 240);
+    const perMonth =
+      perMonthRaw === 'all' || perMonthRaw === '0'
+        ? 0
+        : Math.min(Math.max(Number(perMonthRaw) || 8, 1), 5000);
     const monthlyGames = await syncService.getMonthlyGames(
       req.params.username,
       months,

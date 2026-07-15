@@ -1,4 +1,5 @@
 const { sqlite } = require('../api/config/database');
+const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
 
 function addColumnIfMissing(table, column, ddl) {
   const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all();
@@ -7,6 +8,9 @@ function addColumnIfMissing(table, column, ddl) {
 }
 
 function ensureMoralPuzzleTables() {
+  if (skipEnsureIfPostgres('moral puzzle tables ready (chesscom_random_puzzles, moral_puzzle_assignments, is_used)')) {
+    return;
+  }
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS chesscom_random_puzzles (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,

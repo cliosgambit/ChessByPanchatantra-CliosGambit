@@ -1304,31 +1304,54 @@ async function getMonthlyGames(
   { attachPreviewPgn = false } = {}
 ) {
   const id = chessComId.toLowerCase();
-  const { rows: archiveRows } = await db.query(
-    `SELECT archive_year, archive_month, archive_url, game_count
-     FROM chess_com_archives
-     WHERE chess_com_id = $1
-     ORDER BY archive_year DESC, archive_month DESC
-     LIMIT $2`,
-    [id, maxMonths]
-  );
+  // maxMonths <= 0 → all archive months; perMonth <= 0 → all games in each month
+  const allMonths = !Number.isFinite(Number(maxMonths)) || Number(maxMonths) <= 0;
+  const allPerMonth = !Number.isFinite(Number(perMonth)) || Number(perMonth) <= 0;
+  const monthLimit = allMonths ? null : Math.min(Math.max(Number(maxMonths) || 12, 1), 240);
+
+  const { rows: archiveRows } = monthLimit
+    ? await db.query(
+        `SELECT archive_year, archive_month, archive_url, game_count
+         FROM chess_com_archives
+         WHERE chess_com_id = $1
+         ORDER BY archive_year DESC, archive_month DESC
+         LIMIT $2`,
+        [id, monthLimit]
+      )
+    : await db.query(
+        `SELECT archive_year, archive_month, archive_url, game_count
+         FROM chess_com_archives
+         WHERE chess_com_id = $1
+         ORDER BY archive_year DESC, archive_month DESC`,
+        [id]
+      );
 
   if (!archiveRows.length) return [];
 
-  // SQLite-safe: query each archive month separately (no EXTRACT / window PARTITION).
+  // Query each archive month separately (works on SQLite + Postgres).
   const grouped = new Map();
   for (const archive of archiveRows) {
     const monthKey = `${archive.archive_year}-${String(archive.archive_month).padStart(2, '0')}`;
-    const { rows: gameRows } = await db.query(
-      `SELECT ${GAME_LIST_COLUMNS}
-       FROM chess_com_games
-       WHERE chess_com_id = $1
-         AND CAST(strftime('%Y', played_at) AS INTEGER) = $2
-         AND CAST(strftime('%m', played_at) AS INTEGER) = $3
-       ORDER BY played_at DESC
-       LIMIT $4`,
-      [id, archive.archive_year, archive.archive_month, perMonth]
-    );
+    const { rows: gameRows } = allPerMonth
+      ? await db.query(
+          `SELECT ${GAME_LIST_COLUMNS}
+           FROM chess_com_games
+           WHERE chess_com_id = $1
+             AND CAST(substr(played_at, 1, 4) AS INTEGER) = $2
+             AND CAST(substr(played_at, 6, 2) AS INTEGER) = $3
+           ORDER BY played_at DESC`,
+          [id, archive.archive_year, archive.archive_month]
+        )
+      : await db.query(
+          `SELECT ${GAME_LIST_COLUMNS}
+           FROM chess_com_games
+           WHERE chess_com_id = $1
+             AND CAST(substr(played_at, 1, 4) AS INTEGER) = $2
+             AND CAST(substr(played_at, 6, 2) AS INTEGER) = $3
+           ORDER BY played_at DESC
+           LIMIT $4`,
+          [id, archive.archive_year, archive.archive_month, Number(perMonth)]
+        );
     grouped.set(monthKey, gameRows.map(mapDbGameRow));
   }
 
@@ -1746,7 +1769,7 @@ async function getRatingHistory(chessComId, months = 3) {
      FROM chess_com_games
      WHERE chess_com_id = $1
        AND played_at >= $2
-       AND rated = TRUE
+       AND rated = 1
      ORDER BY played_at ASC NULLS LAST`,
     [id, since.toISOString()]
   );
@@ -1777,27 +1800,100 @@ async function getRatingHistory(chessComId, months = 3) {
   };
 }
 
+const STREAK_MILESTONES = [3, 4, 5, 6, 7, 8, 10, 12, 15, 20];
+const TIME_CLASS_ORDER = ['bullet', 'blitz', 'rapid', 'daily'];
+
 function highestWinStreakFromResults(resultTypes) {
+  return analyzeWinStreaks(resultTypes).highestWinStreak;
+}
+
+function classifyGameBucket(row) {
+  const tc = String(row.time_class || '').toLowerCase();
+  if (tc === 'bullet' || tc === 'blitz' || tc === 'rapid' || tc === 'daily') return tc;
+  return null;
+}
+
+function analyzeWinStreaks(resultTypes) {
+  const types = Array.isArray(resultTypes) ? resultTypes : [];
   let max = 0;
   let current = 0;
+  const timesReached = Object.fromEntries(STREAK_MILESTONES.map((n) => [n, 0]));
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
 
-  for (const resultType of resultTypes) {
+  // Count each completed streak once, at its exact length only.
+  // A 4-win streak → "4 in a row" only (not also "3 in a row").
+  const markStreak = (length) => {
+    if (length <= 0) return;
+    if (Object.prototype.hasOwnProperty.call(timesReached, length)) {
+      timesReached[length] += 1;
+    }
+  };
+
+  for (const resultType of types) {
     if (resultType === 'win') {
+      wins += 1;
       current += 1;
       if (current > max) max = current;
     } else {
+      markStreak(current);
       current = 0;
+      if (resultType === 'loss') losses += 1;
+      else if (resultType === 'draw') draws += 1;
     }
   }
+  markStreak(current);
 
-  return max;
+  return {
+    gameCount: types.length,
+    wins,
+    losses,
+    draws,
+    highestWinStreak: max,
+    currentWinStreak: current,
+    milestones: STREAK_MILESTONES.map((n) => {
+      const times = timesReached[n] || 0;
+      return {
+        length: n,
+        label: `${n} in a row`,
+        achieved: times > 0,
+        times,
+      };
+    }),
+  };
+}
+
+function buildStreakScope(rows, label = null) {
+  const list = Array.isArray(rows) ? rows : [];
+  const overall = analyzeWinStreaks(list.map((row) => row.self_result_type));
+  const byBucket = new Map();
+
+  for (const row of list) {
+    const bucket = classifyGameBucket(row);
+    if (!bucket) continue;
+    if (!byBucket.has(bucket)) byBucket.set(bucket, []);
+    byBucket.get(bucket).push(row.self_result_type);
+  }
+
+  const byTimeClass = TIME_CLASS_ORDER.filter((key) => byBucket.has(key)).map((key) => ({
+    timeClass: key,
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+    ...analyzeWinStreaks(byBucket.get(key)),
+  }));
+
+  return {
+    label,
+    ...overall,
+    byTimeClass,
+  };
 }
 
 async function getPlayerWinStreaks(chessComId, timeZone = DEFAULT_YESTERDAY_TZ) {
   const id = chessComId.toLowerCase();
 
   const { rows: allRows } = await db.query(
-    `SELECT self_result_type
+    `SELECT self_result_type, time_class, opponent_username
      FROM chess_com_games
      WHERE chess_com_id = $1 AND played_at IS NOT NULL
      ORDER BY played_at ASC`,
@@ -1806,7 +1902,7 @@ async function getPlayerWinStreaks(chessComId, timeZone = DEFAULT_YESTERDAY_TZ) 
 
   const { startIso, endIso } = localDayBounds(timeZone, 1);
   const { rows: yesterdayRows } = await db.query(
-    `SELECT self_result_type
+    `SELECT self_result_type, time_class, opponent_username
      FROM chess_com_games
      WHERE chess_com_id = $1
        AND played_at IS NOT NULL
@@ -1817,17 +1913,9 @@ async function getPlayerWinStreaks(chessComId, timeZone = DEFAULT_YESTERDAY_TZ) 
 
   return {
     timeZone,
-    yesterday: {
-      label: formatDayLabelInTz(timeZone, 1),
-      gameCount: yesterdayRows.length,
-      highestWinStreak: highestWinStreakFromResults(
-        yesterdayRows.map((row) => row.self_result_type)
-      ),
-    },
-    allTime: {
-      gameCount: allRows.length,
-      highestWinStreak: highestWinStreakFromResults(allRows.map((row) => row.self_result_type)),
-    },
+    milestones: STREAK_MILESTONES,
+    yesterday: buildStreakScope(yesterdayRows, formatDayLabelInTz(timeZone, 1)),
+    allTime: buildStreakScope(allRows, 'All games'),
   };
 }
 

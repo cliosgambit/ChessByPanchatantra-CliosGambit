@@ -4,6 +4,10 @@ const cors = require('cors');
 const path = require('path');
 const { exec } = require('child_process'); // used only when OPEN_BROWSER=true
 const db = require('./api/config/database');
+const {
+  connectSupabase,
+  getSupabaseStatus,
+} = require('./api/config/supabase');
 const { killProcessOnPort } = require('./api/utils/portKiller');
 
 // --- Import Route Handlers ---
@@ -62,13 +66,32 @@ app.use(express.json({limit: '5mb'}));
 app.use('/story_images', express.static(storyImagesPath));
 app.use(express.static(frontendBuildPath));
 
-// --- Health check (DB + API) ---
+// --- Health check (app DB + Supabase API) ---
 app.get('/api/health', async (req, res) => {
+  const supabase = getSupabaseStatus();
+  const driver = db.isPostgres ? 'supabase-postgres' : 'sqlite';
   try {
     await db.query('SELECT 1');
-    res.json({ ok: true, database: 'connected' });
+    const ok = db.isPostgres ? true : supabase.configured ? supabase.connected : true;
+    res.status(ok ? 200 : 503).json({
+      ok,
+      database: 'connected',
+      driver,
+      supabase: {
+        configured: supabase.configured,
+        connected: supabase.connected || db.isPostgres,
+        url: supabase.url,
+        error: supabase.error,
+      },
+    });
   } catch (err) {
-    res.status(503).json({ ok: false, database: 'disconnected', error: err.message });
+    res.status(503).json({
+      ok: false,
+      database: 'disconnected',
+      driver,
+      supabase,
+      error: err.message,
+    });
   }
 });
 
@@ -103,9 +126,32 @@ app.get('*', (req, res) => {
 // --- Server Startup Logic ---
 const startServerAndServices = async () => {
   try {
-    console.log('Attempting to connect to local SQLite database...');
-    await db.query('SELECT datetime(\'now\')');
-    console.log(`✅ Database connection successful (${require('./api/config/database').dbPath}).`);
+    if (db.isPostgres) {
+      console.log('Attempting to connect to Supabase Postgres (DATABASE_URL)...');
+      await db.query("SELECT (now()::text) AS now");
+      console.log(`✅ App database: Supabase Postgres (${db.dbPath}).`);
+      const supabaseStatus = await connectSupabase();
+      if (supabaseStatus.connected) {
+        console.log(`✅ Supabase API client ready (${supabaseStatus.url}).`);
+      } else {
+        console.warn(`⚠️ Supabase API client: ${supabaseStatus.error || 'not connected'}`);
+      }
+    } else {
+      console.log('Attempting to connect to local SQLite database...');
+      await db.query("SELECT datetime('now')");
+      console.log(`✅ Database connection successful (${db.dbPath}).`);
+      console.log('Attempting to connect to Supabase...');
+      const supabaseStatus = await connectSupabase();
+      if (!supabaseStatus.configured) {
+        console.warn(`⚠️ Supabase not configured: ${supabaseStatus.error}`);
+      } else if (!supabaseStatus.connected) {
+        console.error(`❌ Supabase connection failed: ${supabaseStatus.error}`);
+        throw new Error(`Supabase connection failed: ${supabaseStatus.error}`);
+      } else {
+        console.log(`✅ Supabase connected (${supabaseStatus.url}).`);
+      }
+    }
+
     await migrateUsersToLogin();
     await ensureLibraryTables();
     ensure3000RatedPuzzlesTable();
