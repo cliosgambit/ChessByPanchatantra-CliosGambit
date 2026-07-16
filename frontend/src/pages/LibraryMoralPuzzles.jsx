@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus, FiRefreshCw, FiShuffle, FiTrash2, FiX } from 'react-icons/fi';
-import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import FenHoverPreview from '../components/userProfile/FenHoverPreview';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,6 +16,7 @@ import {
 } from '../services/chessComDbService';
 import { resolveLichessPuzzlePosition } from '../utils/lichessPuzzleFen';
 import { Chess } from 'chess.js';
+import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import './LibraryMoralPuzzles.css';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -425,8 +425,9 @@ function LibraryMoralPuzzles() {
   }
 
   return (
-    <div className="moral-puzzles-page moral-puzzles-page--play">
-      <div className="moral-puzzles-left moral-puzzles-left--play">
+    <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
+      <div className="moral-puzzles-zone moral-puzzles-zone--story">
+        <div className="moral-puzzles-left-inner">
         <button
           type="button"
           className="moral-puzzles-back"
@@ -447,11 +448,13 @@ function LibraryMoralPuzzles() {
           </section>
         ) : null}
 
-        <section className="moral-play-card">
-          <p className="moral-play-card-label">Story Message</p>
+        <section className="moral-play-card moral-play-card--moral">
+          <p className="moral-play-card-label">Moral</p>
           <p className="moral-play-card-body">
             {moral.moral_name}
-            {moral.moral_code ? ` (${moral.moral_code})` : ''}
+            {moral.moral_code ? (
+              <span className="moral-play-moral-code">{moral.moral_code}</span>
+            ) : null}
           </p>
         </section>
 
@@ -554,6 +557,15 @@ function LibraryMoralPuzzles() {
             <p className="moral-puzzles-muted">No solution moves stored for this puzzle.</p>
           ) : null}
         </section>
+        </div>
+      </div>
+
+      <div className="moral-puzzles-zone moral-puzzles-zone--board" aria-label="Board area">
+        <ChroniclesPuzzleBoard
+          initialFen={boardFen}
+          resetKey={boardKey}
+          layout="moral-zone"
+        />
       </div>
 
       {canManage && chipMenu ? (
@@ -575,22 +587,6 @@ function LibraryMoralPuzzles() {
           </button>
         </div>
       ) : null}
-
-      <div className="moral-puzzles-right moral-puzzles-right--play">
-        <div className="moral-puzzles-board-wrap moral-puzzles-board-wrap--play">
-          <ChroniclesPuzzleBoard
-            layout="moral"
-            initialFen={boardFen}
-            resetKey={`${boardKey}-${hasPuzzle ? 'puzzle' : 'start'}`}
-            onMoveHistoryChange={() => {}}
-          />
-          {!hasPuzzle ? (
-            <p className="moral-puzzles-muted moral-puzzles-board-hint">
-              Starting position — assign a puzzle to load it here.
-            </p>
-          ) : null}
-        </div>
-      </div>
 
       {canManage && picker ? (
         <div className="moral-puzzles-modal" role="dialog" aria-modal="true">

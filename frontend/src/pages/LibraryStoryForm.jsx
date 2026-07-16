@@ -75,6 +75,21 @@ function LibraryStoryForm() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const handleWindowPaste = async (e) => {
+      const files = filesFromClipboard(e.clipboardData);
+      if (!files.length) return;
+      e.preventDefault();
+      await uploadGalleryFiles(files);
+    };
+
+    window.addEventListener('paste', handleWindowPaste);
+
+    return () => {
+      window.removeEventListener('paste', handleWindowPaste);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     (async () => {
@@ -318,7 +333,7 @@ function LibraryStoryForm() {
             onPaste={handleGalleryPaste}
           >
             <FiClipboard aria-hidden />
-            <span>Click here, then paste (Ctrl+V / Cmd+V) one or more images</span>
+            <span>Paste (Ctrl+V / Cmd+V) images anywhere on this page, or click here</span>
           </div>
           {form.images.length > 0 ? (
             <div className="library-gallery">

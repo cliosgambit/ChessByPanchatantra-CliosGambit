@@ -1,78 +1,584 @@
 .moral-puzzles-page {
-  --ink: #141414;
-  --muted: #6b7280;
-  --line: #e8e8e8;
+  --ink: #1f2937;
+  --muted: #8a7a70;
+  --line: rgba(59, 47, 42, 0.1);
   --accent: #ea580c;
+  --accent-soft: rgba(234, 88, 12, 0.1);
   --teal: #0d9488;
-  --card-blue: #e8f4f8;
-  --card-green: #e8f6ef;
+  --bg: #fffdfb;
+  --panel: #fdf8f5;
+  --zone-bg: #f3f4f6;
+  --card-blue: #f8fafc;
+  --card-green: #ecfdf5;
 
-  min-height: calc(100vh - 76px);
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr);
-  background: #fff;
+  background: var(--bg);
   color: var(--ink);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .moral-puzzles-page--play {
-  grid-template-columns: minmax(300px, 0.95fr) minmax(520px, 1.35fr);
-  background: #f3f4f6;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  background: transparent;
   gap: 0;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  height: auto;
+  width: 100%;
+}
+
+.moral-puzzles-page--triple {
+  gap: 0;
+  min-height: 100vh;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  align-items: flex-start;
+}
+
+.moral-puzzles-page--play.moral-puzzles-page--triple {
+  height: auto;
+  min-height: 100vh;
+}
+
+.moral-puzzles-zone {
+  margin: 0;
+  padding: 0;
+  border: none;
+  box-sizing: border-box;
+}
+
+.moral-puzzles-zone--story {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 36rem;
+  min-height: 100vh;
+  height: auto;
+  background: var(--zone-bg);
+  padding: 1.5rem 1.25rem 2.5rem 1.5rem;
+  overflow: visible;
+}
+
+.moral-puzzles-zone--board {
+  --moral-board-fill: 90%;
+  container-type: size;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  background: var(--zone-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.moral-zone-board-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.moral-zone-board-stack {
+  --moral-zone-toolbar-h: 2.5rem;
+  --moral-zone-side-strip: 200px;
+  --moral-board-inset: 0.65rem;
+  --moral-board-size: min(
+    calc(90cqh - var(--moral-zone-toolbar-h)),
+    calc(90cqw - var(--moral-zone-side-strip) - var(--moral-board-inset) * 2)
+  );
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--moral-board-size) + var(--moral-board-inset) * 2 + var(--moral-zone-side-strip));
+  max-width: 90cqw;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.moral-zone-board-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.moral-zone-board-main {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 calc(var(--moral-board-size) + var(--moral-board-inset) * 2);
+  width: calc(var(--moral-board-size) + var(--moral-board-inset) * 2);
+  border: 3px solid #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.moral-zone-board-side-strip {
+  flex: 0 0 var(--moral-zone-side-strip);
+  width: var(--moral-zone-side-strip);
+  min-width: var(--moral-zone-side-strip);
+  background: transparent;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 0 0 0.35rem;
+}
+
+.moral-zone-side-history-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.moral-zone-side-history-header {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.35rem 0.55rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.moral-zone-side-history-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.45rem 0.55rem;
+}
+
+.moral-zone-side-history-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.moral-zone-side-move-line {
+  display: grid;
+  grid-template-columns: 1.35rem 1fr 1fr;
+  gap: 0.2rem;
+  font-size: 0.76rem;
+  padding: 0.12rem 0;
+}
+
+.moral-zone-side-move-num {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+.moral-zone-side-history-controls {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 0.45rem 0.5rem 0.5rem;
+  border-top: 1px solid #fff;
+  background: #fff;
+}
+
+.moral-zone-side-history-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.moral-zone-side-history-ctrl-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.35rem 0.4rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.moral-zone-side-history-ctrl-btn:hover:not(:disabled) {
+  border-color: #fdba74;
+  color: var(--accent);
+}
+
+.moral-zone-side-history-ctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.moral-zone-side-history-reset-btn {
+  width: 100%;
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.42rem 0.5rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.moral-zone-side-history-reset-btn:hover {
+  background: #b91c1c;
+}
+
+.moral-zone-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-height: var(--moral-zone-toolbar-h);
+  padding: 0.55rem 0.85rem;
+  background: #fff;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border-bottom: 1px solid #fff;
+}
+
+.moral-zone-board-turn {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.moral-zone-board-frame {
+  border-radius: 0;
+  overflow: hidden;
+  margin: 0 var(--moral-board-inset) var(--moral-board-inset);
+  padding: 0;
+  line-height: 0;
+  font-size: 0;
+  display: block;
+  flex: 0 0 var(--moral-board-size);
+  width: calc(100% - var(--moral-board-inset) * 2);
+  height: var(--moral-board-size);
+  min-width: 0;
+  border: none;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.moral-zone-board-square {
+  position: relative;
+}
+
+.moral-zone-board-square > div[style*='z-index: 3'] {
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1.15 !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.moral-zone-board-square--rank-axis:not(.moral-zone-board-square--corner) > div[style*='z-index: 3'] {
+  top: 4px !important;
+  left: 5px !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.moral-zone-board-square--file-axis:not(.moral-zone-board-square--corner) > div[style*='z-index: 3'] {
+  right: 5px !important;
+  bottom: 4px !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+.moral-zone-board-square--corner > div[style*='z-index: 3']:nth-last-child(2) {
+  top: 4px !important;
+  left: 5px !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.moral-zone-board-square--corner > div[style*='z-index: 3']:nth-last-child(1) {
+  right: 5px !important;
+  bottom: 4px !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+.moral-zone-board-frame > div {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  line-height: 0;
+  display: block;
+}
+
+.moral-zone-board-frame #MoralPuzzleBoard,
+.moral-zone-board-frame #MoralPuzzleBoard > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.moral-puzzles-zone--history {
+  flex: 1 1 0;
+  min-width: var(--history-min);
+  width: auto;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  background: #d1fae5;
+  display: flex;
+  flex-direction: column;
+}
+
+.moral-zone-history-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.moral-zone-history-header {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 1rem 1.1rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #065f46;
+  border-bottom: 1px solid rgba(6, 95, 70, 0.12);
+}
+
+.moral-zone-history-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem 1rem;
+}
+
+.moral-zone-history-empty {
+  margin: 0;
+  color: #047857;
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.moral-zone-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.moral-zone-history-table th,
+.moral-zone-history-table td {
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+}
+
+.moral-zone-history-table th {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #047857;
+  border-bottom: 1px solid rgba(6, 95, 70, 0.15);
+}
+
+.moral-zone-history-table td:first-child {
+  color: #047857;
+  font-weight: 700;
+  width: 2rem;
+}
+
+.moral-zone-history-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.moral-zone-history-controls {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 0.85rem 1rem 1.1rem;
+  border-top: 1px solid rgba(6, 95, 70, 0.15);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.moral-zone-history-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.moral-zone-history-ctrl-btn {
+  border: 1px solid rgba(6, 95, 70, 0.22);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #065f46;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.moral-zone-history-ctrl-btn:hover:not(:disabled) {
+  border-color: #059669;
+  background: #ecfdf5;
+}
+
+.moral-zone-history-ctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.moral-zone-history-reset-btn {
+  width: 100%;
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.moral-zone-history-reset-btn:hover {
+  background: #b91c1c;
 }
 
 .moral-puzzles-left--play {
-  background: #f8fafc;
-  border-right: 1px solid #e5e7eb;
-  padding: 1.25rem 1.5rem 2rem;
-  overflow: auto;
+  flex: 0 0 auto;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  padding: 1.5rem 1.25rem 2.5rem 1.5rem;
+  overflow: visible;
+  height: auto;
+  min-width: 0;
+  width: auto;
+  max-width: 36rem;
+}
+
+.moral-puzzles-left-inner {
+  max-width: none;
+  margin: 0;
+  width: auto;
 }
 
 .moral-puzzles-right--play {
-  background: #f3f4f6;
-  padding: 1.25rem 1.5rem;
-  align-items: stretch;
-  justify-content: stretch;
+  flex: 1 1 0;
+  background: var(--panel);
+  padding: 0 0 0 4px;
+  margin: 0;
+  width: auto;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  display: flex;
+  height: auto;
+  overflow: visible;
 }
 
 .moral-puzzles-board-wrap--play {
   width: 100%;
-  max-width: none;
-  align-items: stretch;
+  min-width: 0;
+  max-width: 100%;
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-self: stretch;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.moral-puzzles-board-hint {
+  text-align: center;
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
 }
 
 .moral-play-title {
   margin: 0 0 0.35rem;
-  font-size: 1.55rem;
-  line-height: 1.25;
-  color: #1e3a5f;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
   font-weight: 800;
 }
 
 .moral-play-sub {
-  margin: 0 0 1.1rem;
-  color: var(--muted);
-  line-height: 1.5;
-  font-size: 0.95rem;
+  margin: 0 0 1.35rem;
+  color: #4b5563;
+  line-height: 1.55;
+  font-size: 1rem;
 }
 
 .moral-play-card {
-  background: var(--card-blue);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 0.85rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.9rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.moral-play-card--moral {
+  border-color: rgba(234, 88, 12, 0.18);
+  background: linear-gradient(135deg, #fffaf5 0%, #fff 100%);
 }
 
 .moral-play-card--solution {
-  background: var(--card-green);
+  background: linear-gradient(135deg, #f0fdfa 0%, #fff 100%);
+  border-color: rgba(13, 148, 136, 0.18);
 }
 
 .moral-play-card-label {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.45rem;
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #1d4ed8;
+  color: var(--muted);
+}
+
+.moral-play-card--moral .moral-play-card-label {
+  color: var(--accent);
 }
 
 .moral-play-card--solution .moral-play-card-label {
@@ -81,69 +587,91 @@
 
 .moral-play-card-body {
   margin: 0;
-  line-height: 1.55;
-  color: #1f2937;
-  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.moral-play-moral-code {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.45rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
 }
 
 .moral-play-add-row {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.85rem;
 }
 
 .moral-play-chip-groups {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.85rem;
 }
 
 .moral-play-chip-group-label {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
 .moral-play-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.45rem;
   align-items: center;
 }
 
 .moral-play-chip {
-  min-width: 2.4rem;
-  height: 2.15rem;
-  padding: 0 0.55rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #f3f4f6;
+  min-width: 2.5rem;
+  height: 2.25rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   color: #374151;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.moral-play-chip:hover:not(.is-active) {
+  transform: translateY(-1px);
 }
 
 .moral-play-chip--gm {
-  background: #fef9c3;
-  border-color: #fde047;
+  background: #fffbeb;
+  border-color: #fde68a;
 }
 
 .moral-play-chip--lichess {
-  background: #e0e7ff;
-  border-color: #a5b4fc;
+  background: #eef2ff;
+  border-color: #c7d2fe;
 }
 
 .moral-play-chip--chesscom {
-  background: #d1fae5;
-  border-color: #6ee7b7;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
 }
 
 .moral-play-chip.is-active {
   background: var(--teal);
   border-color: var(--teal);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
 }
 
 .moral-play-chip-menu {
@@ -151,10 +679,10 @@
   z-index: 120;
   min-width: 140px;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
-  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  padding: 0.3rem;
 }
 
 .moral-play-chip-menu-item {
@@ -164,7 +692,7 @@
   gap: 0.4rem;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.5rem 0.65rem;
   font: inherit;
   font-size: 0.85rem;
@@ -175,7 +703,7 @@
 }
 
 .moral-play-chip-menu-item:hover:not(:disabled) {
-  background: #f3f4f6;
+  background: #f9fafb;
 }
 
 .moral-play-chip-menu-item--danger {
@@ -195,11 +723,12 @@
   border: none;
   background: var(--teal);
   color: #fff;
-  border-radius: 8px;
-  padding: 0.55rem 1rem;
+  border-radius: 10px;
+  padding: 0.55rem 1.1rem;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .moral-play-solution-btn:hover:not(:disabled) {
@@ -212,30 +741,57 @@
 }
 
 .moral-play-solution-text {
-  margin: 0.65rem 0 0;
+  margin: 0.75rem 0 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: #115e59;
+  line-height: 1.5;
 }
 
 /* Right play board stage */
 .moral-play-board-stage {
-  display: grid;
-  grid-template-columns: auto minmax(180px, 220px);
-  gap: 0.85rem;
-  align-items: start;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: flex-start;
   width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  align-self: stretch;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.moral-play-board-stage--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.moral-play-board-stage--stacked .moral-play-side {
+  width: 100%;
+  max-width: 100%;
+  flex: none;
+  min-height: 220px;
 }
 
 .moral-play-board-main {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  background: #fff;
-  border-radius: 12px;
-  padding: 0.85rem;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+  gap: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  box-shadow: none;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  align-self: flex-start;
 }
 
 .moral-play-board-toolbar {
@@ -243,12 +799,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.5rem 0.4rem 0;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .moral-play-board-status {
   font-size: 0.92rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--ink);
 }
 
 .moral-play-ai-toggle {
@@ -257,7 +820,7 @@
   gap: 0.5rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #374151;
+  color: #4b5563;
   cursor: pointer;
 }
 
@@ -292,82 +855,115 @@
 }
 
 .moral-play-board-frame {
-  border-radius: 4px;
-  overflow: hidden;
+  border-radius: 0;
+  overflow: visible;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+  display: block;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.moral-puzzles-board-wrap--play #MoralPuzzleBoard,
+.moral-puzzles-board-wrap--play #MoralPuzzleBoard > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
 }
 
 .moral-play-side {
   background: #fff;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border-radius: 0;
+  border: 1px solid var(--line);
+  border-top: none;
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  height: auto;
+  min-height: 0;
   overflow: hidden;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
+  flex: 0 0 132px;
+  width: 132px;
+  min-width: 132px;
+  max-width: 132px;
+  align-self: stretch;
 }
 
 .moral-play-side-header {
-  padding: 0.7rem 0.85rem;
+  padding: 0.55rem 0.65rem;
   font-weight: 700;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fafafa;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
 }
 
 .moral-play-history-body {
   flex: 1;
   overflow: auto;
-  padding: 0.65rem 0.85rem;
-  min-height: 180px;
+  padding: 0.45rem 0.55rem;
+  min-height: 120px;
 }
 
 .moral-play-history-empty {
   margin: 0;
   color: var(--muted);
   font-style: italic;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
 }
 
 .moral-play-move-line {
   display: grid;
-  grid-template-columns: 2rem 1fr 1fr;
-  gap: 0.35rem;
-  font-size: 0.88rem;
-  padding: 0.2rem 0;
+  grid-template-columns: 1.35rem 1fr 1fr;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  padding: 0.15rem 0;
 }
 
 .moral-play-move-num {
   color: var(--muted);
   font-weight: 600;
+  font-size: 0.72rem;
 }
 
 .moral-play-controls {
-  border-top: 1px solid #e5e7eb;
-  padding: 0.75rem 0.85rem 0.9rem;
+  border-top: 1px solid var(--line);
+  padding: 0.55rem 0.6rem 0.65rem;
 }
 
 .moral-play-controls-label {
-  margin: 0 0 0.45rem;
-  font-size: 0.78rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
 .moral-play-controls-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-bottom: 0.45rem;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .moral-play-ctrl-btn {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--line);
   background: #fff;
   border-radius: 8px;
-  padding: 0.45rem 0.5rem;
+  padding: 0.35rem 0.4rem;
   font: inherit;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.moral-play-ctrl-btn:hover:not(:disabled) {
+  border-color: #fdba74;
+  color: var(--accent);
 }
 
 .moral-play-ctrl-btn:disabled {
@@ -381,10 +977,12 @@
   background: #dc2626;
   color: #fff;
   border-radius: 8px;
-  padding: 0.55rem 0.75rem;
+  padding: 0.45rem 0.55rem;
   font: inherit;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .moral-play-reset-btn:hover {
@@ -392,18 +990,70 @@
 }
 
 @media (max-width: 1100px) {
-  .moral-puzzles-page--play {
-    grid-template-columns: 1fr;
+  .moral-puzzles-page--play,
+  .moral-puzzles-page--triple {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .moral-puzzles-zone--board {
+    position: static;
+    overflow: hidden;
+  }
+
+  .moral-puzzles-zone--story {
+    width: 100%;
+    max-width: none;
+    flex: none;
+    min-height: auto;
+  }
+
+  .moral-puzzles-zone--board {
+    flex: none;
+    width: 100%;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: 1 / 1;
+  }
+
+  .moral-puzzles-left--play {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    width: 100%;
+    max-width: none;
+    flex: none;
+  }
+
+  .moral-puzzles-left-inner {
+    width: 100%;
+    max-width: 42rem;
+    margin: 0 auto;
+  }
+
+  .moral-puzzles-right--play {
+    width: 100%;
+    height: auto;
+    padding: 0 0 1.25rem;
+    overflow: visible;
   }
 
   .moral-play-board-stage {
-    grid-template-columns: 1fr;
-    justify-items: center;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .moral-play-side {
-    width: min(100%, 420px);
-    min-height: 280px;
+    width: 100%;
+    max-width: 100%;
+    flex: none;
+    min-height: 220px;
   }
 }
 
@@ -418,21 +1068,22 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: linear-gradient(160deg, #fafafa 0%, #f3f4f6 100%);
+  background: linear-gradient(160deg, var(--bg) 0%, var(--panel) 100%);
 }
 
 .moral-puzzles-back {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   border: none;
   background: transparent;
   color: var(--muted);
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  padding: 0;
+  padding: 0.35rem 0;
   margin-bottom: 1.25rem;
+  transition: color 0.15s ease;
 }
 
 .moral-puzzles-back:hover {
@@ -480,7 +1131,7 @@
   width: 72px;
   height: 72px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--line);
 }
 
@@ -504,19 +1155,21 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid #e4ddd0;
+  border: 1px solid var(--line);
   background: #fff;
   border-radius: 999px;
-  padding: 0.45rem 0.85rem;
+  padding: 0.45rem 0.9rem;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
 .moral-puzzles-btn:hover:not(:disabled) {
   border-color: #fdba74;
-  color: #c2410c;
+  color: var(--accent);
+  background: #fffaf5;
 }
 
 .moral-puzzles-btn:disabled {
@@ -525,8 +1178,8 @@
 }
 
 .moral-puzzles-btn--primary {
-  background: #ea580c;
-  border-color: #ea580c;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -544,6 +1197,11 @@
 .moral-puzzles-error {
   color: #b91c1c;
   margin: 0.75rem 0;
+  padding: 0.65rem 0.85rem;
+  background: #fef2f2;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  font-size: 0.9rem;
 }
 
 .moral-puzzles-list {
@@ -599,10 +1257,13 @@
   padding: 0.4rem;
   display: grid;
   place-items: center;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .moral-puzzles-icon-btn:hover {
   color: #b91c1c;
+  background: #fef2f2;
 }
 
 .moral-puzzles-board-wrap {
@@ -800,7 +1461,7 @@
   right: calc(100% - var(--range-right, 100%));
   height: 6px;
   border-radius: 999px;
-  background: #ea580c;
+  background: var(--accent);
   pointer-events: none;
 }
 
@@ -851,7 +1512,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid #ea580c;
+  border: 2px solid var(--accent);
   background: #fff;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
   cursor: grab;
@@ -865,7 +1526,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid #ea580c;
+  border: 2px solid var(--accent);
   background: #fff;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
   cursor: grab;
@@ -912,8 +1573,8 @@
 
 .moral-puzzles-filter-field input:not([type='range']),
 .moral-puzzles-filter-field select {
-  border: 1px solid #e4ddd0;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 0.42rem 0.55rem;
   font: inherit;
   font-size: 0.82rem;
@@ -1034,7 +1695,7 @@
   gap: 0.55rem;
   min-width: 0;
   padding: 0.65rem 0.75rem;
-  background: linear-gradient(160deg, #fafafa 0%, #f3f4f6 100%);
+  background: linear-gradient(160deg, var(--bg) 0%, var(--panel) 100%);
   border-radius: 12px;
   border: 1px solid var(--line);
   overflow: auto;
@@ -1083,7 +1744,7 @@
 
 .moral-puzzles-search-row input {
   flex: 1;
-  border: 1px solid #e4ddd0;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.5rem 0.85rem;
   font: inherit;
@@ -1119,6 +1780,7 @@
   cursor: pointer;
   font: inherit;
   color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .moral-puzzles-picker-item:hover:not(:disabled),
@@ -1128,9 +1790,9 @@
 }
 
 .moral-puzzles-picker-item.is-selected {
-  border-color: #ea580c;
+  border-color: var(--accent);
   background: #fff7ed;
-  box-shadow: inset 3px 0 0 #ea580c;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .moral-puzzles-picker-item:disabled {

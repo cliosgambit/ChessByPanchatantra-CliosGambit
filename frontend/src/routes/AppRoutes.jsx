@@ -44,7 +44,7 @@ function LibraryEditRedirect() {
 
 function AppRoutesContent() {
   return (
-    <Box>
+    <Box p={0} m={0} w="100%" h="100%">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -3,6 +3,8 @@
   align-items: stretch;
   background: #fdf8f5;
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .admin-shell__sidebar {
@@ -24,6 +26,12 @@
 .admin-shell__main {
   background: #fdf8f5;
   min-width: 0;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (max-width: 1023px) {
