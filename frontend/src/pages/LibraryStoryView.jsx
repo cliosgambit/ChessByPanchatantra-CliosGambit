@@ -459,34 +459,34 @@ function LibraryStoryView() {
             {editing ? (
               <>
                 {linkedMorals.length > 0 ? (
-                  <ul className="story-view-moral-list">
-                    {linkedMorals.map((m) => (
-                      <li key={m.id} className="story-view-moral-row">
-                        <span>
-                          <strong>{m.moral_code || m.id}</strong> — {m.moral_name}
-                        </span>
-                        <div className="story-view-moral-row-actions">
-                          <button
-                            type="button"
-                            className="story-view-moral-unlink"
-                            aria-label={`Remove ${m.moral_name} from story`}
-                            onClick={() => removeMoralFromStory(m.id)}
-                          >
-                            <FiX aria-hidden />
-                          </button>
-                          <button
-                            type="button"
-                            className="story-view-moral-delete"
-                            aria-label={`Delete ${m.moral_name}`}
-                            disabled={deletingMoralId === Number(m.id) || saving}
-                            onClick={() => handleDeleteMoral(m)}
-                          >
-                            <FiTrash2 aria-hidden />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <table className="story-view-moral-table">
+                    <thead>
+                      <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linkedMorals.map((m) => (
+                        <tr key={m.id} className="story-view-moral-row">
+                          <td className="story-view-moral-row-id">{m.moral_code || m.id}</td>
+                          <td className="story-view-moral-row-name">{m.moral_name}</td>
+                          <td className="story-view-moral-row-actions">
+                            <button
+                              type="button"
+                              className="story-view-moral-delete"
+                              aria-label={`Remove ${m.moral_name} from story`}
+                              disabled={deletingMoralId === Number(m.id) || saving}
+                              onClick={() => removeMoralFromStory(m.id)}
+                            >
+                              <FiX aria-hidden />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   <p className="story-view-muted">No morals yet. Add one below.</p>
                 )}
@@ -508,20 +508,18 @@ function LibraryStoryView() {
                 </div>
               </>
             ) : linkedMorals.length > 0 ? (
-              <ul>
+              <div className="story-view-moral-grid">
                 {linkedMorals.map((m) => (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      className="story-view-moral-link"
-                      onClick={() => navigate(`/library/${storyId}/morals/${m.id}`)}
-                    >
-                      <span className="story-view-moral-code">{m.moral_code || m.id}</span>
-                      <span>{m.moral_name}</span>
-                    </button>
-                  </li>
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="story-view-moral-card"
+                    onClick={() => navigate(`/library/${storyId}/morals/${m.id}`)}
+                  >
+                    {m.moral_name}
+                  </button>
                 ))}
-              </ul>
+              </div>
             ) : (
               <p className="story-view-muted">No morals linked.</p>
             )}

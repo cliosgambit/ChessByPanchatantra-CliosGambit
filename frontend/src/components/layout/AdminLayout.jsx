@@ -12,15 +12,20 @@ function isDashboardPath(pathname) {
 
 function AdminLayout() {
   const location = useLocation();
+  const [prevPath, setPrevPath] = useState(location.pathname);
   const onDashboard = isDashboardPath(location.pathname);
   const [collapsed, setCollapsed] = useState(!onDashboard);
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
-    // Off-dashboard pages start minimized; dashboard starts open
-    setCollapsed(!isDashboardPath(location.pathname));
-    setHovered(false);
-  }, [location.pathname]);
+    // Only set collapsed when navigating to a new path
+    if (location.pathname !== prevPath) {
+      // Off-dashboard pages start minimized; dashboard starts open
+      setCollapsed(!isDashboardPath(location.pathname));
+      setHovered(false);
+      setPrevPath(location.pathname);
+    }
+  }, [location.pathname, prevPath]);
 
   const expanded = !collapsed || hovered;
   const railWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
@@ -41,7 +46,10 @@ function AdminLayout() {
         <SideNav
           collapsed={collapsed}
           expanded={expanded}
-          onToggleCollapse={() => setCollapsed((v) => !v)}
+          onToggleCollapse={() => {
+            setCollapsed((v) => !v);
+            setHovered(false); // Reset hover state when toggling
+          }}
           onHoverChange={setHovered}
         />
       </Box>

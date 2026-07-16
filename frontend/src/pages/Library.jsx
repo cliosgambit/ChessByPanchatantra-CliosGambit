@@ -13,7 +13,10 @@ import {
   deleteLibraryStory,
   fetchLibraryStories,
 } from '../services/libraryService';
+import PaginationBar from '../components/common/PaginationBar';
 import './Library.css';
+
+const ITEMS_PER_PAGE = 50;
 
 const VIEW_KEY = 'libraryViewMode';
 const PREVIEW_ANIMATION_MS = 280;
@@ -37,6 +40,7 @@ function Library() {
       return 'cards';
     }
   });
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [hoveredStory, setHoveredStory] = useState(null);
   const [previewMounted, setPreviewMounted] = useState(false);
@@ -149,6 +153,17 @@ function Library() {
     });
   }, [stories, search]);
 
+  // Reset page to 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.ceil(filteredStories.length / ITEMS_PER_PAGE);
+  const paginatedStories = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredStories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredStories, currentPage]);
+
   const handleDelete = async (story) => {
     if (!window.confirm(`Delete story “${story.title}”?`)) return;
     setDeletingId(story.id);
@@ -233,167 +248,188 @@ function Library() {
         </div>
       )}
 
-      {!loading && filteredStories.length > 0 && viewMode === 'cards' && (
-        <div className="library-grid">
-          {filteredStories.map((story) => (
-            <article
-              key={story.id}
-              className="library-card library-card--clickable"
-              role="link"
-              tabIndex={0}
-              onClick={() => openStory(story.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openStory(story.id);
-                }
-              }}
-            >
-              <div
-                className="library-card-cover"
-                style={
-                  story.cover_image
-                    ? { backgroundImage: `url(${story.cover_image})` }
-                    : undefined
-                }
-              />
-              <div className="library-card-body">
-                <div className="library-card-meta">
-                  <span className={`library-status library-status--${story.status}`}>
-                    {story.status}
-                  </span>
-                  <span className="library-muted">
-                    {story.moral_count || 0} morals · {story.image_count || 0} images
-                  </span>
-                </div>
-                <h2>{story.title}</h2>
-                {story.subheading ? <p className="library-card-sub">{story.subheading}</p> : null}
-                <div className="library-card-actions">
-                  <button
-                    type="button"
-                    className="library-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/library/${story.id}`, { state: { edit: true } });
-                    }}
-                  >
-                    <FiEdit2 aria-hidden /> Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="library-btn library-btn--danger"
-                    disabled={deletingId === story.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(story);
-                    }}
-                  >
-                    <FiTrash2 aria-hidden /> Delete
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {!loading && filteredStories.length > 0 && viewMode === 'table' && (
-        <div
-          className="library-table-wrap"
-          ref={tableWrapRef}
-          onMouseLeave={scheduleHide}
-        >
-          <table className="library-table">
-            <thead>
-              <tr>
-                <th scope="col">Cover</th>
-                <th scope="col">Title</th>
-                <th scope="col">Status</th>
-                <th scope="col">Morals</th>
-                <th scope="col">Images</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStories.map((story) => (
-                <tr
-                  key={story.id}
-                  className={`library-table-row${
-                    hoveredStory?.id === story.id && previewMounted ? ' is-previewing' : ''
-                  }`}
-                  onMouseEnter={(e) => handleRowHover(story, e.currentTarget)}
-                  onClick={() => openStory(story.id)}
-                >
-                  <td>
-                    <div
-                      className="library-table-cover"
-                      style={
-                        story.cover_image
-                          ? { backgroundImage: `url(${story.cover_image})` }
-                          : undefined
-                      }
-                      aria-hidden
-                    />
-                  </td>
-                  <td>
-                    <div className="library-table-title">{story.title}</div>
-                    {story.subheading ? (
-                      <div className="library-table-sub">{story.subheading}</div>
-                    ) : null}
-                  </td>
-                  <td>
+      {!loading && paginatedStories.length > 0 && viewMode === 'cards' && (
+        <>
+          <div className="library-grid">
+            {paginatedStories.map((story) => (
+              <article
+                key={story.id}
+                className="library-card library-card--clickable"
+                role="link"
+                tabIndex={0}
+                onClick={() => openStory(story.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openStory(story.id);
+                  }
+                }}
+              >
+                <div
+                  className="library-card-cover"
+                  style={
+                    story.cover_image
+                      ? { backgroundImage: `url(${story.cover_image})` }
+                      : undefined
+                  }
+                />
+                <div className="library-card-body">
+                  <div className="library-card-meta">
                     <span className={`library-status library-status--${story.status}`}>
                       {story.status}
                     </span>
-                  </td>
-                  <td>{story.moral_count || 0}</td>
-                  <td>{story.image_count || 0}</td>
-                  <td>
-                    <div className="library-table-actions">
-                      <button
-                        type="button"
-                        className="library-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/library/${story.id}`, { state: { edit: true } });
-                        }}
-                      >
-                        <FiEdit2 aria-hidden /> Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="library-btn library-btn--danger"
-                        disabled={deletingId === story.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(story);
-                        }}
-                      >
-                        <FiTrash2 aria-hidden /> Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <span className="library-muted">
+                      {story.moral_count || 0} morals · {story.image_count || 0} images
+                    </span>
+                  </div>
+                  <h2>{story.title}</h2>
+                  {story.subheading ? <p className="library-card-sub">{story.subheading}</p> : null}
+                  <div className="library-card-actions">
+                    <button
+                      type="button"
+                      className="library-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/library/${story.id}`, { state: { edit: true } });
+                      }}
+                    >
+                      <FiEdit2 aria-hidden /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="library-btn library-btn--danger"
+                      disabled={deletingId === story.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(story);
+                      }}
+                    >
+                      <FiTrash2 aria-hidden /> Delete
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <PaginationBar
+            page={currentPage}
+            totalPages={totalPages}
+            total={filteredStories.length}
+            onPageChange={setCurrentPage}
+          />
+        </>
+      )}
 
-          {previewMounted && hoveredStory?.cover_image ? (
-            <div
-              className={`library-hover-preview${previewVisible ? ' is-visible' : ''}`}
-              style={{ top: previewTop }}
-              onMouseEnter={cancelHide}
-              onMouseLeave={scheduleHide}
-              role="presentation"
-            >
-              <img
-                src={hoveredStory.cover_image}
-                alt=""
-                className="library-hover-preview-img"
-              />
-            </div>
-          ) : null}
-        </div>
+      {!loading && paginatedStories.length > 0 && viewMode === 'table' && (
+        <>
+          <div
+            className="library-table-wrap"
+            ref={tableWrapRef}
+            onMouseLeave={scheduleHide}
+          >
+            <table className="library-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Cover</th>
+                  <th scope="col">Title</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Morals</th>
+                  <th scope="col">Images</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedStories.map((story, index) => {
+                  const serialNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                  return (
+                    <tr
+                      key={story.id}
+                      className={`library-table-row${
+                        hoveredStory?.id === story.id && previewMounted ? ' is-previewing' : ''
+                      }`}
+                      onMouseEnter={(e) => handleRowHover(story, e.currentTarget)}
+                      onClick={() => openStory(story.id)}
+                    >
+                      <td>{serialNumber}</td>
+                      <td>
+                        <div
+                          className="library-table-cover"
+                          style={
+                            story.cover_image
+                              ? { backgroundImage: `url(${story.cover_image})` }
+                              : undefined
+                          }
+                          aria-hidden
+                        />
+                      </td>
+                      <td>
+                        <div className="library-table-title">{story.title}</div>
+                        {story.subheading ? (
+                          <div className="library-table-sub">{story.subheading}</div>
+                        ) : null}
+                      </td>
+                      <td>
+                        <span className={`library-status library-status--${story.status}`}>
+                          {story.status}
+                        </span>
+                      </td>
+                      <td>{story.moral_count || 0}</td>
+                      <td>{story.image_count || 0}</td>
+                      <td>
+                        <div className="library-table-actions">
+                          <button
+                            type="button"
+                            className="library-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/library/${story.id}`, { state: { edit: true } });
+                            }}
+                          >
+                            <FiEdit2 aria-hidden /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="library-btn library-btn--danger"
+                            disabled={deletingId === story.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(story);
+                            }}
+                          >
+                            <FiTrash2 aria-hidden /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {previewMounted && hoveredStory?.cover_image ? (
+              <div
+                className={`library-hover-preview${previewVisible ? ' is-visible' : ''}`}
+                style={{ top: previewTop }}
+                onMouseEnter={cancelHide}
+                onMouseLeave={scheduleHide}
+                role="presentation"
+              >
+                <img
+                  src={hoveredStory.cover_image}
+                  alt=""
+                  className="library-hover-preview-img"
+                />
+              </div>
+            ) : null}
+          </div>
+          <PaginationBar
+            page={currentPage}
+            totalPages={totalPages}
+            total={filteredStories.length}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
     </div>
   );
