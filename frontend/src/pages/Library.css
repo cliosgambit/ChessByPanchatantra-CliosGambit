@@ -362,6 +362,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .library-card--clickable {
@@ -437,6 +438,103 @@
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 0.75rem;
+}
+
+.library-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.library-actions-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.library-actions-menu-wrap--card {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 3;
+}
+
+.library-actions-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #6b7280;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.library-actions-menu-wrap--table .library-actions-menu-btn {
+  border-color: #e4ddd0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.library-actions-menu-btn:hover,
+.library-actions-menu-btn[aria-expanded='true'] {
+  border-color: #fdba74;
+  color: #c2410c;
+  background: #fff;
+}
+
+.library-actions-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 40;
+  min-width: 148px;
+  background: #fff;
+  border: 1px solid #e4ddd0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  padding: 0.3rem;
+}
+
+.library-actions-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  color: #1f2937;
+}
+
+.library-actions-menu-item:hover:not(:disabled) {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.library-actions-menu-item--danger {
+  color: #b91c1c;
+}
+
+.library-actions-menu-item--danger:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.library-actions-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .library-form {

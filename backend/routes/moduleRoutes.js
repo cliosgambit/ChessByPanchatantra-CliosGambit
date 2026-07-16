@@ -44,6 +44,8 @@ function mapModuleStory(row) {
     subheading: row.subheading || null,
     cover_image: row.cover_image || row.first_image_url || null,
     status: row.status || null,
+    moral_count: Number(row.moral_count) || 0,
+    image_count: Number(row.image_count) || 0,
   };
 }
 
@@ -153,7 +155,9 @@ router.get('/modules/:id', async (req, res) => {
                 s.title, s.subheading, s.status, s.cover_image,
                 (SELECT si.image_url FROM Story_Images si
                  WHERE si.story_id = s.id
-                 ORDER BY si.display_order ASC, si.id ASC LIMIT 1) AS first_image_url
+                 ORDER BY si.display_order ASC, si.id ASC LIMIT 1) AS first_image_url,
+                (SELECT COUNT(*) FROM Story_Images si WHERE si.story_id = s.id) AS image_count,
+                (SELECT COUNT(*) FROM story_moral_mapping sm WHERE sm.story_id = s.id) AS moral_count
          FROM module_stories ms
          INNER JOIN Stories s ON s.id = ms.story_id
          WHERE ms.module_id = $1
@@ -163,7 +167,9 @@ router.get('/modules/:id', async (req, res) => {
                 s.title, s.subheading, s.status, s.cover_image,
                 (SELECT si.image_url FROM Story_Images si
                  WHERE si.story_id = s.id
-                 ORDER BY si.display_order ASC, si.id ASC LIMIT 1) AS first_image_url
+                 ORDER BY si.display_order ASC, si.id ASC LIMIT 1) AS first_image_url,
+                (SELECT COUNT(*) FROM Story_Images si WHERE si.story_id = s.id) AS image_count,
+                (SELECT COUNT(*) FROM story_moral_mapping sm WHERE sm.story_id = s.id) AS moral_count
          FROM module_stories ms
          INNER JOIN Stories s ON s.id = ms.story_id
          WHERE ms.module_id = $1 AND ms.visible_to_students = 1
