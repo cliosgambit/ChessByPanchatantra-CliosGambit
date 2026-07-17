@@ -4,6 +4,7 @@ import { Box } from '@chakra-ui/react';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
 import EmptyState from '../components/common/EmptyState';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import BrilliantMovesList from '../components/brilliantMoves/BrilliantMovesList';
 import {
   fetchBrilliantMovesFromDb,
@@ -184,6 +185,12 @@ function BrilliantMoves() {
     <Box className="chess-profile-page">
       <div className="chess-profile-header-wrap">
         <div className="chess-profile-header-card" style={{ marginTop: '1rem', paddingBottom: '1rem' }}>
+          <PageBreadcrumb
+            items={[
+              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Brilliant Moves' },
+            ]}
+          />
           <div className="chess-profile-name-row">
             <h1 className="chess-profile-username">Brilliant Moves</h1>
           </div>

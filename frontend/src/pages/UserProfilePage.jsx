@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Box, Link } from '@chakra-ui/react';
 import {
-  FiArrowLeft,
   FiAward,
   FiCalendar,
   FiCheck,
@@ -25,6 +24,7 @@ import {
   FiZap,
 } from 'react-icons/fi';
 import ErrorPanel from '../components/common/ErrorPanel';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { useChessComUserData } from '../hooks/useChessComUserData';
 import { openChessComGame } from '../utils/chessComGameNavigation';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
@@ -363,7 +363,7 @@ function UserProfilePage() {
   const location = useLocation();
   const chessUsername = decodeURIComponent(userId || '');
   const backPath = location.state?.from || '/students';
-  const backLabel = location.state?.fromLabel || 'Back to Students';
+  const fromStudents = backPath === '/students' || String(backPath).startsWith('/students');
   const initialTab = location.state?.tab || 'report';
   const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, profileLoading, gamesLoading, syncing, monthlyLoading, backgroundSync, pending, error, refetch, syncFromChessCom, loadMonthlyGames, lastSyncedAt } =
     useChessComUserData(chessUsername);
@@ -412,14 +412,13 @@ function UserProfilePage() {
   return (
     <Box className="chess-profile-page">
       <div className="chess-profile-topbar">
-        <button
-          type="button"
-          className="chess-btn chess-btn-secondary"
-          onClick={() => navigate(backPath)}
-        >
-          <FiArrowLeft className="chess-icon chess-icon-md" aria-hidden="true" />
-          {backLabel}
-        </button>
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            ...(fromStudents ? [{ label: 'Students', to: '/students' }] : []),
+            { label: displayName || chessUsername || 'Profile' },
+          ]}
+        />
         <div className="chess-profile-top-actions">
           <button
             type="button"

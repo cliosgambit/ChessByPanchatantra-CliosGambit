@@ -32,9 +32,12 @@ const {
 const {
   ensureMoralPuzzleTables,
 } = require('./scripts/ensureMoralPuzzleTables');
+const { repairPuzzleUsedFlags } = require('./scripts/repairPuzzleUsedFlags');
 const { ensureStudentsTable } = require('./scripts/ensureStudentsTable');
+const { ensureBatchesTables } = require('./scripts/ensureBatchesTables');
 const { ensureModulesTables } = require('./scripts/ensureModulesTables');
 const moduleRoutes = require('./routes/moduleRoutes');
+const batchRoutes = require('./routes/batchRoutes');
 const accessRoutes = require('./api/routes/accessRoutes'); // <-- NEW: Import access routes
 const trackerRoutes = require('./api/routes/trackerRoutes');
 const automationRoutes = require('./api/routes/automationRoutes');
@@ -103,6 +106,7 @@ app.use('/api', tableBrowserRoutes);
 app.use('/api', libraryRoutes);
 app.use('/api', puzzleRoutes);
 app.use('/api', studentRoutes);
+app.use('/api', batchRoutes);
 app.use('/api', moduleRoutes);
 app.use('/api', accessRoutes); // <-- NEW: Add access control routes
 app.use('/api', courseRoutes); // Your existing course routes
@@ -156,9 +160,24 @@ const startServerAndServices = async () => {
     await ensureLibraryTables();
     ensure3000RatedPuzzlesTable();
     ensureLichessPuzzlesTable();
-    ensureMoralPuzzleTables();
+    await ensureMoralPuzzleTables();
+    try {
+      const repair = await repairPuzzleUsedFlags();
+      const cleared =
+        (repair.gm_cleared?.length || 0) +
+        (repair.lichess_cleared?.length || 0) +
+        (repair.chesscom_cleared?.length || 0);
+      if (cleared || repair.gm_synced?.length) {
+        console.log(
+          `✅ puzzle used-flag repair: cleared=${cleared}, gm_synced=${repair.gm_synced?.length || 0}`
+        );
+      }
+    } catch (repairErr) {
+      console.warn('⚠️ puzzle used-flag repair skipped:', repairErr.message);
+    }
     ensureStudentsTable();
-    ensureModulesTables();
+    await ensureBatchesTables();
+    await ensureModulesTables();
     await ensureChessPuzzleColumns();
     await ensureChessPuzzlePollTable();
     await ensureChessComSchema();

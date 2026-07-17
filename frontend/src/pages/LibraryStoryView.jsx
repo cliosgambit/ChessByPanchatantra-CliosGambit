@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  FiArrowLeft,
   FiChevronLeft,
   FiChevronRight,
   FiEdit2,
@@ -19,6 +18,7 @@ import {
   updateLibraryStory,
   uploadLibraryImages,
 } from '../services/libraryService';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './LibraryStoryView.css';
 
 function imageUrlsFromStory(story) {
@@ -52,7 +52,9 @@ function LibraryStoryView() {
   const navigate = useNavigate();
   const location = useLocation();
   const backPath = location.state?.from || '/library';
-  const backLabel = location.state?.fromLabel || 'Library';
+  const cameFromModules = String(backPath).startsWith('/modules/');
+  const parentLabel =
+    (location.state?.fromLabel || 'Library').replace(/^Back to\s+/i, '') || 'Library';
 
   const [story, setStory] = useState(null);
   const [moralsCatalog, setMoralsCatalog] = useState([]);
@@ -77,10 +79,7 @@ function LibraryStoryView() {
     setLoading(true);
     setError('');
     try {
-      const [storyData, moralsData] = await Promise.all([
-        fetchLibraryStory(storyId),
-        fetchLibraryMorals(),
-      ]);
+      const storyData = await fetchLibraryStory(storyId);
       const next = storyData?.story;
       if (!next) {
         setError('Story not found.');
@@ -88,9 +87,6 @@ function LibraryStoryView() {
         return;
       }
       setStory(next);
-      setMoralsCatalog(
-        (moralsData?.morals || []).map((m) => ({ ...m, id: Number(m.id) }))
-      );
       setDraft({
         title: next.title || '',
         subheading: next.subheading || '',
@@ -106,13 +102,27 @@ function LibraryStoryView() {
     }
   }, [storyId]);
 
+  const loadMoralsCatalog = useCallback(async () => {
+    try {
+      const moralsData = await fetchLibraryMorals();
+      setMoralsCatalog(
+        (moralsData?.morals || []).map((m) => ({ ...m, id: Number(m.id) }))
+      );
+    } catch (err) {
+      setError(err.message || 'Failed to load morals.');
+    }
+  }, []);
+
   useEffect(() => {
     loadStory();
   }, [loadStory]);
 
   useEffect(() => {
-    if (location.state?.edit) setEditing(true);
-  }, [location.state]);
+    if (location.state?.edit) {
+      setEditing(true);
+      loadMoralsCatalog();
+    }
+  }, [location.state?.edit, loadMoralsCatalog]);
 
   const images = editing ? draft.images : imageUrlsFromStory(story);
 
@@ -165,7 +175,7 @@ function LibraryStoryView() {
     if (index >= images.length) setIndex(images.length - 1);
   }, [images.length, index]);
 
-  const startEdit = () => {
+  const startEdit = async () => {
     if (!story) return;
     setDraft({
       title: story.title || '',
@@ -175,6 +185,9 @@ function LibraryStoryView() {
       moral_ids: moralIdsFromStory(story),
     });
     setError('');
+    if (!moralsCatalog.length) {
+      await loadMoralsCatalog();
+    }
     setEditing(true);
   };
 
@@ -365,10 +378,14 @@ function LibraryStoryView() {
   if ((error && !story) || !story) {
     return (
       <div className="story-view">
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Library', to: '/library' },
+            { label: 'Story' },
+          ]}
+        />
         <p className="story-view-error">{error || 'Story not found.'}</p>
-        <button type="button" className="story-view-back" onClick={() => navigate(backPath)}>
-          <FiArrowLeft aria-hidden /> Back to {backLabel}
-        </button>
       </div>
     );
   }
@@ -383,9 +400,22 @@ function LibraryStoryView() {
       <div className="story-view-panel story-view-panel--content">
         <div className="story-view-content-inner">
           <div className="story-view-toolbar">
-            <button type="button" className="story-view-back" onClick={() => navigate(backPath)}>
-              <FiArrowLeft aria-hidden /> {backLabel}
-            </button>
+            <PageBreadcrumb
+              items={
+                cameFromModules
+                  ? [
+                      { label: 'Dashboard', to: '/dashboard' },
+                      { label: 'Modules', to: '/modules' },
+                      { label: parentLabel, to: backPath },
+                      { label: editing ? 'Edit' : title || 'Story' },
+                    ]
+                  : [
+                      { label: 'Dashboard', to: '/dashboard' },
+                      { label: 'Library', to: '/library' },
+                      { label: editing ? 'Edit Story' : title || 'Story' },
+                    ]
+              }
+            />
             {!editing ? (
               <button type="button" className="story-view-edit" onClick={startEdit}>
                 <FiEdit2 aria-hidden /> Edit

@@ -1,20 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiPlus, FiRefreshCw, FiShuffle, FiTrash2, FiX } from 'react-icons/fi';
+import { useParams } from 'react-router-dom';
+import { FiPlus, FiRefreshCw, FiShuffle, FiTrash2, FiX } from 'react-icons/fi';
 import FenHoverPreview from '../components/userProfile/FenHoverPreview';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { useAuth } from '../context/AuthContext';
 import {
   assignMoralPuzzle,
   fetchMoralPuzzles,
   unassignMoralPuzzle,
 } from '../services/libraryService';
-import { fetchModuleMoralPuzzles } from '../services/modulesService';
+import { fetchChapterMoralPuzzles } from '../services/modulesService';
 import { fetchGmPuzzles } from '../services/gmPuzzleService';
 import { fetchLichessPuzzles, fetchLichessPuzzleFilters } from '../services/lichessPuzzleService';
 import {
   fetchChessComRandomPuzzle,
+  persistChessComPuzzle,
 } from '../services/chessComDbService';
 import { resolveLichessPuzzlePosition } from '../utils/lichessPuzzleFen';
+import { solutionSansFromChessCom, solutionTextFromChessCom } from '../utils/chessComPgnUtils';
+import { fetchBestMoveSequence, uciSequenceToSans } from '../utils/stockfishClient';
 import { Chess } from 'chess.js';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import './LibraryMoralPuzzles.css';
@@ -78,6 +82,9 @@ const SOURCE_LABEL = {
   chesscom: 'Chess.com',
 };
 
+const SOLUTION_ENGINE_DEPTH = 15;
+const SOLUTION_MAX_PLIES = 14;
+
 function playFenForAssignment(assignment) {
   const p = assignment?.puzzle;
   if (!p?.fen) return null;
@@ -92,6 +99,9 @@ function solutionSansForAssignment(assignment) {
   if (!p) return [];
   if (p.source === 'lichess' || assignment.source === 'lichess') {
     return resolveLichessPuzzlePosition(p.fen, p.moves).solutionSans || [];
+  }
+  if (p.source === 'chesscom' || assignment.source === 'chesscom') {
+    return solutionSansFromChessCom(p.solution || p.pgn, p.fen);
   }
   if (!p.moves || !p.fen) return [];
   try {
@@ -134,17 +144,19 @@ function sameChessComPuzzle(a, b) {
 }
 
 function LibraryMoralPuzzles() {
-  const { storyId, moralId, moduleId } = useParams();
-  const navigate = useNavigate();
+  const { storyId, moralId, moduleId, chapterId } = useParams();
   const { user } = useAuth();
   const isAdmin = (user?.role || '').toLowerCase() === 'admin';
   const canManage = isAdmin;
-  const storyBackPath = moduleId
-    ? `/modules/${moduleId}/stories/${storyId}`
-    : `/library/${storyId}`;
+  const storyBackPath =
+    moduleId && chapterId
+      ? `/modules/${moduleId}/chapters/${chapterId}/stories/${storyId}`
+      : `/library/${storyId}`;
 
   const [story, setStory] = useState(null);
   const [moral, setMoral] = useState(null);
+  const [moduleMeta, setModuleMeta] = useState(null);
+  const [chapterMeta, setChapterMeta] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -152,6 +164,12 @@ function LibraryMoralPuzzles() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [boardKey, setBoardKey] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
+  const [computedSolutionSans, setComputedSolutionSans] = useState([]);
+  const [isFetchingSolution, setIsFetchingSolution] = useState(false);
+  const [solutionError, setSolutionError] = useState('');
+  const solutionFetchId = useRef(0);
+  /** assignment_id → { sans, error } — avoids re-fetching when switching puzzles on this page */
+  const solutionCacheRef = useRef(new Map());
   const [chipMenu, setChipMenu] = useState(null); // { x, y, assignmentId, label }
 
   const [picker, setPicker] = useState(null); // 'gm' | 'lichess' | 'chesscom' | null
@@ -183,14 +201,18 @@ function LibraryMoralPuzzles() {
   }, [pickerSelectedId]);
 
   const load = useCallback(async () => {
+    solutionCacheRef.current.clear();
     setLoading(true);
     setError('');
     try {
-      const data = moduleId
-        ? await fetchModuleMoralPuzzles(moduleId, storyId, moralId)
-        : await fetchMoralPuzzles(storyId, moralId);
+      const data =
+        moduleId && chapterId
+          ? await fetchChapterMoralPuzzles(moduleId, chapterId, storyId, moralId)
+          : await fetchMoralPuzzles(storyId, moralId);
       setStory(data.story || null);
       setMoral(data.moral || null);
+      setModuleMeta(data.module || null);
+      setChapterMeta(data.chapter || null);
       setAssignments(data.assignments || []);
       setSelectedIndex(0);
       setBoardKey((k) => k + 1);
@@ -198,21 +220,92 @@ function LibraryMoralPuzzles() {
       setError(err.message || 'Failed to load moral puzzles.');
       setStory(null);
       setMoral(null);
+      setModuleMeta(null);
+      setChapterMeta(null);
       setAssignments([]);
     } finally {
       setLoading(false);
     }
-  }, [moduleId, storyId, moralId]);
+  }, [moduleId, chapterId, storyId, moralId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const active = assignments[selectedIndex] || assignments[0] || null;
+
   const puzzleFen = playFenForAssignment(active);
   const boardFen = puzzleFen || START_FEN;
   const hasPuzzle = Boolean(puzzleFen);
   const solutionSans = useMemo(() => solutionSansForAssignment(active), [active]);
+  const displayedSolutionSans =
+    solutionSans.length > 0 ? solutionSans : computedSolutionSans;
+
+  useEffect(() => {
+    const fetchId = ++solutionFetchId.current;
+    setShowSolution(false);
+
+    if (!active?.assignment_id || !puzzleFen) {
+      setComputedSolutionSans([]);
+      setSolutionError('');
+      setIsFetchingSolution(false);
+      return undefined;
+    }
+
+    if (solutionSans.length > 0) {
+      setComputedSolutionSans([]);
+      setSolutionError('');
+      setIsFetchingSolution(false);
+      return undefined;
+    }
+
+    const cacheKey = String(active.assignment_id);
+    const cached = solutionCacheRef.current.get(cacheKey);
+    if (cached) {
+      setComputedSolutionSans(cached.sans || []);
+      setSolutionError(cached.error || '');
+      setIsFetchingSolution(false);
+      return undefined;
+    }
+
+    setSolutionError('');
+    setComputedSolutionSans([]);
+    setIsFetchingSolution(true);
+
+    (async () => {
+      try {
+        const uciMoves = await fetchBestMoveSequence(puzzleFen, {
+          depth: SOLUTION_ENGINE_DEPTH,
+          ply: SOLUTION_MAX_PLIES,
+        });
+        if (fetchId !== solutionFetchId.current) return;
+        if (!uciMoves.length) {
+          throw new Error('Analysis returned no valid moves.');
+        }
+        const sans = uciSequenceToSans(puzzleFen, uciMoves);
+        if (!sans.length) {
+          throw new Error('Analysis returned no valid moves.');
+        }
+        solutionCacheRef.current.set(cacheKey, { sans, error: '' });
+        setComputedSolutionSans(sans);
+      } catch (err) {
+        if (fetchId !== solutionFetchId.current) return;
+        const message = err.message || 'Failed to fetch solution from Stockfish.';
+        solutionCacheRef.current.set(cacheKey, { sans: [], error: message });
+        setSolutionError(message);
+      } finally {
+        if (fetchId === solutionFetchId.current) {
+          setIsFetchingSolution(false);
+        }
+      }
+    })();
+
+    return undefined;
+  }, [active?.assignment_id, puzzleFen, solutionSans.length]);
+
+  const handleShowSolution = useCallback(() => {
+    setShowSolution(true);
+  }, []);
 
   const puzzlesBySource = useMemo(() => {
     const groups = { gm: [], lichess: [], chesscom: [] };
@@ -266,6 +359,14 @@ function LibraryMoralPuzzles() {
       } else if (source === 'chesscom') {
         const puzzle = await fetchChessComRandomPuzzle();
         setChesscomDraft(puzzle);
+        puzzle?.persistPromise?.then((saved) => {
+          if (!saved) return;
+          setChesscomDraft((current) =>
+            current && sameChessComPuzzle(current, saved)
+              ? { ...current, ...saved, persistPromise: undefined }
+              : current
+          );
+        });
       }
     } catch (err) {
       setError(err.message || 'Failed to load unused puzzles.');
@@ -307,7 +408,34 @@ function LibraryMoralPuzzles() {
     setBusy(true);
     setError('');
     try {
-      await assignMoralPuzzle(storyId, moralId, { source, puzzle_id: puzzleId });
+      let id = puzzleId;
+      if (source === 'chesscom' && id == null) {
+        let saved = null;
+        if (chesscomDraft?.persistPromise) {
+          saved = await chesscomDraft.persistPromise;
+        }
+        // Persist may have failed earlier (race) — retry ingest once before giving up.
+        if (!saved?.id && chesscomDraft?.fen) {
+          saved = await persistChessComPuzzle({
+            title: chesscomDraft.title,
+            fen: chesscomDraft.fen,
+            pgn: chesscomDraft.solution || chesscomDraft.pgn,
+            solution: chesscomDraft.solution || chesscomDraft.pgn,
+            url: chesscomDraft.url,
+            image: chesscomDraft.image,
+            publish_time: chesscomDraft.publish_time,
+            comments: chesscomDraft.comments,
+          });
+        }
+        id = saved?.id ?? null;
+        if (saved) {
+          setChesscomDraft((current) =>
+            current ? { ...current, ...saved, persistPromise: undefined } : current
+          );
+        }
+      }
+      if (id == null) throw new Error('Puzzle is still saving — try Assign again in a moment.');
+      await assignMoralPuzzle(storyId, moralId, { source, puzzle_id: id });
       closePicker();
       await load();
     } catch (err) {
@@ -385,25 +513,62 @@ function LibraryMoralPuzzles() {
     setPickerLoading(true);
     setError('');
     const previous = chesscomDraft;
-    const maxAttempts = 25;
     try {
-      let puzzle = null;
-      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        puzzle = await fetchChessComRandomPuzzle();
-        if (!previous || !sameChessComPuzzle(previous, puzzle)) {
-          setChesscomDraft(puzzle);
-          return;
-        }
-        // Chess.com sometimes returns the same random puzzle — retry after a short pause
-        await new Promise((resolve) => setTimeout(resolve, 350));
+      const puzzle = await fetchChessComRandomPuzzle();
+      if (previous && sameChessComPuzzle(previous, puzzle)) {
+        setError('Chess.com returned the same puzzle — try again in a few seconds.');
+        return;
       }
-      setError('Still getting the same puzzle from Chess.com. Try Fetch new again.');
+      setChesscomDraft(puzzle);
+      puzzle?.persistPromise?.then((saved) => {
+        if (!saved) return;
+        setChesscomDraft((current) =>
+          current && sameChessComPuzzle(current, saved)
+            ? { ...current, ...saved, persistPromise: undefined }
+            : current
+        );
+      });
     } catch (err) {
       setError(err.message || 'Failed to fetch Chess.com puzzle.');
     } finally {
       setPickerLoading(false);
     }
   };
+
+  const moralBreadcrumb = useMemo(() => {
+    const moralLabel = moral?.moral_name || moral?.moral_code || 'Moral puzzles';
+    if (moduleId && chapterId) {
+      return [
+        { label: 'Dashboard', to: '/dashboard' },
+        { label: 'Modules', to: '/modules' },
+        { label: moduleMeta?.name || 'Module', to: `/modules/${moduleId}` },
+        {
+          label: chapterMeta?.name || 'Chapter',
+          to: `/modules/${moduleId}/chapters/${chapterId}`,
+        },
+        {
+          label: story?.title || 'Story',
+          to: storyBackPath,
+        },
+        { label: moralLabel },
+      ];
+    }
+    return [
+      { label: 'Dashboard', to: '/dashboard' },
+      { label: 'Library', to: '/library' },
+      { label: story?.title || 'Story', to: storyBackPath },
+      { label: moralLabel },
+    ];
+  }, [
+    moduleId,
+    chapterId,
+    moduleMeta?.name,
+    chapterMeta?.name,
+    story?.title,
+    storyBackPath,
+    moral?.moral_name,
+    moral?.moral_code,
+  ]);
 
   if (loading) {
     return (
@@ -416,10 +581,8 @@ function LibraryMoralPuzzles() {
   if (!story || !moral) {
     return (
       <div className="moral-puzzles-page">
+        <PageBreadcrumb items={moralBreadcrumb} />
         <p className="moral-puzzles-error">{error || 'Not found.'}</p>
-        <button type="button" className="moral-puzzles-back" onClick={() => navigate(storyBackPath)}>
-          <FiArrowLeft aria-hidden /> Back to story
-        </button>
       </div>
     );
   }
@@ -428,13 +591,7 @@ function LibraryMoralPuzzles() {
     <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
       <div className="moral-puzzles-zone moral-puzzles-zone--story">
         <div className="moral-puzzles-left-inner">
-        <button
-          type="button"
-          className="moral-puzzles-back"
-          onClick={() => navigate(storyBackPath)}
-        >
-          <FiArrowLeft aria-hidden /> Back to story
-        </button>
+        <PageBreadcrumb items={moralBreadcrumb} />
 
         <h1 className="moral-play-title">{story.title}</h1>
         {story.subheading ? <p className="moral-play-sub">{story.subheading}</p> : null}
@@ -513,7 +670,6 @@ function LibraryMoralPuzzles() {
                           onClick={() => {
                             setSelectedIndex(globalIndex);
                             setBoardKey((k) => k + 1);
-                            setShowSolution(false);
                             setChipMenu(null);
                           }}
                           onContextMenu={(e) => {
@@ -541,20 +697,43 @@ function LibraryMoralPuzzles() {
         <section className="moral-play-card moral-play-card--solution">
           <p className="moral-play-card-label">Puzzle Solution</p>
           {!showSolution ? (
-            <button
-              type="button"
-              className="moral-play-solution-btn"
-              disabled={!hasPuzzle || solutionSans.length === 0}
-              onClick={() => setShowSolution(true)}
-            >
-              Show Solution
-            </button>
+            <>
+              {hasPuzzle &&
+              (isFetchingSolution || displayedSolutionSans.length > 0) ? (
+                <button
+                  type="button"
+                  className="moral-play-solution-btn"
+                  disabled={isFetchingSolution || displayedSolutionSans.length === 0}
+                  onClick={handleShowSolution}
+                >
+                  Show Solution
+                </button>
+              ) : null}
+              {!isFetchingSolution &&
+              hasPuzzle &&
+              displayedSolutionSans.length === 0 &&
+              solutionError ? (
+                <p className="moral-puzzles-muted">{solutionError}</p>
+              ) : null}
+              {!isFetchingSolution &&
+              hasPuzzle &&
+              displayedSolutionSans.length === 0 &&
+              !solutionError ? (
+                <p className="moral-puzzles-muted">No solution moves available for this puzzle.</p>
+              ) : null}
+            </>
           ) : null}
-          {showSolution && solutionSans.length > 0 ? (
-            <p className="moral-play-solution-text">{solutionSans.join(' ')}</p>
+          {showSolution && displayedSolutionSans.length > 0 ? (
+            <p className="moral-play-solution-text">{displayedSolutionSans.join(' ')}</p>
           ) : null}
-          {showSolution && solutionSans.length === 0 && hasPuzzle ? (
-            <p className="moral-puzzles-muted">No solution moves stored for this puzzle.</p>
+          {showSolution && displayedSolutionSans.length === 0 && solutionError ? (
+            <p className="moral-puzzles-muted">{solutionError}</p>
+          ) : null}
+          {showSolution &&
+          displayedSolutionSans.length === 0 &&
+          !solutionError &&
+          hasPuzzle ? (
+            <p className="moral-puzzles-muted">No solution moves available for this puzzle.</p>
           ) : null}
         </section>
         </div>
@@ -1055,6 +1234,15 @@ function LibraryMoralPuzzles() {
                           <p className="moral-puzzles-fen">{chesscomDraft.fen}</p>
                         </div>
                       ) : null}
+                      {chesscomDraft.solution || chesscomDraft.pgn ? (
+                        <div className="moral-puzzles-detail-block">
+                          <span className="moral-puzzles-detail-label">Solution</span>
+                          <p className="moral-puzzles-fen">
+                            {solutionTextFromChessCom(chesscomDraft.solution || chesscomDraft.pgn) ||
+                              '—'}
+                          </p>
+                        </div>
+                      ) : null}
                       {chesscomDraft.url ? (
                         <a
                           className="moral-puzzles-game-link"
@@ -1093,8 +1281,10 @@ function LibraryMoralPuzzles() {
                 disabled={
                   busy ||
                   !pickerSelectedRow ||
-                  pickerSelectedRow.is_used ||
-                  pickerSelectedRow.id == null
+                  Boolean(pickerSelectedRow.is_used) ||
+                  (picker === 'chesscom'
+                    ? !pickerSelectedRow.fen
+                    : pickerSelectedRow.id == null)
                 }
                 onClick={() => handleAssign(picker, pickerSelectedRow.id)}
               >

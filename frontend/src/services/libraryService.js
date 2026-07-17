@@ -1,5 +1,6 @@
 import { getStoredToken } from './authService';
 import { apiFetch } from '../utils/apiFetch';
+import { createListCache } from './listCache';
 
 function authHeaders(json = true) {
   const token = getStoredToken();
@@ -9,11 +10,15 @@ function authHeaders(json = true) {
   };
 }
 
-export async function fetchLibraryStories() {
-  return apiFetch('/api/library/stories', {
+const storiesCache = createListCache(() =>
+  apiFetch('/api/library/stories', {
     headers: authHeaders(),
     cache: 'no-store',
-  });
+  })
+);
+
+export async function fetchLibraryStories(options) {
+  return storiesCache.get(options);
 }
 
 export async function fetchLibraryStory(id) {
@@ -24,26 +29,32 @@ export async function fetchLibraryStory(id) {
 }
 
 export async function createLibraryStory(payload) {
-  return apiFetch('/api/library/stories', {
+  const data = await apiFetch('/api/library/stories', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
+  storiesCache.invalidate();
+  return data;
 }
 
 export async function updateLibraryStory(id, payload) {
-  return apiFetch(`/api/library/stories/${id}`, {
+  const data = await apiFetch(`/api/library/stories/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
+  storiesCache.invalidate();
+  return data;
 }
 
 export async function deleteLibraryStory(id) {
-  return apiFetch(`/api/library/stories/${id}`, {
+  const data = await apiFetch(`/api/library/stories/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
+  storiesCache.invalidate();
+  return data;
 }
 
 export async function fetchLibraryMorals() {

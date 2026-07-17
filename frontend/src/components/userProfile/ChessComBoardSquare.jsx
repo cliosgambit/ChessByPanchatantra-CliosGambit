@@ -5,8 +5,9 @@ function isRankAxisSquare(square, orientation) {
   return orientation === 'white' ? file === 'a' : file === 'h';
 }
 
-function isFileAxisSquare(square) {
-  return square[1] === '1';
+function isFileAxisSquare(square, orientation) {
+  const rank = square[1];
+  return orientation === 'white' ? rank === '1' : rank === '8';
 }
 
 const ChessComBoardSquare = forwardRef(function ChessComBoardSquare(
@@ -14,7 +15,7 @@ const ChessComBoardSquare = forwardRef(function ChessComBoardSquare(
   ref
 ) {
   const rankAxis = isRankAxisSquare(square, boardOrientation);
-  const fileAxis = isFileAxisSquare(square);
+  const fileAxis = isFileAxisSquare(square, boardOrientation);
   const corner = rankAxis && fileAxis;
 
   const className = [

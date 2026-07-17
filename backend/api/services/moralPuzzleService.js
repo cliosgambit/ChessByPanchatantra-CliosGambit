@@ -12,7 +12,7 @@ function mapChesscomRow(row) {
     id: row.id,
     title: row.title || null,
     fen: row.fen,
-    pgn: row.pgn || null,
+    solution: row.solution || row.pgn || null,
     source_url: row.source_url || null,
     image_url: row.image_url || null,
     publish_time: row.publish_time != null ? Number(row.publish_time) : null,
@@ -35,22 +35,36 @@ async function upsertChesscomRandomPuzzle(payload = {}) {
     return { puzzle: mapChesscomRow(existing.rows[0]), created: false };
   }
 
+  const solution = payload.solution || payload.pgn || null;
+
   const { rows } = await db.query(
     `INSERT INTO chesscom_random_puzzles
-       (title, fen, pgn, source_url, image_url, publish_time, comments, is_used, created_at)
+       (title, fen, solution, source_url, image_url, publish_time, comments, is_used, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, 0, datetime('now'))
+     ON CONFLICT (fen) DO NOTHING
      RETURNING *`,
     [
       payload.title || null,
       fen,
-      payload.pgn || null,
+      solution,
       payload.url || payload.source_url || null,
       payload.image || payload.image_url || null,
       payload.publish_time != null ? Number(payload.publish_time) : null,
       payload.comments || null,
     ]
   );
-  return { puzzle: mapChesscomRow(rows[0]), created: true };
+
+  if (rows[0]) {
+    return { puzzle: mapChesscomRow(rows[0]), created: true };
+  }
+
+  // Lost race with a concurrent insert — return the row that won.
+  const again = await db.query(
+    `SELECT * FROM chesscom_random_puzzles WHERE fen = $1`,
+    [fen]
+  );
+  if (!again.rows[0]) throw new Error('Failed to save Chess.com puzzle.');
+  return { puzzle: mapChesscomRow(again.rows[0]), created: false };
 }
 
 async function setSourceUsed(source, puzzleId, used) {
@@ -97,7 +111,7 @@ async function loadPuzzleDetails(source, puzzleId) {
       is_used: Boolean(Number(row.is_used)),
       title: `GM #${row.id}`,
       moves: null,
-      pgn: null,
+      solution: null,
       rating: null,
       url: null,
     };
@@ -117,7 +131,7 @@ async function loadPuzzleDetails(source, puzzleId) {
       is_used: Boolean(Number(row.is_used)),
       title: `Lichess #${row.id}${row.rating != null ? ` (${row.rating})` : ''}`,
       moves: row.moves,
-      pgn: null,
+      solution: null,
       rating: row.rating,
       themes: row.themes,
       url: row.game_url,
@@ -137,7 +151,7 @@ async function loadPuzzleDetails(source, puzzleId) {
       is_used: Boolean(Number(row.is_used)),
       title: row.title || `Chess.com #${row.id}`,
       moves: null,
-      pgn: row.pgn,
+      solution: row.solution || row.pgn || null,
       rating: null,
       url: row.source_url,
       image_url: row.image_url,

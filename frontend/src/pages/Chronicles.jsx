@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiArrowLeft } from 'react-icons/fi';
+import { useSearchParams } from 'react-router-dom';
 import EmptyState from '../components/common/EmptyState';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import ChroniclesStoriesTab from '../components/chronicles/ChroniclesStoriesTab';
 import ChroniclesPuzzlesTab from '../components/chronicles/ChroniclesPuzzlesTab';
 import './Chronicles.css';
@@ -30,7 +30,6 @@ function ChroniclesPlaceholder({ label }) {
 }
 
 function Chronicles() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = useMemo(() => resolveTab(searchParams), [searchParams]);
 
@@ -47,10 +46,12 @@ function Chronicles() {
   return (
     <div className="chronicles-page">
       <header className="chronicles-header">
-        <button type="button" className="chronicles-back-btn" onClick={() => navigate('/dashboard')}>
-          <FiArrowLeft aria-hidden />
-          Back to Dashboard
-        </button>
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Chronicles' },
+          ]}
+        />
         <div>
           <h1 className="chronicles-title">Chronicles</h1>
           <p className="chronicles-subtitle">

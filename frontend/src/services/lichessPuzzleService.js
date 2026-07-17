@@ -11,8 +11,11 @@ function authHeaders(json = true) {
 
 export async function fetchLichessPuzzles({
   unused = false,
+  used = false,
   q = '',
   limit,
+  offset,
+  random = false,
   ratingMin,
   ratingMax,
   theme = '',
@@ -21,8 +24,11 @@ export async function fetchLichessPuzzles({
 } = {}) {
   const params = new URLSearchParams();
   if (unused) params.set('unused', '1');
+  if (used) params.set('used', '1');
   if (q) params.set('q', q);
   if (limit != null) params.set('limit', String(limit));
+  if (offset != null) params.set('offset', String(offset));
+  if (random) params.set('random', '1');
   if (ratingMin != null && ratingMin !== '') params.set('rating_min', String(ratingMin));
   if (ratingMax != null && ratingMax !== '') params.set('rating_max', String(ratingMax));
   if (theme) params.set('theme', theme);

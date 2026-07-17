@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiPlus, FiX, FiUpload, FiClipboard } from 'react-icons/fi';
+import { FiPlus, FiX, FiUpload, FiClipboard } from 'react-icons/fi';
 import {
   createLibraryMoral,
   createLibraryStory,
@@ -8,6 +8,7 @@ import {
   updateLibraryStory,
   uploadLibraryImages,
 } from '../services/libraryService';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Library.css';
 
 const EMPTY_FORM = {
@@ -266,9 +267,13 @@ function LibraryStoryForm() {
     <div className="library-page library-page--form">
       <header className="library-header">
         <div>
-          <button type="button" className="library-back" onClick={() => navigate('/library')}>
-            <FiArrowLeft aria-hidden /> Library
-          </button>
+          <PageBreadcrumb
+            items={[
+              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Library', to: '/library' },
+              { label: isEdit ? 'Edit Story' : 'Add Story' },
+            ]}
+          />
           <h1>{isEdit ? 'Edit Story' : 'Add Story'}</h1>
         </div>
       </header>

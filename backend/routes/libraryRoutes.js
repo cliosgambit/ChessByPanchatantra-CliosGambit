@@ -164,29 +164,89 @@ async function replaceStoryMorals(storyId, moralIds = []) {
   }
 }
 
+/** List view: metadata only — omit story content and per-row image subqueries. */
+const LIBRARY_STORY_LIST_SQL = `
+  SELECT s.id, s.title, s.subheading, s.cover_image, s.status,
+         s.created_by, s.created_at, s.updated_at,
+         COALESCE(s.cover_image, fi.image_url) AS cover_image_resolved,
+         COALESCE(ic.cnt, 0)::int AS image_count,
+         COALESCE(mc.cnt, 0)::int AS moral_count
+  FROM Stories s
+  LEFT JOIN LATERAL (
+    SELECT si.image_url
+    FROM Story_Images si
+    WHERE si.story_id = s.id
+    ORDER BY si.display_order ASC, si.id ASC
+    LIMIT 1
+  ) fi ON true
+  LEFT JOIN (
+    SELECT story_id, COUNT(*)::int AS cnt
+    FROM Story_Images
+    GROUP BY story_id
+  ) ic ON ic.story_id = s.id
+  LEFT JOIN (
+    SELECT story_id, COUNT(*)::int AS cnt
+    FROM story_moral_mapping
+    GROUP BY story_id
+  ) mc ON mc.story_id = s.id
+  ORDER BY s.updated_at DESC, s.id DESC`;
+
+function mapLibraryStoryListRow(row) {
+  return {
+    id: Number(row.id),
+    title: row.title,
+    subheading: row.subheading,
+    cover_image: row.cover_image_resolved || row.cover_image || null,
+    status: row.status,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    image_count: Number(row.image_count) || 0,
+    moral_count: Number(row.moral_count) || 0,
+  };
+}
+
+async function loadStoryForPuzzles(storyId) {
+  const id = Number(storyId);
+  if (!Number.isFinite(id)) return null;
+
+  const { rows } = await db.query(
+    `SELECT id, title, subheading, content, cover_image, status
+     FROM Stories WHERE id = $1`,
+    [id]
+  );
+  const story = rows[0];
+  if (!story) return null;
+
+  const { rows: morals } = await db.query(
+    `SELECT m.id, m.moral_code, m.moral_name
+     FROM story_moral_mapping sm
+     JOIN Morals m ON m.id = sm.moral_id
+     WHERE sm.story_id = $1
+     ORDER BY m.id ASC`,
+    [id]
+  );
+
+  return {
+    id: Number(story.id),
+    title: story.title,
+    subheading: story.subheading,
+    content: story.content,
+    cover_image: story.cover_image,
+    status: story.status,
+    morals: morals.map((row) => ({
+      id: Number(row.id),
+      moral_code: row.moral_code,
+      moral_name: row.moral_name,
+    })),
+  };
+}
+
 /** GET /api/library/stories */
 router.get('/library/stories', async (_req, res) => {
   try {
-    const { rows } = await db.query(
-      `SELECT s.*,
-              (SELECT si.image_url
-               FROM Story_Images si
-               WHERE si.story_id = s.id
-               ORDER BY si.display_order ASC, si.id ASC
-               LIMIT 1) AS first_image_url,
-              (SELECT COUNT(*) FROM Story_Images si WHERE si.story_id = s.id) AS image_count,
-              (SELECT COUNT(*) FROM story_moral_mapping sm WHERE sm.story_id = s.id) AS moral_count
-       FROM Stories s
-       ORDER BY s.updated_at DESC, s.id DESC`
-    );
-    const stories = rows.map((row) => {
-      const { first_image_url, ...story } = row;
-      return {
-        ...story,
-        cover_image: first_image_url || story.cover_image || null,
-      };
-    });
-    return res.json({ stories });
+    const { rows } = await db.query(LIBRARY_STORY_LIST_SQL);
+    return res.json({ stories: rows.map(mapLibraryStoryListRow) });
   } catch (err) {
     console.error('[library] list stories:', err.message);
     return res.status(500).json({ message: 'Failed to load stories.' });
@@ -414,7 +474,7 @@ router.get('/library/stories/:storyId/morals/:moralId/puzzles', async (req, res)
   try {
     const storyId = Number(req.params.storyId);
     const moralId = Number(req.params.moralId);
-    const story = await loadStoryBundle(storyId);
+    const story = await loadStoryForPuzzles(storyId);
     if (!story) return res.status(404).json({ message: 'Story not found.' });
     const moral = (story.morals || []).find((m) => Number(m.id) === moralId);
     if (!moral) {

@@ -47,9 +47,36 @@ function mapStudent(row) {
     notes: row.notes || null,
     email: row.email || null,
     role: row.Role || row.role || 'student',
+    batches: Array.isArray(row.batches) ? row.batches : [],
     created_at: row.created_at || null,
     updated_at: row.updated_at || null,
   };
+}
+
+async function loadBatchesForStudents(studentIds) {
+  const ids = [...new Set((studentIds || []).map(Number).filter((n) => n > 0))];
+  if (!ids.length) return new Map();
+
+  const { rows } = await db.query(
+    `SELECT bs.student_id, b.id, b.name, b.status
+     FROM batch_students bs
+     INNER JOIN batches b ON b.id = bs.batch_id
+     WHERE bs.student_id = ANY($1)
+     ORDER BY b.name ASC`,
+    [ids]
+  );
+
+  const map = new Map();
+  for (const row of rows) {
+    const sid = Number(row.student_id);
+    if (!map.has(sid)) map.set(sid, []);
+    map.get(sid).push({
+      id: row.id,
+      name: row.name,
+      status: row.status || 'active',
+    });
+  }
+  return map;
 }
 
 async function ensurePlayerRow(chessComId, playerName) {
@@ -85,7 +112,11 @@ router.get('/students', async (req, res) => {
     }
     sql += ` ORDER BY s.joining_date DESC, s.id DESC`;
     const { rows } = await db.query(sql, params);
-    return res.json({ students: rows.map(mapStudent), count: rows.length });
+    const batchMap = await loadBatchesForStudents(rows.map((r) => r.id));
+    const students = rows.map((row) =>
+      mapStudent({ ...row, batches: batchMap.get(Number(row.id)) || [] })
+    );
+    return res.json({ students, count: students.length });
   } catch (err) {
     console.error('[students] list:', err.message);
     return res.status(500).json({ message: 'Failed to load students.' });
@@ -142,7 +173,13 @@ router.get('/students/:id', async (req, res) => {
       [Number(req.params.id)]
     );
     if (!rows[0]) return res.status(404).json({ message: 'Student not found.' });
-    return res.json({ student: mapStudent(rows[0]) });
+    const batchMap = await loadBatchesForStudents([rows[0].id]);
+    return res.json({
+      student: mapStudent({
+        ...rows[0],
+        batches: batchMap.get(Number(rows[0].id)) || [],
+      }),
+    });
   } catch (err) {
     console.error('[students] get:', err.message);
     return res.status(500).json({ message: 'Failed to load student.' });

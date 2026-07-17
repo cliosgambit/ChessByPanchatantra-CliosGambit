@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box } from '@chakra-ui/react';
-import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import BrilliantMoveBoardView from '../components/brilliantMoves/BrilliantMoveBoardView';
 import BrilliantMoveVerificationBar from '../components/brilliantMoves/BrilliantMoveVerificationBar';
 import {
@@ -101,14 +101,13 @@ function ViewBrilliantMove() {
 
       <div className="chess-profile-header-wrap">
         <div className="chess-profile-header-card view-brilliant-move-page-header">
-          <button
-            type="button"
-            className="chess-btn-secondary view-brilliant-move-back"
-            onClick={() => navigate('/brilliant-moves')}
-          >
-            <FiArrowLeft />
-            <span>Back to Brilliant Moves</span>
-          </button>
+          <PageBreadcrumb
+            items={[
+              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Brilliant Moves', to: '/brilliant-moves' },
+              { label: moveId ? `Move #${moveId}` : 'Move' },
+            ]}
+          />
         </div>
       </div>
 

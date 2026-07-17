@@ -230,64 +230,143 @@ router.get('/puzzles/lichess/filters', async (req, res) => {
   }
 });
 
+/** Build WHERE clause + params for lichess_puzzles list filters. */
+function buildLichessWhere(query) {
+  const unusedOnly = String(query.unused || '') === '1' || query.unused === 'true';
+  const usedOnly = String(query.used || '') === '1' || query.used === 'true';
+  const q = String(query.q || '').trim();
+  const ratingMin = parseOptionalInt(query.rating_min);
+  const ratingMax = parseOptionalInt(query.rating_max);
+  const theme = String(query.theme || '').trim();
+  const opening = String(query.opening || '').trim();
+  const params = [];
+  let where = ' WHERE 1=1';
+  if (unusedOnly) where += ` AND IFNULL(is_used, 0) = 0`;
+  if (usedOnly) where += ` AND IFNULL(is_used, 0) = 1`;
+  if (ratingMin != null) {
+    params.push(ratingMin);
+    where += ` AND rating >= $${params.length}`;
+  }
+  if (ratingMax != null) {
+    params.push(ratingMax);
+    where += ` AND rating <= $${params.length}`;
+  }
+  if (theme) {
+    params.push(`%${theme}%`);
+    where += ` AND IFNULL(themes,'') LIKE $${params.length}`;
+  }
+  if (opening) {
+    params.push(`%${opening}%`);
+    where += ` AND IFNULL(opening_tags,'') LIKE $${params.length}`;
+  }
+  if (q) {
+    const like = `%${q}%`;
+    params.push(like);
+    const a = params.length;
+    params.push(like);
+    const b = params.length;
+    params.push(like);
+    const c = params.length;
+    params.push(like);
+    const d = params.length;
+    where += ` AND (fen LIKE $${a} OR IFNULL(themes,'') LIKE $${b} OR IFNULL(opening_tags,'') LIKE $${c} OR CAST(id AS TEXT) LIKE $${d})`;
+  }
+  const hasFilter =
+    unusedOnly ||
+    usedOnly ||
+    q ||
+    ratingMin != null ||
+    ratingMax != null ||
+    theme ||
+    opening;
+  return { where, params, hasFilter };
+}
+
 /** GET /api/puzzles/lichess
- *  Query: unused=1, q=, limit=, rating_min=, rating_max=, theme=, opening=, sort=
+ *  Query: unused=1, used=1, q=, limit=, offset=, random=1,
+ *         rating_min=, rating_max=, theme=, opening=, sort=
  */
 router.get('/puzzles/lichess', async (req, res) => {
   try {
-    const unusedOnly = String(req.query.unused || '') === '1' || req.query.unused === 'true';
-    const q = String(req.query.q || '').trim();
-    const ratingMin = parseOptionalInt(req.query.rating_min);
-    const ratingMax = parseOptionalInt(req.query.rating_max);
-    const theme = String(req.query.theme || '').trim();
-    const opening = String(req.query.opening || '').trim();
     const sort = String(req.query.sort || 'id_asc');
-    const hasFilter = unusedOnly || q || ratingMin != null || ratingMax != null || theme || opening;
+    const wantRandom =
+      String(req.query.random || '') === '1' || req.query.random === 'true';
+    const { where, params, hasFilter } = buildLichessWhere(req.query);
     const limit = Math.min(
-      Math.max(Number(req.query.limit) || (hasFilter ? 100 : 2000), 1),
-      2000
+      Math.max(Number(req.query.limit) || (hasFilter ? 100 : 25), 1),
+      500
     );
-    const params = [];
-    let sql = `
-      SELECT id, fen, moves, rating, rating_deviation, popularity, nb_plays,
-             themes, game_url, opening_tags, is_used, created_at
-      FROM lichess_puzzles
-      WHERE 1=1`;
-    if (unusedOnly) sql += ` AND IFNULL(is_used, 0) = 0`;
-    if (ratingMin != null) {
-      params.push(ratingMin);
-      sql += ` AND rating >= $${params.length}`;
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+    const countResult = await db.query(
+      `SELECT COUNT(*)::int AS total FROM lichess_puzzles${where}`,
+      params
+    );
+    const total = Number(countResult.rows[0]?.total) || 0;
+
+    const usageResult = await db.query(
+      `SELECT
+         COUNT(*)::int AS total_all,
+         COUNT(*) FILTER (WHERE COALESCE(is_used, 0) = 1)::int AS total_used,
+         COUNT(*) FILTER (WHERE COALESCE(is_used, 0) = 0)::int AS total_unused
+       FROM lichess_puzzles`
+    );
+    const usageRow = usageResult.rows[0] || {};
+    const usage = {
+      all: Number(usageRow.total_all) || 0,
+      used: Number(usageRow.total_used) || 0,
+      unused: Number(usageRow.total_unused) || 0,
+    };
+
+    if (wantRandom) {
+      if (total === 0) {
+        return res.json({
+          puzzles: [],
+          count: 0,
+          total: 0,
+          offset: 0,
+          limit: 1,
+          usage,
+        });
+      }
+      const skip = Math.floor(Math.random() * total);
+      const randomParams = [...params, 1, skip];
+      const { rows } = await db.query(
+        `SELECT id, fen, moves, rating, rating_deviation, popularity, nb_plays,
+                themes, game_url, opening_tags, is_used, created_at
+         FROM lichess_puzzles
+         ${where}
+         ORDER BY ${lichessSortClause(sort)}
+         LIMIT $${randomParams.length - 1} OFFSET $${randomParams.length}`,
+        randomParams
+      );
+      return res.json({
+        puzzles: rows.map(mapLichessPuzzle),
+        count: rows.length,
+        total,
+        offset: skip,
+        limit: 1,
+        usage,
+      });
     }
-    if (ratingMax != null) {
-      params.push(ratingMax);
-      sql += ` AND rating <= $${params.length}`;
-    }
-    if (theme) {
-      params.push(`%${theme}%`);
-      sql += ` AND IFNULL(themes,'') LIKE $${params.length}`;
-    }
-    if (opening) {
-      params.push(`%${opening}%`);
-      sql += ` AND IFNULL(opening_tags,'') LIKE $${params.length}`;
-    }
-    if (q) {
-      const like = `%${q}%`;
-      params.push(like);
-      const a = params.length;
-      params.push(like);
-      const b = params.length;
-      params.push(like);
-      const c = params.length;
-      params.push(like);
-      const d = params.length;
-      sql += ` AND (fen LIKE $${a} OR IFNULL(themes,'') LIKE $${b} OR IFNULL(opening_tags,'') LIKE $${c} OR CAST(id AS TEXT) LIKE $${d})`;
-    }
-    params.push(limit);
-    sql += ` ORDER BY ${lichessSortClause(sort)} LIMIT $${params.length}`;
-    const { rows } = await db.query(sql, params);
+
+    const listParams = [...params, limit, offset];
+    const { rows } = await db.query(
+      `SELECT id, fen, moves, rating, rating_deviation, popularity, nb_plays,
+              themes, game_url, opening_tags, is_used, created_at
+       FROM lichess_puzzles
+       ${where}
+       ORDER BY ${lichessSortClause(sort)}
+       LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
     return res.json({
       puzzles: rows.map(mapLichessPuzzle),
       count: rows.length,
+      total,
+      offset,
+      limit,
+      usage,
     });
   } catch (err) {
     console.error('[puzzles] list lichess:', err.message);

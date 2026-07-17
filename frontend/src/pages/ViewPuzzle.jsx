@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box } from '@chakra-ui/react';
-import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import PuzzleBoardView from '../components/puzzles/PuzzleBoardView';
 import {
   fetchBrilliantPuzzleFromDb,
@@ -82,14 +82,14 @@ function ViewPuzzle() {
     <Box className="chess-profile-page">
       <div className="chess-profile-header-wrap">
         <div className="chess-profile-header-card view-brilliant-move-page-header">
-          <button
-            type="button"
-            className="chess-btn-secondary view-brilliant-move-back"
-            onClick={() => navigate('/puzzles/chesscom')}
-          >
-            <FiArrowLeft />
-            <span>Back to Chess.com puzzles</span>
-          </button>
+          <PageBreadcrumb
+            items={[
+              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Puzzles', to: '/puzzles' },
+              { label: 'Chess.com Puzzles', to: '/puzzles/chesscom' },
+              { label: puzzleId ? `Puzzle #${puzzleId}` : 'Puzzle' },
+            ]}
+          />
         </div>
       </div>
 

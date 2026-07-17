@@ -400,8 +400,35 @@ async function analyzePosition({ currentFen, previousFen, multipv = 3 }) {
   return response;
 }
 
+/** Single-position best move via local Stockfish binary. */
+async function getBestMove(fen, depth = 15) {
+  const cappedDepth = Math.min(Math.max(1, Number(depth) || 15), 25);
+  const result = await runEngineWithFallbacks(
+    { fen, depth: cappedDepth, multipv: 1 },
+    [
+      { fen, depth: Math.min(12, cappedDepth), multipv: 1 },
+      { fen, movetime: 800, multipv: 1 },
+    ],
+    false
+  );
+  const bestmove = result?.bestmove || null;
+  if (!bestmove) {
+    throw new Error('Local Stockfish did not return a best move.');
+  }
+  const score = result?.score || { type: 'cp', value: 0 };
+  return {
+    success: true,
+    bestmove: `bestmove ${bestmove}${result?.ponder ? ` ponder ${result.ponder}` : ''}`,
+    evaluation: score.type === 'cp' ? score.value / 100 : null,
+    mate: score.type === 'mate' ? score.value : null,
+    source: 'local',
+    depth: result?.depth || cappedDepth,
+  };
+}
+
 module.exports = {
   analyzePosition,
   scoreToWhiteWinProbability,
   parseEngineLines,
+  getBestMove,
 };

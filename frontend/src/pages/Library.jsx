@@ -4,7 +4,6 @@ import {
   FiPlus,
   FiEdit2,
   FiTrash2,
-  FiArrowLeft,
   FiSearch,
   FiGrid,
   FiList,
@@ -13,6 +12,7 @@ import {
   deleteLibraryStory,
   fetchLibraryStories,
 } from '../services/libraryService';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import PaginationBar from '../components/common/PaginationBar';
 import './Library.css';
 
@@ -184,9 +184,12 @@ function Library() {
       <div className="library-sticky-head">
         <header className="library-header">
           <div>
-            <button type="button" className="library-back" onClick={() => navigate('/dashboard')}>
-              <FiArrowLeft aria-hidden /> Dashboard
-            </button>
+            <PageBreadcrumb
+              items={[
+                { label: 'Dashboard', to: '/dashboard' },
+                { label: 'Library' },
+              ]}
+            />
             <h1>Library</h1>
             <p className="library-muted">Create and manage stories for CLIO.</p>
           </div>

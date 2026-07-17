@@ -1,33 +1,23 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiExternalLink, FiEye, FiEyeOff, FiRefreshCw } from 'react-icons/fi';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FiExternalLink, FiRefreshCw } from 'react-icons/fi';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchChessComRandomPuzzle } from '../services/chessComDbService';
-import './Puzzles.css';
-import './ChroniclesChessPuzzlePage.css';
+import { solutionTextFromChessCom } from '../utils/chessComPgnUtils';
+import './LibraryMoralPuzzles.css';
 
-function formatMoveHistoryLines(moves) {
-  const lines = [];
-  for (let index = 0; index < moves.length; index += 2) {
-    const moveNumber = Math.floor(index / 2) + 1;
-    lines.push({
-      moveNumber,
-      white: moves[index] || '',
-      black: moves[index + 1] || '',
-    });
-  }
-  return lines;
-}
+const CHESSCOM_BREADCRUMB = [
+  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Puzzles', to: '/puzzles' },
+  { label: 'Chess.com Puzzles' },
+];
 
-/** Strip PGN headers / result → solution move text. */
-function solutionFromPgn(pgn) {
-  if (!pgn) return '';
-  return String(pgn)
-    .replace(/\[[^\]]*\]/g, ' ')
-    .replace(/\r/g, '')
-    .replace(/\s*(?:\*|1-0|0-1|1\/2-1\/2)\s*$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+const CHESSCOM_PUZZLE_CACHE_KEY = 'clio:chesscom-random-puzzle';
+const FETCH_NEW_MAX_ATTEMPTS = 40;
+const FETCH_NEW_RETRY_MS = 750;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function fenOrientation(fen) {
@@ -38,201 +28,241 @@ function fenOrientation(fen) {
   }
 }
 
-function ChessComPuzzles() {
-  const navigate = useNavigate();
-  const [puzzle, setPuzzle] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [moveHistory, setMoveHistory] = useState([]);
-  const [boardResetKey, setBoardResetKey] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+function sameFen(a, b) {
+  const fenA = String(a?.fen || '').trim();
+  const fenB = String(b?.fen || '').trim();
+  return Boolean(fenA) && fenA === fenB;
+}
 
-  const loadPuzzle = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    setMoveHistory([]);
-    setShowAnswer(false);
-    try {
-      const data = await fetchChessComRandomPuzzle();
-      if (!data?.fen) throw new Error('Puzzle response missing FEN.');
-      setPuzzle(data);
-      setBoardResetKey((v) => v + 1);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch Chess.com puzzle.');
-      setPuzzle(null);
-    } finally {
-      setLoading(false);
+function stripTransientPuzzleFields(puzzle) {
+  if (!puzzle) return null;
+  const { persistPromise, ...serializable } = puzzle;
+  return serializable;
+}
+
+function readCachedPuzzle() {
+  try {
+    const raw = localStorage.getItem(CHESSCOM_PUZZLE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.fen ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedPuzzle(puzzle) {
+  try {
+    const serializable = stripTransientPuzzleFields(puzzle);
+    if (serializable?.fen) {
+      localStorage.setItem(CHESSCOM_PUZZLE_CACHE_KEY, JSON.stringify(serializable));
     }
+  } catch {
+    // Cache failures should never block the puzzle UI.
+  }
+}
+
+function ChessComPuzzles() {
+  const [puzzle, setPuzzle] = useState(() => readCachedPuzzle());
+  const [loading, setLoading] = useState(() => !readCachedPuzzle());
+  const [error, setError] = useState('');
+  const [boardKey, setBoardKey] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const puzzleRef = useRef(puzzle);
+  const fetchInFlightRef = useRef(false);
+
+  puzzleRef.current = puzzle;
+
+  const applyPuzzle = useCallback((data) => {
+    setPuzzle(data);
+    writeCachedPuzzle(data);
+    setBoardKey((v) => v + 1);
+    setShowAnswer(false);
+    data?.persistPromise?.then((saved) => {
+      if (!saved?.fen) return;
+      setPuzzle((current) =>
+        current && sameFen(current, saved)
+          ? (() => {
+              const merged = { ...current, ...saved, persistPromise: undefined };
+              writeCachedPuzzle(merged);
+              return merged;
+            })()
+          : current
+      );
+    });
   }, []);
 
   useEffect(() => {
-    loadPuzzle();
-  }, [loadPuzzle]);
+    let cancelled = false;
 
-  const historyLines = useMemo(() => formatMoveHistoryLines(moveHistory), [moveHistory]);
-  const solution = useMemo(() => solutionFromPgn(puzzle?.pgn), [puzzle?.pgn]);
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await fetchChessComRandomPuzzle();
+        if (cancelled) return;
+        if (!data?.fen) throw new Error('Puzzle response missing FEN.');
+        applyPuzzle(data);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message || 'Failed to fetch Chess.com puzzle.');
+        if (!puzzleRef.current) setPuzzle(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPuzzle]);
+
+  const fetchNewPuzzle = useCallback(async () => {
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
+    setLoading(true);
+    setError('');
+    const currentFen = String(puzzleRef.current?.fen || '').trim();
+    try {
+      for (let attempt = 0; attempt < FETCH_NEW_MAX_ATTEMPTS; attempt += 1) {
+        const data = await fetchChessComRandomPuzzle();
+        if (!data?.fen) throw new Error('Puzzle response missing FEN.');
+        if (!currentFen || data.fen.trim() !== currentFen) {
+          applyPuzzle(data);
+          return;
+        }
+        await sleep(FETCH_NEW_RETRY_MS);
+      }
+      setError('Chess.com kept returning the same puzzle. Try again in a moment.');
+    } catch (err) {
+      setError(err.message || 'Failed to fetch Chess.com puzzle.');
+      if (!puzzleRef.current) setPuzzle(null);
+    } finally {
+      fetchInFlightRef.current = false;
+      setLoading(false);
+    }
+  }, [applyPuzzle]);
+
+  const solution = useMemo(
+    () => solutionTextFromChessCom(puzzle?.solution || puzzle?.pgn),
+    [puzzle?.solution, puzzle?.pgn]
+  );
   const sideToMove = puzzle?.fen ? fenOrientation(puzzle.fen) : 'white';
 
   if (loading && !puzzle) {
     return (
-      <div className="puzzles-page">
-        <button type="button" className="puzzles-back" onClick={() => navigate('/puzzles')}>
-          <FiArrowLeft aria-hidden /> Puzzles
-        </button>
-        <p className="puzzles-muted">Fetching random Chess.com puzzle…</p>
+      <div className="moral-puzzles-page">
+        <PageBreadcrumb items={CHESSCOM_BREADCRUMB} />
+        <p className="moral-puzzles-muted">Fetching random Chess.com puzzle…</p>
       </div>
     );
   }
 
   if (error && !puzzle) {
     return (
-      <div className="puzzles-page">
-        <button type="button" className="puzzles-back" onClick={() => navigate('/puzzles')}>
-          <FiArrowLeft aria-hidden /> Puzzles
-        </button>
-        <p className="puzzles-error">{error}</p>
-        <button
-          type="button"
-          className="puzzles-action-btn puzzles-action-btn--primary"
-          onClick={loadPuzzle}
-        >
-          <FiRefreshCw aria-hidden /> Fetch new
-        </button>
+      <div className="moral-puzzles-page">
+        <PageBreadcrumb items={CHESSCOM_BREADCRUMB} />
+        <p className="moral-puzzles-error">{error}</p>
+        <div className="moral-puzzles-add-row">
+          <button
+            type="button"
+            className="moral-puzzles-btn moral-puzzles-btn--primary"
+            onClick={fetchNewPuzzle}
+          >
+            <FiRefreshCw aria-hidden /> Fetch new
+          </button>
+        </div>
       </div>
     );
   }
 
+  const dbLabel =
+    puzzle?.id != null
+      ? `#${puzzle.id}${puzzle.created ? ' · newly saved' : ' · already stored'}`
+      : 'Not saved';
+  const usageLabel =
+    puzzle?.id != null ? (puzzle.is_used ? 'Used' : 'Unused') : null;
+
   return (
-    <div className="chronicles-puzzle-page">
-      <header className="chronicles-puzzle-page-header">
-        <button
-          type="button"
-          className="chronicles-back-btn"
-          onClick={() => navigate('/puzzles')}
-        >
-          <FiArrowLeft aria-hidden />
-          Back to Puzzles
-        </button>
-        <div className="gm-puzzle-view-title-row">
-          <div>
-            <h1 className="chronicles-puzzle-page-title">
-              {puzzle?.title || 'Chess.com random puzzle'}
-            </h1>
-            <p className="chronicles-puzzle-page-subtitle">
-              {sideToMove === 'black' ? 'Black' : 'White'} to move · from{' '}
-              <a href="https://api.chess.com/pub/puzzle/random" target="_blank" rel="noreferrer">
-                Chess.com API
-              </a>
+    <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
+      <div className="moral-puzzles-zone moral-puzzles-zone--story">
+        <div className="moral-puzzles-left-inner">
+          <PageBreadcrumb items={CHESSCOM_BREADCRUMB} />
+
+          <h1 className="moral-play-title">{puzzle?.title || 'Chess.com Puzzle'}</h1>
+          <p className="moral-play-sub">
+            {sideToMove === 'black' ? 'Black' : 'White'} to move · Chess.com random puzzle
+          </p>
+
+          {error ? <p className="moral-puzzles-error">{error}</p> : null}
+
+          <section className="moral-play-card">
+            <p className="moral-play-card-label">Puzzle details</p>
+            <p className="moral-play-card-body">
+              {dbLabel}
+              {usageLabel ? (
+                <span className="moral-play-moral-code">{usageLabel}</span>
+              ) : null}
             </p>
-          </div>
-          <div className="puzzles-header-actions">
-            <button
-              type="button"
-              className="puzzles-action-btn"
-              onClick={() => setShowAnswer((v) => !v)}
-              disabled={!solution}
-            >
-              {showAnswer ? <FiEyeOff aria-hidden /> : <FiEye aria-hidden />}
-              {showAnswer ? 'Hide answer' : 'Show answer'}
-            </button>
-            <button
-              type="button"
-              className="puzzles-action-btn puzzles-action-btn--primary"
-              onClick={loadPuzzle}
-              disabled={loading}
-            >
-              <FiRefreshCw aria-hidden />
-              {loading ? 'Fetching…' : 'Fetch new'}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {error ? <p className="puzzles-error">{error}</p> : null}
-
-      <div className="chronicles-puzzle-workspace">
-        <aside className="chronicles-puzzle-meta">
-          <h2 className="chronicles-puzzle-meta-title">Puzzle details</h2>
-          <dl className="chronicles-puzzle-meta-list">
-            <div>
-              <dt>DB</dt>
-              <dd>
-                {puzzle?.id != null
-                  ? `#${puzzle.id}${puzzle.created ? ' · newly saved' : ' · already stored'}`
-                  : 'Not saved'}
-                {puzzle?.is_used ? ' · used' : puzzle?.id != null ? ' · unused' : ''}
-              </dd>
-            </div>
-            <div>
-              <dt>Title</dt>
-              <dd>{puzzle?.title || '—'}</dd>
-            </div>
-            <div>
-              <dt>Side to move</dt>
-              <dd>{sideToMove === 'black' ? 'Black' : 'White'}</dd>
-            </div>
-            {showAnswer && solution ? (
-              <div>
-                <dt>Solution</dt>
-                <dd style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{solution}</dd>
-              </div>
-            ) : null}
+            <p className="moral-play-card-body">
+              {sideToMove === 'black' ? 'Black' : 'White'} to move
+            </p>
+            <p className="moral-puzzles-fen">{puzzle?.fen}</p>
             {puzzle?.url ? (
-              <div>
-                <dt>Source</dt>
-                <dd>
-                  <a href={puzzle.url} target="_blank" rel="noreferrer">
-                    Open on Chess.com <FiExternalLink aria-hidden style={{ display: 'inline' }} />
-                  </a>
-                </dd>
-              </div>
+              <a
+                className="moral-puzzles-game-link"
+                href={puzzle.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open on Chess.com <FiExternalLink aria-hidden />
+              </a>
             ) : null}
-            <div>
-              <dt>FEN</dt>
-              <dd style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
-                {puzzle?.fen}
-              </dd>
-            </div>
-          </dl>
-        </aside>
+          </section>
 
-        <div className="chronicles-puzzle-center">
-          {puzzle?.fen ? (
-            <ChroniclesPuzzleBoard
-              initialFen={puzzle.fen}
-              onMoveHistoryChange={setMoveHistory}
-              resetKey={boardResetKey}
-            />
-          ) : null}
-        </div>
-
-        <aside className="chronicles-puzzle-history">
-          <h2 className="chronicles-puzzle-history-title">Move history</h2>
-          <div className="chronicles-puzzle-history-scroll">
-            {historyLines.length === 0 ? (
-              <p className="chronicles-puzzle-history-empty">Play a move on the board to begin.</p>
+          <section className="moral-play-card moral-play-card--solution">
+            <p className="moral-play-card-label">Puzzle Solution</p>
+            {!showAnswer ? (
+              <button
+                type="button"
+                className="moral-play-solution-btn"
+                disabled={!solution}
+                onClick={() => setShowAnswer(true)}
+              >
+                Show Solution
+              </button>
+            ) : solution ? (
+              <p className="moral-play-solution-text">{solution}</p>
             ) : (
-              <table className="chronicles-puzzle-history-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>White</th>
-                    <th>Black</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyLines.map((line) => (
-                    <tr key={line.moveNumber}>
-                      <td>{line.moveNumber}</td>
-                      <td>{line.white}</td>
-                      <td>{line.black}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <p className="moral-puzzles-muted">No solution available for this puzzle.</p>
             )}
-          </div>
-        </aside>
+          </section>
+
+          <section className="moral-play-card">
+            <p className="moral-play-card-label">Actions</p>
+            <div className="moral-puzzles-add-row moral-play-add-row">
+              <button
+                type="button"
+                className="moral-puzzles-btn moral-puzzles-btn--primary"
+                onClick={fetchNewPuzzle}
+                disabled={loading}
+              >
+                <FiRefreshCw aria-hidden />
+                {loading ? 'Fetching…' : 'Fetch new'}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div className="moral-puzzles-zone moral-puzzles-zone--board" aria-label="Board area">
+        {puzzle?.fen ? (
+          <ChroniclesPuzzleBoard
+            initialFen={puzzle.fen}
+            resetKey={boardKey}
+            layout="moral-zone"
+          />
+        ) : null}
       </div>
     </div>
   );

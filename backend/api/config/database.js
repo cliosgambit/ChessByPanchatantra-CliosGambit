@@ -164,7 +164,12 @@ async function runOnPg(clientOrPool, sql, params = []) {
       /^\s*INSERT\s+INTO\b/i.test(sql) &&
       !/\bON\s+CONFLICT\b/i.test(sql)
     ) {
-      const retrySql = `${sql.replace(/;?\s*$/, '')} ON CONFLICT DO NOTHING`;
+      // ON CONFLICT must come before RETURNING — appending after RETURNING is invalid SQL.
+      const trimmed = sql.replace(/;?\s*$/, '');
+      const returningMatch = trimmed.match(/\bRETURNING\b[\s\S]*$/i);
+      const retrySql = returningMatch
+        ? `${trimmed.slice(0, returningMatch.index).trimEnd()} ON CONFLICT DO NOTHING ${returningMatch[0]}`
+        : `${trimmed} ON CONFLICT DO NOTHING`;
       const result = await clientOrPool.query(retrySql, values);
       return {
         rows: result.rows,

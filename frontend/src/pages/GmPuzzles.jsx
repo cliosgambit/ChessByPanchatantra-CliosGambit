@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiEye, FiShuffle } from 'react-icons/fi';
+import { FiSearch, FiShuffle, FiX } from 'react-icons/fi';
 import FenHoverPreview from '../components/userProfile/FenHoverPreview';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchGmPuzzles } from '../services/gmPuzzleService';
 import './Puzzles.css';
 
@@ -23,12 +24,19 @@ function pickRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+const USAGE_OPTIONS = [
+  { value: 'all', label: 'Both' },
+  { value: 'used', label: 'Used' },
+  { value: 'unused', label: 'Unused' },
+];
+
 function GmPuzzles() {
   const navigate = useNavigate();
   const [puzzles, setPuzzles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [usageFilter, setUsageFilter] = useState('all');
   const [page, setPage] = useState(1);
 
   const hideTimer = useRef(null);
@@ -36,6 +44,18 @@ function GmPuzzles() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [hoveredPuzzle, setHoveredPuzzle] = useState(null);
   const [previewPos, setPreviewPos] = useState({ top: 0, left: 0 });
+
+  const showMorals = usageFilter !== 'unused';
+  const usageCounts = useMemo(
+    () => ({
+      all: puzzles.length,
+      used: puzzles.filter(
+        (p) => Boolean(p.is_used) && (p.moral_code || p.moral_name || p.moral_id)
+      ).length,
+      unused: puzzles.filter((p) => !p.is_used).length,
+    }),
+    [puzzles]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -57,23 +77,32 @@ function GmPuzzles() {
   }, []);
 
   const filtered = useMemo(() => {
+    let rows = puzzles;
+    if (usageFilter === 'used') {
+      rows = rows.filter((p) => Boolean(p.is_used) && (p.moral_code || p.moral_name || p.moral_id));
+    } else if (usageFilter === 'unused') {
+      rows = rows.filter((p) => !p.is_used);
+    }
+
     const q = query.trim().toLowerCase();
-    if (!q) return puzzles;
-    return puzzles.filter((p) => {
-      const moralLabel = [p.moral_code, p.moral_name].filter(Boolean).join(' ');
+    if (!q) return rows;
+    return rows.filter((p) => {
+      const moralLabel = showMorals
+        ? [p.moral_code, p.moral_name].filter(Boolean).join(' ')
+        : '';
       const hay = [moralLabel, p.fen, String(p.id)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [puzzles, query]);
+  }, [puzzles, query, usageFilter, showMorals]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
   useEffect(() => {
     setPage(1);
-  }, [query]);
+  }, [query, usageFilter]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -112,25 +141,20 @@ function GmPuzzles() {
     });
   }, []);
 
-  const updatePreviewPosition = useCallback((el) => {
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const boardSize = 168;
-    const gap = 14;
-    let left = rect.right + gap;
-    let top = rect.top + rect.height / 2;
-    if (left + boardSize + 24 > window.innerWidth) {
-      left = Math.max(12, rect.left - boardSize - gap);
-    }
-    top = Math.min(window.innerHeight - boardSize / 2 - 12, Math.max(boardSize / 2 + 12, top));
-    setPreviewPos({ top, left });
+  const updatePreviewPosition = useCallback((rowEl) => {
+    if (!rowEl) return;
+    const rowRect = rowEl.getBoundingClientRect();
+    setPreviewPos({
+      top: rowRect.top + rowRect.height / 2,
+      left: rowRect.right + 14,
+    });
   }, []);
 
-  const handleFenHover = useCallback(
-    (puzzle, el) => {
+  const handleRowHover = useCallback(
+    (puzzle, rowEl) => {
       if (!puzzle?.fen) return;
       clearTimers();
-      updatePreviewPosition(el);
+      updatePreviewPosition(rowEl);
       setHoveredPuzzle(puzzle);
       setPreviewMounted(true);
       revealPreview();
@@ -170,7 +194,6 @@ function GmPuzzles() {
               fen={hoveredPuzzle.fen}
               orientation={fenOrientation(hoveredPuzzle.fen)}
               boardId="gm-puzzle-hover-board"
-              boardSize={168}
             />
           </div>,
           document.body
@@ -178,21 +201,78 @@ function GmPuzzles() {
       : null;
 
   return (
-    <div className="puzzles-page puzzles-page--wide">
-      <header className="puzzles-header">
-        <button type="button" className="puzzles-back" onClick={() => navigate('/puzzles')}>
-          <FiArrowLeft aria-hidden /> Puzzles
-        </button>
+    <div className="puzzles-page puzzles-page--wide gm-puzzles-page">
+      <header className="puzzles-header gm-puzzles-header">
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Puzzles', to: '/puzzles' },
+            { label: 'GM Puzzles' },
+          ]}
+        />
         <div className="puzzles-header-row">
-          <div>
+          <div className="gm-puzzles-heading">
+            <span className="gm-puzzles-eyebrow">Puzzle library</span>
             <h1>GM Puzzles</h1>
             <p className="puzzles-muted">
               {loading
                 ? 'Loading…'
-                : `${filtered.length} of ${puzzles.length} puzzles · page ${page}/${totalPages}`}
+                : `${filtered.length} result${filtered.length === 1 ? '' : 's'} · page ${page} of ${totalPages}`}
             </p>
           </div>
-          <div className="puzzles-header-actions">
+          <div className="gm-puzzles-summary" aria-label="Puzzle totals">
+            <div>
+              <strong>{usageCounts.all}</strong>
+              <span>Total</span>
+            </div>
+            <div>
+              <strong>{usageCounts.used}</strong>
+              <span>Used</span>
+            </div>
+            <div>
+              <strong>{usageCounts.unused}</strong>
+              <span>Unused</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section className="gm-puzzles-toolbar" aria-label="Puzzle controls">
+        <div className="gm-puzzles-filter-block">
+          <span className="gm-puzzles-control-label">Show puzzles</span>
+          <div className="puzzles-usage-filter" role="group" aria-label="Usage filter">
+            {USAGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`puzzles-usage-filter-btn${
+                  usageFilter === opt.value ? ' is-active' : ''
+                }`}
+                aria-pressed={usageFilter === opt.value}
+                onClick={() => setUsageFilter(opt.value)}
+              >
+                <span>{opt.label}</span>
+                <span className="puzzles-usage-filter-count">{usageCounts[opt.value]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="puzzles-header-actions">
+          <label className="gm-puzzles-search">
+            <FiSearch aria-hidden />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={showMorals ? 'Search by moral, FEN or ID' : 'Search by FEN or ID'}
+              aria-label="Search GM puzzles"
+            />
+            {query ? (
+              <button type="button" onClick={() => setQuery('')} aria-label="Clear search">
+                <FiX aria-hidden />
+              </button>
+            ) : null}
+          </label>
             <button
               type="button"
               className="puzzles-action-btn puzzles-action-btn--primary"
@@ -201,15 +281,8 @@ function GmPuzzles() {
             >
               <FiShuffle aria-hidden /> View random puzzle
             </button>
-            <input
-              className="puzzles-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search moral, FEN…"
-            />
-          </div>
         </div>
-      </header>
+      </section>
 
       {error ? <p className="puzzles-error">{error}</p> : null}
 
@@ -219,42 +292,41 @@ function GmPuzzles() {
 
       {!loading && pageRows.length > 0 ? (
         <>
-          <div className="puzzles-table-wrap" onMouseLeave={scheduleHide}>
+          <div className="puzzles-table-wrap gm-puzzles-table-wrap" onMouseLeave={scheduleHide}>
             <table className="puzzles-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Moral</th>
+                  <th className="gm-puzzles-number-column">#</th>
+                  {showMorals ? <th>Moral</th> : null}
                   <th>FEN</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((p, i) => (
-                  <tr key={p.id}>
-                    <td>{(page - 1) * PAGE_SIZE + i + 1}</td>
-                    <td>
-                      {p.moral_code || p.moral_name
-                        ? [p.moral_code, p.moral_name].filter(Boolean).join(' — ')
-                        : '—'}
-                    </td>
-                    <td
-                      className="puzzles-fen puzzles-fen--hoverable"
-                      onMouseEnter={(e) => handleFenHover(p, e.currentTarget)}
-                      onMouseLeave={scheduleHide}
-                    >
-                      {p.fen || '—'}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="puzzles-action-btn"
-                        onClick={() => openPuzzle(p)}
-                        disabled={!p.fen}
-                      >
-                        <FiEye aria-hidden /> View
-                      </button>
-                    </td>
+                  <tr
+                    key={p.id}
+                    className="gm-puzzles-row--clickable"
+                    onClick={() => openPuzzle(p)}
+                    onMouseEnter={(e) => handleRowHover(p, e.currentTarget)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openPuzzle(p);
+                      }
+                    }}
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`View puzzle ${p.id}`}
+                  >
+                    <td className="gm-puzzles-row-number">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                    {showMorals ? (
+                      <td className="gm-puzzles-moral">
+                        {p.moral_code || p.moral_name
+                          ? [p.moral_code, p.moral_name].filter(Boolean).join(' — ')
+                          : '—'}
+                      </td>
+                    ) : null}
+                    <td className="puzzles-fen">{p.fen || '—'}</td>
                   </tr>
                 ))}
               </tbody>

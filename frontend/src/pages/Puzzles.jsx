@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiGrid, FiShuffle, FiTarget } from 'react-icons/fi';
+import { FiGrid, FiShuffle, FiTarget } from 'react-icons/fi';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Puzzles.css';
 
 function Puzzles() {
@@ -33,9 +34,12 @@ function Puzzles() {
   return (
     <div className="puzzles-page">
       <header className="puzzles-header">
-        <button type="button" className="puzzles-back" onClick={() => navigate('/dashboard')}>
-          <FiArrowLeft aria-hidden /> Dashboard
-        </button>
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Puzzles' },
+          ]}
+        />
         <h1>Puzzles</h1>
         <p className="puzzles-muted">Choose a puzzle collection.</p>
       </header>

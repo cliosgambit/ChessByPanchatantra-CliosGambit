@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiExternalLink } from 'react-icons/fi';
+import { useParams } from 'react-router-dom';
+import { FiExternalLink } from 'react-icons/fi';
 import CustomGamePage from './test/CustomGamePage';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchChessComGameFromDb } from '../services/chessComDbService';
 import { loadChessComGame } from '../utils/chessComGameNavigation';
 import { sanitizeChessComPgn } from '../utils/chessComPgnUtils';
@@ -21,7 +22,6 @@ function timeClassLabel(timeClass) {
 
 function ChessComGamePage() {
   const { userId, gameId } = useParams();
-  const navigate = useNavigate();
   const profileUsername = decodeURIComponent(userId || '');
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -104,14 +104,17 @@ function ChessComGamePage() {
       <div className="chess-game-page">
         <div className="chess-game-page-inner">
           <header className="chess-game-page-topbar">
-            <button
-              type="button"
-              className="chess-game-topbar-btn"
-              onClick={() => navigate(`/players/${encodeURIComponent(profileUsername)}`)}
-            >
-              <FiArrowLeft />
-              <span>Back to Profile</span>
-            </button>
+            <PageBreadcrumb
+              items={[
+                { label: 'Dashboard', to: '/dashboard' },
+                { label: 'Students', to: '/students' },
+                {
+                  label: profileUsername || 'Profile',
+                  to: `/players/${encodeURIComponent(profileUsername)}`,
+                },
+                { label: 'Game' },
+              ]}
+            />
           </header>
           <div className="chess-game-page-empty">
             {error || 'Game data not found. Sync games from the player profile first.'}
@@ -127,14 +130,17 @@ function ChessComGamePage() {
     <div className="chess-game-page chess-game-page--test">
       <div className="chess-game-page-inner chess-game-page-inner--test">
         <header className="chess-game-page-topbar">
-          <button
-            type="button"
-            className="chess-game-topbar-btn"
-            onClick={() => navigate(`/players/${encodeURIComponent(profileUsername)}`)}
-          >
-            <FiArrowLeft />
-            <span>Back to Profile</span>
-          </button>
+          <PageBreadcrumb
+            items={[
+              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Students', to: '/students' },
+              {
+                label: profileUsername || 'Profile',
+                to: `/players/${encodeURIComponent(profileUsername)}`,
+              },
+              { label: 'Game' },
+            ]}
+          />
 
           <div className="chess-game-page-meta">
             {timeIcon && <img src={timeIcon} alt="" className="chess-game-page-meta-icon" />}

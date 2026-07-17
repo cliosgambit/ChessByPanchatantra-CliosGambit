@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiChevronLeft, FiChevronRight, FiEdit2 } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiEdit2 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { fetchModuleStory } from '../services/modulesService';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
+import { fetchChapterStory } from '../services/modulesService';
 import './LibraryStoryView.css';
 
 function imageUrlsFromStory(story) {
@@ -14,16 +15,20 @@ function imageUrlsFromStory(story) {
 }
 
 function ModuleStoryViewPage() {
-  const { moduleId, storyId } = useParams();
+  const { moduleId, chapterId, storyId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = (user?.role || '').toLowerCase() === 'admin';
 
   const [story, setStory] = useState(null);
+  const [chapter, setChapter] = useState(null);
   const [module, setModule] = useState(null);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const chapterPath = `/modules/${moduleId}/chapters/${chapterId}`;
+  const storyPath = `${chapterPath}/stories/${storyId}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -31,15 +36,18 @@ function ModuleStoryViewPage() {
       setLoading(true);
       setError('');
       try {
-        const data = await fetchModuleStory(moduleId, storyId);
+        const data = await fetchChapterStory(moduleId, chapterId, storyId);
         if (cancelled) return;
         setStory(data.story || null);
+        setChapter(data.chapter || null);
         setModule(data.module || null);
         setIndex(0);
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Failed to load story.');
           setStory(null);
+          setChapter(null);
+          setModule(null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -48,7 +56,7 @@ function ModuleStoryViewPage() {
     return () => {
       cancelled = true;
     };
-  }, [moduleId, storyId]);
+  }, [moduleId, chapterId, storyId]);
 
   const images = useMemo(() => imageUrlsFromStory(story), [story]);
   const morals = Array.isArray(story?.morals) ? story.morals : [];
@@ -90,19 +98,20 @@ function ModuleStoryViewPage() {
     );
   }
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Modules', to: '/modules' },
+    { label: module?.name || 'Module', to: `/modules/${moduleId}` },
+    { label: chapter?.name || 'Chapter', to: chapterPath },
+  ];
+
   if (error || !story) {
     return (
       <div className="story-view">
         <div className="story-view-panel story-view-panel--content">
           <div className="story-view-content-inner">
+            <PageBreadcrumb items={[...breadcrumbItems, { label: 'Story' }]} />
             <p className="story-view-error">{error || 'Story not found.'}</p>
-            <button
-              type="button"
-              className="story-view-back"
-              onClick={() => navigate(`/modules/${moduleId}`)}
-            >
-              <FiArrowLeft aria-hidden /> Back to module
-            </button>
           </div>
         </div>
       </div>
@@ -116,13 +125,9 @@ function ModuleStoryViewPage() {
       <div className="story-view-panel story-view-panel--content">
         <div className="story-view-content-inner">
           <div className="story-view-toolbar">
-            <button
-              type="button"
-              className="story-view-back"
-              onClick={() => navigate(`/modules/${moduleId}`)}
-            >
-              <FiArrowLeft aria-hidden /> {module?.name || 'Module'}
-            </button>
+            <PageBreadcrumb
+              items={[...breadcrumbItems, { label: story.title || 'Story' }]}
+            />
             {isAdmin ? (
               <button
                 type="button"
@@ -131,7 +136,7 @@ function ModuleStoryViewPage() {
                   navigate(`/library/${story.id}`, {
                     state: {
                       edit: true,
-                      from: `/modules/${moduleId}/stories/${storyId}`,
+                      from: storyPath,
                       fromLabel: 'Back to Story',
                     },
                   })
@@ -155,9 +160,7 @@ function ModuleStoryViewPage() {
                       type="button"
                       className="story-view-moral-link"
                       onClick={() =>
-                        navigate(
-                          `/modules/${moduleId}/stories/${storyId}/morals/${m.id}`
-                        )
+                        navigate(`${storyPath}/morals/${m.id}`)
                       }
                     >
                       <span className="story-view-moral-code">{m.moral_code || m.id}</span>

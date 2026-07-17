@@ -17,6 +17,7 @@ const RESET_STAGGER_MS = 65;
 
 let audioContext = null;
 const audioCache = Object.create(null);
+let audioUnlocked = false;
 
 function getAudioContext() {
   if (!audioContext) {
@@ -58,6 +59,30 @@ function createAudioPlayback(type) {
     return clone;
   }
   return new Audio(SOUND_FILES[type]);
+}
+
+export function unlockChessAudio() {
+  if (!isChessSoundEnabled() || audioUnlocked) return;
+
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+    gain.connect(ctx.destination);
+
+    const osc = ctx.createOscillator();
+    osc.frequency.value = 220;
+    osc.connect(gain);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.02);
+    audioUnlocked = true;
+  } catch {
+    // Browser audio can still be locked until the next user gesture.
+  }
 }
 
 function playSynthSound(type, options = DEFAULT_SOUND_OPTIONS) {
@@ -119,6 +144,7 @@ export function playChessSound(type, options = DEFAULT_SOUND_OPTIONS) {
   if (!isChessSoundEnabled()) return;
 
   const { rate = 1, volume = 1 } = options;
+  unlockChessAudio();
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') {
     ctx.resume().catch(() => {});

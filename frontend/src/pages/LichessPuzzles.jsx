@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiEye, FiShuffle, FiUpload } from 'react-icons/fi';
+import { FiSearch, FiShuffle, FiUpload, FiX } from 'react-icons/fi';
 import FenHoverPreview from '../components/userProfile/FenHoverPreview';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import {
   fetchLichessPuzzles,
   uploadLichessPuzzlesFile,
@@ -11,22 +12,28 @@ import { resolveLichessPuzzlePosition } from '../utils/lichessPuzzleFen';
 import './Puzzles.css';
 
 const PAGE_SIZE = 25;
+const SEARCH_DEBOUNCE_MS = 300;
 const PREVIEW_ANIMATION_MS = 280;
 const PREVIEW_HIDE_DELAY_MS = 120;
 
-function pickRandom(items) {
-  if (!items.length) return null;
-  return items[Math.floor(Math.random() * items.length)];
-}
+const USAGE_OPTIONS = [
+  { value: 'all', label: 'Both' },
+  { value: 'used', label: 'Used' },
+  { value: 'unused', label: 'Unused' },
+];
 
 function LichessPuzzles() {
   const navigate = useNavigate();
   const [puzzles, setPuzzles] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [usageCounts, setUsageCounts] = useState({ all: 0, used: 0, unused: 0 });
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [usageFilter, setUsageFilter] = useState('all');
   const [page, setPage] = useState(1);
 
   const hideTimer = useRef(null);
@@ -35,49 +42,53 @@ function LichessPuzzles() {
   const [hoveredPuzzle, setHoveredPuzzle] = useState(null);
   const [previewPos, setPreviewPos] = useState({ top: 0, left: 0 });
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, usageFilter]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchLichessPuzzles();
+      const data = await fetchLichessPuzzles({
+        q: debouncedQuery,
+        unused: usageFilter === 'unused',
+        used: usageFilter === 'used',
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      });
       setPuzzles(data.puzzles || []);
+      setTotal(Number(data.total) || 0);
+      if (data.usage) {
+        setUsageCounts({
+          all: Number(data.usage.all) || 0,
+          used: Number(data.usage.used) || 0,
+          unused: Number(data.usage.unused) || 0,
+        });
+      }
     } catch (err) {
       setError(err.message || 'Failed to load Lichess puzzles.');
+      setPuzzles([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [debouncedQuery, usageFilter, page]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return puzzles;
-    return puzzles.filter((p) => {
-      const hay = [p.fen, p.moves, p.themes, p.opening_tags, p.game_url, String(p.id), String(p.rating)]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [puzzles, query]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setPage(1);
-  }, [query]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
-
-  const pageRows = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
 
   const openPuzzle = useCallback(
     (puzzle) => {
@@ -87,14 +98,24 @@ function LichessPuzzles() {
     [navigate]
   );
 
-  const handleViewRandom = () => {
-    const withFen = filtered.filter((p) => p.fen);
-    const pick = pickRandom(withFen);
-    if (!pick) {
-      setError('No puzzles with a FEN to view.');
-      return;
+  const handleViewRandom = async () => {
+    setError('');
+    try {
+      const data = await fetchLichessPuzzles({
+        q: debouncedQuery,
+        unused: usageFilter === 'unused',
+        used: usageFilter === 'used',
+        random: true,
+      });
+      const pick = (data.puzzles || []).find((p) => p.fen);
+      if (!pick) {
+        setError('No puzzles with a FEN to view.');
+        return;
+      }
+      openPuzzle(pick);
+    } catch (err) {
+      setError(err.message || 'Failed to pick a random puzzle.');
     }
-    openPuzzle(pick);
   };
 
   const clearTimers = useCallback(() => {
@@ -115,13 +136,13 @@ function LichessPuzzles() {
     let left = rect.right + gap;
     let top = rect.top + rect.height / 2;
     if (left + boardSize + 24 > window.innerWidth) {
-      left = Math.max(12, rect.left - boardSize - gap);
+      left = Math.max(12, rect.right - boardSize);
     }
     top = Math.min(window.innerHeight - boardSize / 2 - 12, Math.max(boardSize / 2 + 12, top));
     setPreviewPos({ top, left });
   }, []);
 
-  const handleFenHover = useCallback(
+  const handleRowHover = useCallback(
     (puzzle, el) => {
       if (!puzzle?.fen) return;
       clearTimers();
@@ -201,99 +222,167 @@ function LichessPuzzles() {
   };
 
   return (
-    <div className="puzzles-page puzzles-page--wide">
-      <header className="puzzles-header">
-        <button type="button" className="puzzles-back" onClick={() => navigate('/puzzles')}>
-          <FiArrowLeft aria-hidden /> Puzzles
-        </button>
+    <div className="puzzles-page puzzles-page--wide gm-puzzles-page">
+      <header className="puzzles-header gm-puzzles-header">
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Puzzles', to: '/puzzles' },
+            { label: 'Lichess Puzzles' },
+          ]}
+        />
         <div className="puzzles-header-row">
-          <div>
-            <h1>Lichess puzzles</h1>
+          <div className="gm-puzzles-heading">
+            <span className="gm-puzzles-eyebrow">Puzzle library</span>
+            <h1>Lichess Puzzles</h1>
             <p className="puzzles-muted">
               {loading
                 ? 'Loading…'
-                : `${filtered.length} of ${puzzles.length} puzzles · page ${page}/${totalPages}`}
+                : `${total.toLocaleString()} result${total === 1 ? '' : 's'} · page ${page} of ${totalPages}`}
             </p>
           </div>
-          <div className="puzzles-header-actions">
-            <button
-              type="button"
-              className="puzzles-action-btn puzzles-action-btn--primary"
-              onClick={handleViewRandom}
-              disabled={loading || !filtered.some((p) => p.fen)}
-            >
-              <FiShuffle aria-hidden /> View random puzzle
-            </button>
-            <label className={`puzzles-action-btn${uploading ? ' is-disabled' : ''}`}>
-              <FiUpload aria-hidden />
-              {uploading ? 'Uploading…' : 'Upload Excel'}
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
-                hidden
-                disabled={uploading}
-                onChange={handleUpload}
-              />
-            </label>
-            <input
-              className="puzzles-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search FEN, themes, moves…"
-            />
+          <div className="gm-puzzles-summary" aria-label="Puzzle totals">
+            <div>
+              <strong>{usageCounts.all.toLocaleString()}</strong>
+              <span>Total</span>
+            </div>
+            <div>
+              <strong>{usageCounts.used.toLocaleString()}</strong>
+              <span>Used</span>
+            </div>
+            <div>
+              <strong>{usageCounts.unused.toLocaleString()}</strong>
+              <span>Unused</span>
+            </div>
           </div>
         </div>
       </header>
 
-      {error ? <p className="puzzles-error">{error}</p> : null}
-      {message ? <p className="puzzles-muted">{message}</p> : null}
+      <section className="gm-puzzles-toolbar" aria-label="Puzzle controls">
+        <div className="gm-puzzles-filter-block">
+          <span className="gm-puzzles-control-label">Show puzzles</span>
+          <div className="puzzles-usage-filter" role="group" aria-label="Usage filter">
+            {USAGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`puzzles-usage-filter-btn${
+                  usageFilter === opt.value ? ' is-active' : ''
+                }`}
+                aria-pressed={usageFilter === opt.value}
+                onClick={() => setUsageFilter(opt.value)}
+              >
+                <span>{opt.label}</span>
+                <span className="puzzles-usage-filter-count">
+                  {usageCounts[opt.value].toLocaleString()}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {!loading && !error && filtered.length === 0 ? (
+        <div className="puzzles-header-actions">
+          <label className="gm-puzzles-search">
+            <FiSearch aria-hidden />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search FEN, themes, rating, ID…"
+              aria-label="Search Lichess puzzles"
+            />
+            {query ? (
+              <button type="button" onClick={() => setQuery('')} aria-label="Clear search">
+                <FiX aria-hidden />
+              </button>
+            ) : null}
+          </label>
+          <button
+            type="button"
+            className="puzzles-action-btn puzzles-action-btn--primary"
+            onClick={handleViewRandom}
+            disabled={loading || total === 0}
+          >
+            <FiShuffle aria-hidden /> View random puzzle
+          </button>
+          <label
+            className={`puzzles-action-btn${uploading ? ' is-disabled' : ''}`}
+            style={uploading ? { pointerEvents: 'none', opacity: 0.55 } : undefined}
+          >
+            <FiUpload aria-hidden />
+            {uploading ? 'Uploading…' : 'Upload Excel'}
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+              hidden
+              disabled={uploading}
+              onChange={handleUpload}
+            />
+          </label>
+        </div>
+      </section>
+
+      {error ? <p className="puzzles-error">{error}</p> : null}
+      {message ? <p className="puzzles-muted" style={{ marginBottom: '0.85rem' }}>{message}</p> : null}
+
+      {!loading && !error && total === 0 ? (
         <div className="puzzles-empty">
-          No Lichess puzzles yet. Upload an Excel sheet with columns: FEN, Moves, Rating,
-          RatingDeviation, Popularity, NbPlays, Themes, GameUrl, OpeningTags.
+          {usageCounts.all === 0
+            ? 'No Lichess puzzles yet. Upload an Excel sheet with columns: FEN, Moves, Rating, RatingDeviation, Popularity, NbPlays, Themes, GameUrl, OpeningTags.'
+            : 'No puzzles match.'}
         </div>
       ) : null}
 
-      {!loading && pageRows.length > 0 ? (
+      {!loading && puzzles.length > 0 ? (
         <>
-          <div className="puzzles-table-wrap" onMouseLeave={scheduleHide}>
+          <div className="puzzles-table-wrap gm-puzzles-table-wrap" onMouseLeave={scheduleHide}>
             <table className="puzzles-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th className="gm-puzzles-number-column">#</th>
+                  <th className="lichess-id-column">ID</th>
                   <th>FEN</th>
-                  <th>Moves</th>
-                  <th>Rating</th>
+                  <th className="lichess-rating-column">Rating</th>
                   <th>Themes</th>
-                  <th>Plays</th>
-                  <th />
+                  <th className="lichess-plays-column">Plays</th>
+                  <th className="lichess-status-column">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {pageRows.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td
-                      className="puzzles-fen puzzles-fen--hoverable"
-                      onMouseEnter={(e) => handleFenHover(p, e.currentTarget)}
-                      onMouseLeave={scheduleHide}
-                    >
-                      {p.fen}
+                {puzzles.map((p, i) => (
+                  <tr
+                    key={p.id}
+                    className="gm-puzzles-row--clickable"
+                    onClick={() => {
+                      if (p.fen) openPuzzle(p);
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && p.fen) {
+                        e.preventDefault();
+                        openPuzzle(p);
+                      }
+                    }}
+                    onMouseEnter={(e) => handleRowHover(p, e.currentTarget)}
+                    onMouseLeave={scheduleHide}
+                    role="link"
+                    tabIndex={p.fen ? 0 : -1}
+                    aria-label={`View Lichess puzzle ${p.id}`}
+                  >
+                    <td className="gm-puzzles-row-number">
+                      {(page - 1) * PAGE_SIZE + i + 1}
                     </td>
-                    <td className="puzzles-fen">{p.moves || '—'}</td>
-                    <td>{p.rating ?? '—'}</td>
-                    <td>{p.themes || '—'}</td>
-                    <td>{p.nb_plays ?? '—'}</td>
+                    <td className="lichess-id-cell">{p.id}</td>
+                    <td className="puzzles-fen">{p.fen || '—'}</td>
+                    <td className="lichess-rating-cell">{p.rating ?? '—'}</td>
+                    <td className="lichess-themes-cell">{p.themes || '—'}</td>
+                    <td className="lichess-plays-cell">{p.nb_plays ?? '—'}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="puzzles-action-btn"
-                        onClick={() => openPuzzle(p)}
-                        disabled={!p.fen}
+                      <span
+                        className={`lichess-usage-badge${
+                          p.is_used ? ' lichess-usage-badge--used' : ' lichess-usage-badge--unused'
+                        }`}
                       >
-                        <FiEye aria-hidden /> View
-                      </button>
+                        {p.is_used ? 'Used' : 'Unused'}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -305,7 +394,7 @@ function LichessPuzzles() {
             <div className="puzzles-pagination">
               <span className="puzzles-muted">
                 Showing {(page - 1) * PAGE_SIZE + 1}–
-                {Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                {Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
               </span>
               <div className="puzzles-pagination-btns">
                 <button

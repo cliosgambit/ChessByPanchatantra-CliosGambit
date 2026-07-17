@@ -8,6 +8,7 @@ import {
   playSoundForVerboseMove,
   playUndoSounds,
   preloadChessSounds,
+  unlockChessAudio,
 } from '../../utils/chessSound';
 
 const MORAL_NOTATION_STYLE = {
@@ -21,8 +22,9 @@ function isRankAxisSquare(square, orientation) {
   return orientation === 'white' ? file === 'a' : file === 'h';
 }
 
-function isFileAxisSquare(square) {
-  return square[1] === '1';
+function isFileAxisSquare(square, orientation) {
+  const rank = square[1];
+  return orientation === 'white' ? rank === '1' : rank === '8';
 }
 
 const MoralBoardSquare = forwardRef(function MoralBoardSquare(
@@ -30,7 +32,7 @@ const MoralBoardSquare = forwardRef(function MoralBoardSquare(
   ref
 ) {
   const rankAxis = isRankAxisSquare(square, boardOrientation);
-  const fileAxis = isFileAxisSquare(square);
+  const fileAxis = isFileAxisSquare(square, boardOrientation);
   const corner = rankAxis && fileAxis;
   const className = [
     'moral-zone-board-square',
@@ -272,6 +274,10 @@ const ChroniclesPuzzleBoard = forwardRef(function ChroniclesPuzzleBoard(
 
   useEffect(() => {
     preloadChessSounds();
+  }, []);
+
+  const handleBoardInteraction = useCallback(() => {
+    unlockChessAudio();
   }, []);
 
   useEffect(() => {
@@ -695,7 +701,12 @@ const ChroniclesPuzzleBoard = forwardRef(function ChroniclesPuzzleBoard(
 
   if (isMoralZone) {
     return (
-      <div className="moral-zone-board-stage" ref={stageRef}>
+      <div
+        className="moral-zone-board-stage"
+        ref={stageRef}
+        onPointerDownCapture={handleBoardInteraction}
+        onTouchStartCapture={handleBoardInteraction}
+      >
         <div className="moral-zone-board-stack">
           <div className="moral-zone-board-body">
             <div className="moral-zone-board-main">
@@ -780,6 +791,8 @@ const ChroniclesPuzzleBoard = forwardRef(function ChroniclesPuzzleBoard(
           .filter(Boolean)
           .join(' ')}
         ref={stageRef}
+        onPointerDownCapture={handleBoardInteraction}
+        onTouchStartCapture={handleBoardInteraction}
       >
         <div className="moral-play-board-main">
           <div
@@ -850,7 +863,11 @@ const ChroniclesPuzzleBoard = forwardRef(function ChroniclesPuzzleBoard(
   }
 
   return (
-    <div className="chronicles-puzzle-board-wrap">
+    <div
+      className="chronicles-puzzle-board-wrap"
+      onPointerDownCapture={handleBoardInteraction}
+      onTouchStartCapture={handleBoardInteraction}
+    >
       <div className="chronicles-puzzle-board-toolbar">
         <span className="chronicles-puzzle-board-status">{statusMeta}</span>
         <div className="chronicles-puzzle-mode-toggle" role="group" aria-label="Play mode">

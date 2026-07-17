@@ -9,7 +9,6 @@ import {
   useColorModeValue,
   useBreakpointValue,
   Stack,
-  Link,
   Wrap,
   WrapItem,
   IconButton,
@@ -23,9 +22,10 @@ import {
   AlertDialogOverlay,
 } from '@chakra-ui/react';
 import { AddIcon, CloseIcon } from '@chakra-ui/icons';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import ChessGame from './ChessGame';
 import PuzzleModal from '../components/principles/PuzzleModal';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchPrincipleById } from '../services/principlesService';
 import { fetchPuzzlesForPrinciple, unlinkPuzzleFromPrinciple } from '../services/puzzleService';
 
@@ -335,9 +335,13 @@ function PrincipleDetails() {
   if (error === 'not_found' || !principle) {
     return (
       <Box px={{ base: 4, md: 8 }} py={8} bg={pageBg} minH="100%">
-        <Link as={RouterLink} to="/principles" color="blue.600" fontSize="sm" mb={4} display="inline-block">
-          ← Back to Principles
-        </Link>
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Principles', to: '/principles' },
+            { label: 'Principle' },
+          ]}
+        />
         <Heading size="md" color="red.500" mt={4}>
           Principle not found.
         </Heading>
@@ -348,9 +352,13 @@ function PrincipleDetails() {
   if (error) {
     return (
       <Box px={{ base: 4, md: 8 }} py={8} bg={pageBg} minH="100%">
-        <Link as={RouterLink} to="/principles" color="blue.600" fontSize="sm" mb={4} display="inline-block">
-          ← Back to Principles
-        </Link>
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Principles', to: '/principles' },
+            { label: 'Principle' },
+          ]}
+        />
         <Heading size="md" color="red.500" mt={4}>
           {error}
         </Heading>
@@ -360,10 +368,14 @@ function PrincipleDetails() {
 
   const leftPanel = (
     <Box>
-      <Link as={RouterLink} to="/principles" color="blue.600" fontSize="sm" mb={4} display="inline-block">
-        ← Back to Principles
-      </Link>
-      <Heading mb={2} size={{ base: 'lg', md: 'xl' }} color={headingColor} lineHeight="short">
+      <PageBreadcrumb
+        items={[
+          { label: 'Dashboard', to: '/dashboard' },
+          { label: 'Principles', to: '/principles' },
+          { label: principleText || 'Principle' },
+        ]}
+      />
+      <Heading mb={2} mt={2} size={{ base: 'lg', md: 'xl' }} color={headingColor} lineHeight="short">
         {principleText}
       </Heading>
       <Text fontSize="sm" color={subColor} mb={6} fontFamily="mono">

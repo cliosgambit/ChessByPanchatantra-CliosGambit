@@ -44,6 +44,12 @@
   margin-bottom: 1rem;
 }
 
+.story-view-toolbar .page-breadcrumb {
+  margin-bottom: 0;
+  min-width: 0;
+  flex: 1;
+}
+
 .story-view-back,
 .story-view-edit {
   display: inline-flex;

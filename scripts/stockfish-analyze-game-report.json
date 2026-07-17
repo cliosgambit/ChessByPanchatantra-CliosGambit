@@ -1,0 +1,242 @@
+{
+  "meta": {
+    "date": "2026-07-16T18:05:00.000Z",
+    "hosted": "https://stockfish-cbp.onrender.com",
+    "docs": "https://stockfish-cbp.onrender.com/docs",
+    "localApi": "http://127.0.0.1:10000/api/analyze",
+    "testPgnPlies": 75,
+    "engineHosted": "Stockfish 18.1"
+  },
+  "verdict": {
+    "analyzeGameWorks": true,
+    "acceptsFullPgn": true,
+    "localHasPgnEndpoint": false,
+    "perPlyBestmoveAgreement": "4/4 sample plies (local /api/analyze vs hosted /analyze)",
+    "fullGameAnalyzeGameMs": 96407,
+    "fullGameSettings": { "movetime": 200, "multipv": 3 }
+  },
+  "hostedEndpoints": {
+    "GET /": { "ok": true, "sample": { "status": "online", "engine": "Stockfish", "version": "18.1" } },
+    "POST /bestmove": { "input": { "fen": "string", "depth": 18 }, "notes": "single position" },
+    "POST /multipv": { "input": { "fen": "string", "depth": 18, "multipv": 3 }, "notes": "single position MultiPV" },
+    "POST /analyze": {
+      "input": {
+        "fen": "optional",
+        "current_fen": "optional",
+        "previous_fen": "optional",
+        "depth": "optional",
+        "movetime": "optional",
+        "multipv": 1
+      },
+      "notes": "same semantic as CLIO local /api/analyze (FEN pair)"
+    },
+    "POST /analyze-game": {
+      "input": {
+        "pgn": "required string",
+        "depth": "optional int",
+        "movetime": "optional int",
+        "multipv": "default 3"
+      },
+      "output": {
+        "total_plies": "number",
+        "timeline": [
+          {
+            "ply": 1,
+            "move": "uci played to reach fen",
+            "fen": "position after move",
+            "analysis": "same shape as POST /analyze response"
+          }
+        ]
+      },
+      "invalidPgn": { "total_plies": 0, "timeline": [] }
+    }
+  },
+  "analyzeGameLiveTests": {
+    "full75PlyMovetime200": {
+      "ok": true,
+      "ms": 96407,
+      "total_plies": 75,
+      "responseKeys": ["total_plies", "timeline"]
+    },
+    "mini9PlyDepth10": {
+      "ok": true,
+      "ms": 14605,
+      "total_plies": 10
+    },
+    "invalidPgn": {
+      "ok": true,
+      "ms": 266,
+      "body": { "total_plies": 0, "timeline": [] },
+      "notes": "HTTP 200 with empty timeline — not an error status"
+    }
+  },
+  "timelineEntryExample": {
+    "ply": 1,
+    "move": "d2d3",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+    "analysis": {
+      "fen": "rnbqkbnr/pppppppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR b KQkq - 0 1",
+      "bestmove": "d7d5",
+      "ponder": "e2e4",
+      "previous_fen_bestmove": null,
+      "requested_movetime": 150,
+      "multipv": 3,
+      "win_probability": { "white": 50.92, "black": 49.08 },
+      "analysis": [
+        {
+          "rank": 1,
+          "bestmove": "d7d5",
+          "cp": 10,
+          "mate": null,
+          "depth": 9,
+          "pv": ["d7d5", "e2e4", "e7e5"],
+          "first_move_score": { "cp": -25, "mate": null }
+        }
+      ],
+      "cached": false
+    }
+  },
+  "perPlyCompareSample": [
+    {
+      "ply": 1,
+      "san": "d3",
+      "localBest": "d7d5",
+      "hostedBest": "d7d5",
+      "agree": true,
+      "localMs": 1970,
+      "hostedMs": 1846
+    },
+    {
+      "ply": 14,
+      "san": "Be7",
+      "localBest": "g5e7",
+      "hostedBest": "g5e7",
+      "agree": true,
+      "localMs": 782,
+      "hostedMs": 1561
+    },
+    {
+      "ply": 35,
+      "san": "Rh4",
+      "localBest": "c5c4",
+      "hostedBest": "c5c4",
+      "agree": true
+    },
+    {
+      "ply": 75,
+      "san": "Rg2",
+      "localBest": "f3f6",
+      "hostedBest": "f3f6",
+      "agree": true
+    }
+  ],
+  "comparisonWithLocal": {
+    "pgnSupport": {
+      "hosted": "POST /analyze-game accepts full PGN in one call",
+      "local": "No PGN endpoint — frontend parses PGN and calls /api/analyze once per ply"
+    },
+    "responseShape": {
+      "local": {
+        "bestmove": "uci",
+        "ponder": "uci|null",
+        "score": { "type": "cp|mate", "value": "number" },
+        "depth": "number",
+        "winProbability": { "white": "number", "black": "number" },
+        "lines": [
+          {
+            "multipv": "number",
+            "depth": "number",
+            "score": { "type": "cp|mate", "value": "number" },
+            "pv": "space-separated uci string",
+            "firstMoveScore": { "type": "cp|mate", "value": "number" }
+          }
+        ],
+        "previousFenBestmove": "uci"
+      },
+      "hostedAnalyze": {
+        "bestmove": "uci",
+        "ponder": "uci|null",
+        "previous_fen_bestmove": "uci|null",
+        "win_probability": { "white": "number", "black": "number" },
+        "analysis": [
+          {
+            "rank": "number",
+            "bestmove": "uci",
+            "cp": "number|null",
+            "mate": "number|null",
+            "depth": "number",
+            "pv": ["uci", "..."],
+            "first_move_score": { "cp": "number|null", "mate": "number|null" }
+          }
+        ]
+      }
+    },
+    "qualityControls": {
+      "local": "Client depth/movetime mostly ignored; engine uses short fixed movetimes internally",
+      "hosted": "Respects depth and movetime — tunable quality vs latency"
+    },
+    "latency": {
+      "fullGame75PliesHostedAnalyzeGame": "~96s at movetime=200 multipv=3",
+      "singlePlyLocalAnalyze": "~0.8–2.0s typical in samples",
+      "singlePlyHostedAnalyze": "~1.5–1.8s at movetime=300"
+    },
+    "moveAgreement": "High on sampled plies for /analyze (4/4 bestmove matches)"
+  },
+  "changesNeededForClio": [
+    {
+      "id": 1,
+      "area": "backend",
+      "change": "Add POST /api/analyze-game proxy to https://stockfish-cbp.onrender.com/analyze-game",
+      "detail": "Accept { pgn, depth?, movetime?, multipv? }. Forward to hosted. Optional local fallback: parse PGN with chess.js and loop analyzePosition per ply."
+    },
+    {
+      "id": 2,
+      "area": "backend adapter",
+      "change": "Normalize hosted timeline into CLIO analysis[] shape",
+      "mapping": {
+        "win_probability": "winProbability",
+        "previous_fen_bestmove": "previousFenBestmove",
+        "analysis[].rank": "lines[].multipv",
+        "analysis[].cp/mate": "lines[].score { type, value }",
+        "analysis[].pv array": "lines[].pv joined string",
+        "analysis[].first_move_score": "lines[].firstMoveScore",
+        "score": "derive from analysis[0] cp/mate as { type, value }"
+      }
+    },
+    {
+      "id": 3,
+      "area": "frontend useGameAnalysis / useChessGame",
+      "change": "Optional one-shot game analysis path",
+      "detail": "When PGN (or full move list) is available, call /api/analyze-game once instead of queuing N /api/analyze calls. Map timeline[i].analysis → analysis[i]. Keep per-ply path for live play / partial games."
+    },
+    {
+      "id": 4,
+      "area": "UX / timeouts",
+      "change": "Progress + timeout for long games",
+      "detail": "75-ply game took ~96s at movetime=200. Use movetime 100–200 for interactive; depth for batch. Show progress. Handle Render cold starts."
+    },
+    {
+      "id": 5,
+      "area": "error handling",
+      "change": "Treat empty timeline as bad/empty PGN",
+      "detail": "Hosted returns HTTP 200 with total_plies:0 for invalid PGN — do not treat as success."
+    },
+    {
+      "id": 6,
+      "area": "puzzle solution path",
+      "change": "Already using hosted as fallback after stockfish.online 429",
+      "detail": "No change required for single-best-move puzzle solutions beyond existing fallback chain."
+    },
+    {
+      "id": 7,
+      "area": "do not use",
+      "change": "stockfish.online for full-game PGN",
+      "detail": "No PGN endpoint; CORS/rate limits. Prefer hosted /analyze-game or local per-ply."
+    }
+  ],
+  "recommendedIntegrationPlan": {
+    "phase1": "Backend proxy + response adapter for /analyze-game (hosted primary, local loop fallback)",
+    "phase2": "Wire game analysis UI to one-shot when full PGN known; keep incremental /analyze for live moves",
+    "phase3": "Tune default movetime/multipv to match classification quality of current local pipeline"
+  }
+}

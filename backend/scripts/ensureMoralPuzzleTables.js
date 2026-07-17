@@ -1,5 +1,5 @@
-const { sqlite } = require('../api/config/database');
-const { skipEnsureIfPostgres } = require('./ensureOnPostgres');
+const db = require('../api/config/database');
+const { sqlite, isPostgres } = db;
 
 function addColumnIfMissing(table, column, ddl) {
   const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all();
@@ -7,16 +7,49 @@ function addColumnIfMissing(table, column, ddl) {
   sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
 }
 
-function ensureMoralPuzzleTables() {
-  if (skipEnsureIfPostgres('moral puzzle tables ready (chesscom_random_puzzles, moral_puzzle_assignments, is_used)')) {
+async function renamePgnColumnToSolution() {
+  try {
+    if (isPostgres) {
+      const cols = await db.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_name = 'chesscom_random_puzzles'
+           AND column_name IN ('pgn', 'solution')`
+      );
+      const names = new Set(cols.rows.map((r) => r.column_name));
+      if (names.has('pgn') && !names.has('solution')) {
+        await db.query(`ALTER TABLE chesscom_random_puzzles RENAME COLUMN pgn TO solution`);
+        console.log('✅ renamed chesscom_random_puzzles.pgn → solution');
+      }
+      return;
+    }
+    const cols = sqlite.prepare(`PRAGMA table_info(chesscom_random_puzzles)`).all();
+    const hasPgn = cols.some((c) => c.name === 'pgn');
+    const hasSolution = cols.some((c) => c.name === 'solution');
+    if (hasPgn && !hasSolution) {
+      sqlite.exec(`ALTER TABLE chesscom_random_puzzles RENAME COLUMN pgn TO solution`);
+      console.log('✅ renamed chesscom_random_puzzles.pgn → solution');
+    }
+  } catch (err) {
+    console.warn('chesscom_random_puzzles pgn→solution rename skipped:', err.message || err);
+  }
+}
+
+async function ensureMoralPuzzleTables() {
+  if (isPostgres) {
+    await renamePgnColumnToSolution();
+    console.log(
+      '✅ moral puzzle tables ready (chesscom_random_puzzles, moral_puzzle_assignments, is_used) (Supabase)'
+    );
     return;
   }
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS chesscom_random_puzzles (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       title         TEXT,
       fen           TEXT NOT NULL UNIQUE,
-      pgn           TEXT,
+      solution      TEXT,
       source_url    TEXT,
       image_url     TEXT,
       publish_time  INTEGER,
@@ -51,6 +84,7 @@ function ensureMoralPuzzleTables() {
 
   addColumnIfMissing('"3000_rated_puzzles"', 'is_used', 'is_used INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing('lichess_puzzles', 'is_used', 'is_used INTEGER NOT NULL DEFAULT 0');
+  await renamePgnColumnToSolution();
 
   sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_3000_rated_puzzles_used

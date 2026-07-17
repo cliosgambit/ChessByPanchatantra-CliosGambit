@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft } from 'react-icons/fi';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
+import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import { fetchAllRatedPuzzles } from '../services/puzzleService';
 import './ChroniclesChessPuzzlePage.css';
@@ -70,14 +70,13 @@ function ChroniclesRatedPuzzlePage() {
   return (
     <div className="chronicles-puzzle-page">
       <header className="chronicles-puzzle-page-header">
-        <button
-          type="button"
-          className="chronicles-back-btn"
-          onClick={() => navigate('/chronicles?tab=puzzles&source=rated3000')}
-        >
-          <FiArrowLeft aria-hidden />
-          Back to Chronicles
-        </button>
+        <PageBreadcrumb
+          items={[
+            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Chronicles', to: '/chronicles?tab=puzzles&source=rated3000' },
+            { label: '3000 rated puzzle' },
+          ]}
+        />
         <div>
           <h1 className="chronicles-puzzle-page-title">3000 rated puzzle</h1>
           <p className="chronicles-puzzle-page-subtitle">{puzzle.id}</p>

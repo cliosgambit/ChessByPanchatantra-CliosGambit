@@ -592,6 +592,19 @@
   font-size: 0.98rem;
 }
 
+.moral-play-card-body + .moral-play-card-body,
+.moral-play-card-body + .moral-puzzles-muted,
+.moral-puzzles-muted + .moral-puzzles-muted {
+  margin-top: 0.45rem;
+}
+
+.moral-play-card .moral-puzzles-game-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
 .moral-play-moral-code {
   display: inline-flex;
   align-items: center;

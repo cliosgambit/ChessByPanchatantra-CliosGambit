@@ -381,8 +381,8 @@ exports.unsaveBrilliantPuzzle = async (req, res) => {
   }
 };
 
-/** Proxy Chess.com public daily random puzzle: https://api.chess.com/pub/puzzle/random
- *  Upserts by unique FEN into chesscom_random_puzzles.
+/** Proxy Chess.com public random puzzle: https://api.chess.com/pub/puzzle/random
+ *  Returns Chess.com payload immediately; persists to DB in the background.
  */
 exports.getRandomDailyPuzzle = async (_req, res) => {
   try {
@@ -402,12 +402,10 @@ exports.getRandomDailyPuzzle = async (_req, res) => {
       res.status(502).json({ error: 'Chess.com puzzle response missing FEN.' });
       return;
     }
-    const { puzzle, created } = await upsertChesscomRandomPuzzle(data);
-    res.json({
-      ...puzzle,
-      url: puzzle.source_url,
-      image: puzzle.image_url,
-      created,
+    // Do not block the client on DB uniqueness / insert.
+    res.json(data);
+    upsertChesscomRandomPuzzle(data).catch((err) => {
+      console.warn('Chess.com puzzle background persist failed:', err.message || err);
     });
   } catch (err) {
     console.error('Chess.com random puzzle error:', err);

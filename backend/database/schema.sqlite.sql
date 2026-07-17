@@ -63,6 +63,28 @@ CREATE INDEX IF NOT EXISTS idx_students_player_name ON Students (player_name);
 CREATE INDEX IF NOT EXISTS idx_students_joining_date ON Students (joining_date);
 CREATE INDEX IF NOT EXISTS idx_students_status ON Students (status);
 
+-- Student batches (many-to-many; students may have zero or more batches)
+CREATE TABLE IF NOT EXISTS batches (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  name            TEXT NOT NULL UNIQUE,
+  description     TEXT,
+  status          TEXT NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active', 'archived')),
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS batch_students (
+  batch_id        INTEGER NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
+  student_id      INTEGER NOT NULL REFERENCES Students(id) ON DELETE CASCADE,
+  added_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (batch_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_batches_status ON batches (status);
+CREATE INDEX IF NOT EXISTS idx_batch_students_batch ON batch_students (batch_id);
+CREATE INDEX IF NOT EXISTS idx_batch_students_student ON batch_students (student_id);
+
 -- Library
 CREATE TABLE IF NOT EXISTS Stories (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,10 +133,25 @@ CREATE TABLE IF NOT EXISTS modules (
   updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS module_chapters (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  module_id             INTEGER NOT NULL
+                          REFERENCES modules(id) ON DELETE CASCADE,
+  name                  TEXT NOT NULL,
+  description           TEXT,
+  visible_to_students   INTEGER NOT NULL DEFAULT 0
+                          CHECK (visible_to_students IN (0, 1)),
+  display_order         INTEGER NOT NULL DEFAULT 0,
+  created_at            TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS module_stories (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   module_id             INTEGER NOT NULL
                           REFERENCES modules(id) ON DELETE CASCADE,
+  chapter_id            INTEGER
+                          REFERENCES module_chapters(id) ON DELETE CASCADE,
   story_id              INTEGER NOT NULL
                           REFERENCES Stories(id) ON DELETE CASCADE,
   visible_to_students   INTEGER NOT NULL DEFAULT 1
@@ -126,8 +163,12 @@ CREATE TABLE IF NOT EXISTS module_stories (
 
 CREATE INDEX IF NOT EXISTS idx_modules_visible
   ON modules (visible_to_students);
+CREATE INDEX IF NOT EXISTS idx_module_chapters_module
+  ON module_chapters (module_id, display_order, id);
 CREATE INDEX IF NOT EXISTS idx_module_stories_module
   ON module_stories (module_id, display_order, id);
+CREATE INDEX IF NOT EXISTS idx_module_stories_chapter
+  ON module_stories (chapter_id, display_order, id);
 CREATE INDEX IF NOT EXISTS idx_module_stories_story
   ON module_stories (story_id);
 
@@ -164,7 +205,7 @@ CREATE TABLE IF NOT EXISTS chesscom_random_puzzles (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   title         TEXT,
   fen           TEXT NOT NULL UNIQUE,
-  pgn           TEXT,
+  solution      TEXT,
   source_url    TEXT,
   image_url     TEXT,
   publish_time  INTEGER,

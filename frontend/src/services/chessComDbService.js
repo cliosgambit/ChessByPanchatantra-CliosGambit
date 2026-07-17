@@ -137,31 +137,20 @@ export async function fetchBrilliantPuzzlesFromDb({ limit = 2000 } = {}) {
   return apiFetch(`${API_BASE}/brilliant-puzzles?limit=${limit}`);
 }
 
-/** Random daily puzzle from Chess.com — saves unique FEN to DB on fetch. */
-export async function fetchChessComRandomPuzzle() {
-  let raw = null;
-  try {
-    const res = await fetch('https://api.chess.com/pub/puzzle/random', {
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    });
-    if (!res.ok) {
-      throw new Error(`Chess.com API returned ${res.status}.`);
-    }
-    raw = await res.json();
-    if (!raw?.fen) throw new Error('Chess.com puzzle response missing FEN.');
-  } catch (directErr) {
-    try {
-      // Backend proxy also upserts into chesscom_random_puzzles
-      return await apiFetch(`${API_BASE}/puzzle/random`, { cache: 'no-store' });
-    } catch {
-      throw directErr instanceof Error
-        ? directErr
-        : new Error('Failed to fetch Chess.com random puzzle.');
-    }
-  }
+function mapChessComPuzzleRaw(raw = {}) {
+  return {
+    title: raw.title || null,
+    fen: raw.fen || null,
+    // Chess.com API field is `pgn`; we store/expose it as `solution`.
+    solution: raw.solution || raw.pgn || null,
+    url: raw.url || raw.source_url || null,
+    image: raw.image || raw.image_url || null,
+    publish_time: raw.publish_time ?? null,
+    comments: raw.comments || null,
+  };
+}
 
-  // Persist unique FEN via backend (required — do not swallow failures)
+async function persistChessComPuzzle(raw) {
   const saved = await apiFetch(`${API_BASE}/puzzle/ingest`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -174,9 +163,57 @@ export async function fetchChessComRandomPuzzle() {
     image: saved.puzzle?.image || saved.puzzle?.image_url || raw.image,
     fen: saved.puzzle?.fen || raw.fen,
     title: saved.puzzle?.title || raw.title,
-    pgn: saved.puzzle?.pgn || raw.pgn,
+    solution: saved.puzzle?.solution || raw.solution || raw.pgn,
     publish_time: saved.puzzle?.publish_time ?? raw.publish_time,
   };
+}
+
+export { persistChessComPuzzle };
+
+/**
+ * Random puzzle from Chess.com.
+ * Returns the API payload immediately — DB ingest is background by default
+ * (Chess.com rotates ~every 10s; no need to wait on uniqueness checks).
+ * Pass `{ waitForPersist: true }` when a saved DB id is required (e.g. moral assign).
+ */
+export async function fetchChessComRandomPuzzle({ waitForPersist = false } = {}) {
+  let raw = null;
+  try {
+    // Browser calls to Chess.com can stall because of network/CORS behavior.
+    // Use our backend proxy first; it returns the Chess.com payload immediately.
+    raw = await apiFetch(`${API_BASE}/puzzle/random`, { cache: 'no-store' });
+    if (!raw?.fen) throw new Error('Chess.com puzzle response missing FEN.');
+  } catch (proxyErr) {
+    try {
+      const res = await fetch('https://api.chess.com/pub/puzzle/random', {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        throw new Error(`Chess.com API returned ${res.status}.`);
+      }
+      raw = await res.json();
+      if (!raw?.fen) throw new Error('Chess.com puzzle response missing FEN.');
+    } catch {
+      throw proxyErr instanceof Error
+        ? proxyErr
+        : new Error('Failed to fetch Chess.com random puzzle.');
+    }
+  }
+
+  const puzzle = mapChessComPuzzleRaw(raw);
+  const persistPromise = persistChessComPuzzle(raw).catch((err) => {
+    console.warn('Chess.com puzzle persist failed:', err);
+    return null;
+  });
+  puzzle.persistPromise = persistPromise;
+
+  if (waitForPersist) {
+    const saved = await persistPromise;
+    return saved || puzzle;
+  }
+
+  return puzzle;
 }
 
 export async function fetchSavedChessComPuzzles({ unused = false, q = '', limit = 100 } = {}) {

@@ -15,7 +15,7 @@
       40
     ]
   },
-  "hostedHealth": [
+  "hostedHealth": 
     {
       "test": "GET /",
       "ms": 485,
