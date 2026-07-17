@@ -19,13 +19,63 @@ const TIME_CONTROLS = [
 
 const MONTHS_WINDOW = 3;
 
-function RatingTooltip({ active, payload }) {
+const CHART_THEMES = {
+  dark: {
+    grid: '#3a3835',
+    axis: '#3a3835',
+    tick: '#a8a6a3',
+    label: '#7a7875',
+    cursor: '#3a3835',
+    activeDotStroke: '#f3f2f1',
+  },
+  light: {
+    grid: '#e5e7eb',
+    axis: '#e5e7eb',
+    tick: '#6b7280',
+    label: '#9ca3af',
+    cursor: '#d1d5db',
+    activeDotStroke: '#ffffff',
+  },
+};
+
+function formatSinceLabel(sinceDate) {
+  if (!sinceDate) return null;
+  const d = new Date(sinceDate);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function computeSinceDate(rangeKey, joiningDate) {
+  if (rangeKey === 'joining' && joiningDate) return joiningDate;
+  if (rangeKey === 'overall') return null;
+  const now = new Date();
+  if (rangeKey === '1d') {
+    // Yesterday 00:00 local → includes yesterday + today
+    now.setDate(now.getDate() - 1);
+    now.setHours(0, 0, 0, 0);
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  if (rangeKey === '1w') {
+    now.setDate(now.getDate() - 7);
+    return now.toISOString().slice(0, 10);
+  }
+  if (rangeKey === '1m') {
+    now.setMonth(now.getMonth() - 1);
+    return now.toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+function RatingTooltip({ active, payload, theme = 'dark' }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   if (!point) return null;
 
   return (
-    <div className="chess-rating-chart-tooltip">
+    <div className={`chess-rating-chart-tooltip${theme === 'light' ? ' chess-rating-chart-tooltip--light' : ''}`}>
       <div className="chess-rating-chart-tooltip-title">Game {point.game}</div>
       <div className="chess-rating-chart-tooltip-row">
         <span>Rating</span>
@@ -41,13 +91,28 @@ function RatingTooltip({ active, payload }) {
   );
 }
 
+const RANGE_FILTERS = [
+  { key: 'joining', label: 'From Joining' },
+  { key: '1d', label: '1 Day' },
+  { key: '1w', label: '1 Week' },
+  { key: '1m', label: '1 Month' },
+  { key: 'overall', label: 'Overall' },
+];
+
+export { RANGE_FILTERS, computeSinceDate };
+
 /**
  * @param {object} props
  * @param {string} props.username
- * @param {string} [props.activeTimeClass] controlled time class (bullet|blitz|rapid|daily)
+ * @param {string} [props.activeTimeClass]
  * @param {(key: string) => void} [props.onActiveTimeClassChange]
- * @param {boolean} [props.hideTabs] hide internal tab buttons (when rating cards drive selection)
- * @param {boolean} [props.compact] denser layout for profile header
+ * @param {boolean} [props.hideTabs] hide time-control tab buttons
+ * @param {boolean} [props.compact]
+ * @param {string} [props.joiningDate] YYYY-MM-DD student joining date
+ * @param {boolean} [props.showRangeFilters] show date-range filter buttons (uncontrolled)
+ * @param {string} [props.activeRange] controlled range key
+ * @param {(key: string) => void} [props.onActiveRangeChange]
+ * @param {'dark'|'light'} [props.theme]
  */
 function RatingProgressChart({
   username,
@@ -55,18 +120,42 @@ function RatingProgressChart({
   onActiveTimeClassChange,
   hideTabs = false,
   compact = false,
+  joiningDate = null,
+  showRangeFilters = false,
+  activeRange: controlledRange,
+  onActiveRangeChange,
+  theme = 'dark',
 }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [internalTimeClass, setInternalTimeClass] = useState('blitz');
+  const [internalRange, setInternalRange] = useState(joiningDate ? 'joining' : 'overall');
   const initialPickDoneRef = useRef(false);
   const isControlled = controlledTimeClass != null;
+  const isRangeControlled = controlledRange != null;
   const activeTimeClass = isControlled ? controlledTimeClass : internalTimeClass;
+  const activeRange = isRangeControlled ? controlledRange : internalRange;
+  const palette = CHART_THEMES[theme] || CHART_THEMES.dark;
+
+  const effectiveSince = useMemo(
+    () =>
+      showRangeFilters || isRangeControlled
+        ? computeSinceDate(activeRange, joiningDate)
+        : joiningDate,
+    [showRangeFilters, isRangeControlled, activeRange, joiningDate]
+  );
+
+  const sinceLabel = formatSinceLabel(effectiveSince);
 
   const setActiveTimeClass = (key) => {
     if (onActiveTimeClassChange) onActiveTimeClassChange(key);
     if (!isControlled) setInternalTimeClass(key);
+  };
+
+  const setActiveRange = (key) => {
+    if (onActiveRangeChange) onActiveRangeChange(key);
+    if (!isRangeControlled) setInternalRange(key);
   };
 
   useEffect(() => {
@@ -74,7 +163,7 @@ function RatingProgressChart({
     if (!safeUsername) {
       setGames([]);
       setLoading(false);
-      return;
+      return undefined;
     }
 
     initialPickDoneRef.current = false;
@@ -84,7 +173,14 @@ function RatingProgressChart({
     setLoading(true);
     setError(null);
 
-    fetchChessComRatingHistoryFromDb(safeUsername, { months: MONTHS_WINDOW })
+    const isOverall = (showRangeFilters || isRangeControlled) && activeRange === 'overall';
+    const fetchOpts = effectiveSince
+      ? { since: effectiveSince }
+      : isOverall
+        ? { all: true }
+        : { months: MONTHS_WINDOW };
+
+    fetchChessComRatingHistoryFromDb(safeUsername, fetchOpts)
       .then((data) => {
         if (cancelled) return;
         setGames(data.games || []);
@@ -101,7 +197,7 @@ function RatingProgressChart({
     return () => {
       cancelled = true;
     };
-  }, [username, isControlled]);
+  }, [username, isControlled, effectiveSince]);
 
   const seriesByTimeClass = useMemo(() => {
     const grouped = Object.fromEntries(TIME_CONTROLS.map((tc) => [tc.key, []]));
@@ -160,22 +256,36 @@ function RatingProgressChart({
     return ticks;
   }, [chartData]);
 
-  const chartHeight = compact ? 180 : 220;
+  const chartHeight = compact ? 200 : 220;
+  const isOverallRange =
+    (showRangeFilters || isRangeControlled) && activeRange === 'overall';
+  const rangeLabel = isOverallRange
+    ? 'all time'
+    : sinceLabel
+      ? `since ${sinceLabel}`
+      : `last ${MONTHS_WINDOW} months`;
+  const emptyRangeLabel = isOverallRange
+    ? 'across all time'
+    : sinceLabel
+      ? `since ${sinceLabel}`
+      : `in the last ${MONTHS_WINDOW} months`;
 
   return (
-    <div className={`chess-rating-chart${compact ? ' chess-rating-chart--compact' : ''}`}>
+    <div
+      className={`chess-rating-chart${compact ? ' chess-rating-chart--compact' : ''}${
+        theme === 'light' ? ' chess-rating-chart--light' : ''
+      }`}
+    >
       <div className="chess-rating-chart-header">
         <div>
           <h3 className="chess-rating-chart-title">
-            {activeConfig.label} · last {MONTHS_WINDOW} months
+            {activeConfig.label} · {rangeLabel}
           </h3>
           <p className="chess-rating-chart-subtitle">
-            {hideTabs
-              ? 'Rated games only · click a rating box above to switch'
-              : `Last ${MONTHS_WINDOW} months · rated games only`}
+            Rated games only · click a rating card above to switch
           </p>
         </div>
-        {!hideTabs && (
+        {!hideTabs && !showRangeFilters && (
           <div className="chess-rating-chart-tabs" role="tablist" aria-label="Time control">
             {TIME_CONTROLS.map((tc) => {
               const count = seriesByTimeClass[tc.key]?.length || 0;
@@ -200,6 +310,27 @@ function RatingProgressChart({
             })}
           </div>
         )}
+        {showRangeFilters && (
+          <div className="chess-rating-chart-tabs" role="tablist" aria-label="Time range">
+            {RANGE_FILTERS.map((rf) => {
+              if (rf.key === 'joining' && !joiningDate) return null;
+              const isActive = activeRange === rf.key;
+              return (
+                <button
+                  key={rf.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`chess-rating-chart-tab${isActive ? ' is-active' : ''}`}
+                  style={{ '--tab-accent': '#6366f1' }}
+                  onClick={() => setActiveRange(rf.key)}
+                >
+                  {rf.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="chess-rating-chart-body">
@@ -209,7 +340,7 @@ function RatingProgressChart({
           <div className="chess-rating-chart-empty chess-rating-chart-empty--error">{error}</div>
         ) : chartData.length === 0 ? (
           <div className="chess-rating-chart-empty">
-            No rated {activeConfig.label.toLowerCase()} games in the last {MONTHS_WINDOW} months.
+            No rated {activeConfig.label.toLowerCase()} games {emptyRangeLabel}.
           </div>
         ) : (
           <>
@@ -238,38 +369,43 @@ function RatingProgressChart({
             </div>
             <ResponsiveContainer width="100%" height={chartHeight}>
               <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3a3835" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
                 <XAxis
                   dataKey="game"
                   type="number"
                   domain={[1, chartData.length]}
                   ticks={xTicks}
-                  tick={{ fill: '#a8a6a3', fontSize: 11 }}
+                  tick={{ fill: palette.tick, fontSize: 11 }}
                   tickLine={false}
-                  axisLine={{ stroke: '#3a3835' }}
+                  axisLine={{ stroke: palette.axis }}
                   label={{
                     value: 'Game #',
                     position: 'insideBottom',
                     offset: -2,
-                    fill: '#7a7875',
+                    fill: palette.label,
                     fontSize: 11,
                   }}
                 />
                 <YAxis
                   domain={yDomain}
-                  tick={{ fill: '#a8a6a3', fontSize: 11 }}
+                  tick={{ fill: palette.tick, fontSize: 11 }}
                   tickLine={false}
-                  axisLine={{ stroke: '#3a3835' }}
+                  axisLine={{ stroke: palette.axis }}
                   width={44}
                 />
-                <Tooltip content={<RatingTooltip />} cursor={{ stroke: '#3a3835' }} />
+                <Tooltip content={<RatingTooltip theme={theme} />} cursor={{ stroke: palette.cursor }} />
                 <Line
                   type="monotone"
                   dataKey="rating"
                   stroke={activeConfig.color}
                   strokeWidth={2.5}
                   dot={chartData.length <= 40 ? { r: 3, fill: activeConfig.color } : false}
-                  activeDot={{ r: 5, fill: activeConfig.color, stroke: '#f3f2f1', strokeWidth: 2 }}
+                  activeDot={{
+                    r: 5,
+                    fill: activeConfig.color,
+                    stroke: palette.activeDotStroke,
+                    strokeWidth: 2,
+                  }}
                   isAnimationActive={false}
                 />
               </LineChart>

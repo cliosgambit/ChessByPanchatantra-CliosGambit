@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import GameHistoryRow, { GamesTableHeader } from './GameHistoryRow';
 import GameRowHoverPreview from './GameRowHoverPreview';
 import { fetchChessComGamePgnFromDb } from '../../services/chessComDbService';
@@ -7,6 +8,8 @@ import { getChessComGameId } from '../../utils/chessComGameNavigation';
 const PREVIEW_ANIMATION_MS = 280;
 const PREVIEW_HIDE_DELAY_MS = 120;
 const PGN_PREFETCH_CONCURRENCY = 6;
+const PREVIEW_BOARD_SIZE = 176;
+const PREVIEW_GAP = 14;
 
 function GameHistoryList({
   games,
@@ -16,6 +19,7 @@ function GameHistoryList({
   dateColumnLabel = 'Date',
   extraColumnLabel = null,
   extraColumn = null,
+  portalPreview = false,
 }) {
   const listRef = useRef(null);
   const hideTimer = useRef(null);
@@ -28,6 +32,7 @@ function GameHistoryList({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [hoveredGame, setHoveredGame] = useState(null);
   const [previewTop, setPreviewTop] = useState(0);
+  const [previewLeft, setPreviewLeft] = useState(0);
   const [previewPgn, setPreviewPgn] = useState(null);
 
   const showPreview = useCallback((instant = false) => {
@@ -70,12 +75,31 @@ function GameHistoryList({
     clearTimeout(hideTimer.current);
   }, []);
 
-  const updatePreviewPosition = useCallback((rowEl) => {
-    if (!listRef.current || !rowEl) return;
-    const listRect = listRef.current.getBoundingClientRect();
-    const rowRect = rowEl.getBoundingClientRect();
-    setPreviewTop(rowRect.top - listRect.top + rowRect.height / 2);
-  }, []);
+  const updatePreviewPosition = useCallback(
+    (rowEl) => {
+      if (!rowEl) return;
+      const rowRect = rowEl.getBoundingClientRect();
+
+      if (portalPreview) {
+        const preferLeft = rowRect.left >= PREVIEW_BOARD_SIZE + PREVIEW_GAP + 16;
+        const left = preferLeft
+          ? rowRect.left - PREVIEW_BOARD_SIZE - PREVIEW_GAP
+          : rowRect.right + PREVIEW_GAP;
+        const top = Math.min(
+          Math.max(rowRect.top + rowRect.height / 2, PREVIEW_BOARD_SIZE / 2 + 8),
+          window.innerHeight - PREVIEW_BOARD_SIZE / 2 - 8
+        );
+        setPreviewLeft(left);
+        setPreviewTop(top);
+        return;
+      }
+
+      if (!listRef.current) return;
+      const listRect = listRef.current.getBoundingClientRect();
+      setPreviewTop(rowRect.top - listRect.top + rowRect.height / 2);
+    },
+    [portalPreview]
+  );
 
   const handleRowHover = useCallback(
     (game, rowEl) => {
@@ -180,6 +204,37 @@ function GameHistoryList({
 
   const hoveredId = hoveredGame ? getChessComGameId(hoveredGame) : null;
 
+  const previewNode =
+    previewMounted && hoveredGame && (previewLoading || previewPgn) ? (
+      <div
+        className={`chess-game-hover-preview ${
+          portalPreview ? 'chess-game-hover-preview--portal' : 'chess-game-hover-preview--shared'
+        }${previewVisible ? ' chess-game-hover-preview--visible' : ''}${
+          previewInstant ? ' chess-game-hover-preview--instant' : ''
+        }${previewLoading ? ' chess-game-hover-preview--loading' : ''}`}
+        style={
+          portalPreview
+            ? { top: previewTop, left: previewLeft }
+            : { top: previewTop }
+        }
+        onMouseEnter={cancelHide}
+        onMouseLeave={scheduleHide}
+        role="presentation"
+      >
+        {previewLoading && !previewPgn ? (
+          <div className="chess-game-hover-preview-loading" aria-label="Loading game preview">
+            <span className="chess-game-hover-preview-spinner" />
+          </div>
+        ) : (
+          <GameRowHoverPreview
+            pgn={previewPgn}
+            orientation={hoveredGame.isWhite ? 'white' : 'black'}
+            boardId="chess-game-hover-shared-board"
+          />
+        )}
+      </div>
+    ) : null;
+
   return (
     <div className={`chess-games-table${extraColumn ? ' chess-games-table--with-extra' : ''}`}>
       {showHeader && (
@@ -193,43 +248,20 @@ function GameHistoryList({
         ref={listRef}
         onMouseLeave={scheduleHide}
       >
-      {games.map((game, index) => (
-        <GameHistoryRow
-          key={game.uuid || `${game.gameUrl || game.date}-${index}`}
-          game={game}
-          onSelect={onSelect}
-          isHovered={hoveredId === getChessComGameId(game) && previewMounted}
-          onRowHover={handleRowHover}
-          extraColumn={extraColumn}
-        />
-      ))}
+        {games.map((game, index) => (
+          <GameHistoryRow
+            key={game.uuid || `${game.gameUrl || game.date}-${index}`}
+            game={game}
+            onSelect={onSelect}
+            isHovered={hoveredId === getChessComGameId(game) && previewMounted}
+            onRowHover={handleRowHover}
+            extraColumn={extraColumn}
+          />
+        ))}
 
-      {previewMounted && hoveredGame && (previewLoading || previewPgn) && (
-        <div
-          className={`chess-game-hover-preview chess-game-hover-preview--shared${
-            previewVisible ? ' chess-game-hover-preview--visible' : ''
-          }${previewInstant ? ' chess-game-hover-preview--instant' : ''}${
-            previewLoading ? ' chess-game-hover-preview--loading' : ''
-          }`}
-          style={{ top: previewTop }}
-          onMouseEnter={cancelHide}
-          onMouseLeave={scheduleHide}
-          role="presentation"
-        >
-          {previewLoading && !previewPgn ? (
-            <div className="chess-game-hover-preview-loading" aria-label="Loading game preview">
-              <span className="chess-game-hover-preview-spinner" />
-            </div>
-          ) : (
-            <GameRowHoverPreview
-              pgn={previewPgn}
-              orientation={hoveredGame.isWhite ? 'white' : 'black'}
-              boardId="chess-game-hover-shared-board"
-            />
-          )}
-        </div>
-      )}
+        {!portalPreview ? previewNode : null}
       </div>
+      {portalPreview && previewNode ? createPortal(previewNode, document.body) : null}
     </div>
   );
 }

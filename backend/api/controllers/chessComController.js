@@ -141,10 +141,14 @@ exports.getGameMoves = async (req, res) => {
 exports.getGames = async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 25, 200);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
     const includeTotal = req.query.total !== 'false';
+    const since = String(req.query.since || '').trim() || null;
     const result = await syncService.getRecentGames(req.params.username, limit, {
       attachPreviewPgn: req.query.previewPgn === 'true',
       includeTotal,
+      since,
+      offset,
     });
     res.json(result);
   } catch (err) {
@@ -181,12 +185,72 @@ exports.getMonthlyGames = async (req, res) => {
 
 exports.getRatingHistory = async (req, res) => {
   try {
+    const since = String(req.query.since || '').trim();
+    const all = req.query.all === 'true';
     const months = Math.min(Number(req.query.months) || 3, 12);
-    const history = await syncService.getRatingHistory(req.params.username, months);
+    const history = await syncService.getRatingHistory(
+      req.params.username,
+      since ? { since } : all ? { all: true } : { months }
+    );
     res.json(history);
   } catch (err) {
     console.error('Chess.com rating history error:', err);
     res.status(500).json({ error: err.message || 'Failed to load rating history.' });
+  }
+};
+
+exports.getRatingImprovementSince = async (req, res) => {
+  try {
+    const since = String(req.query.since || '').trim();
+    const all = req.query.all === 'true';
+    if (!since && !all) {
+      return res.status(400).json({
+        error: 'Query param "since" (YYYY-MM-DD) or all=true is required.',
+      });
+    }
+    const data = await syncService.getRatingImprovementSince(
+      req.params.username,
+      all && !since ? { all: true } : { since }
+    );
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com rating improvement error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load rating improvement.' });
+  }
+};
+
+exports.getGameStatsForRange = async (req, res) => {
+  try {
+    const since = String(req.query.since || '').trim();
+    const all = req.query.all === 'true' || !since;
+    const data = await syncService.getGameStatsForRange(
+      req.params.username,
+      all && !since ? {} : { since }
+    );
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com game stats range error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load game stats.' });
+  }
+};
+
+exports.getPlayerAchievements = async (req, res) => {
+  try {
+    const since = String(req.query.since || '').trim();
+    const all = req.query.all === 'true';
+    if (!since && !all) {
+      return res.status(400).json({
+        error: 'Query param "since" (YYYY-MM-DD) or all=true is required.',
+      });
+    }
+    const data = await syncService.getPlayerAchievements(
+      req.params.username,
+      all && !since ? { all: true } : { since }
+    );
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com achievements error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load achievements.' });
   }
 };
 

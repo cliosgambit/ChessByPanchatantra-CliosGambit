@@ -1089,6 +1089,91 @@ async function getProfileRow(chessComId) {
   return rows[0] || null;
 }
 
+/** Lightweight profile+stats refresh (avatar, name, ratings) without re-fetching all games. */
+async function refreshProfileFromChessCom(username) {
+  const safeName = String(username || '').trim();
+  if (!safeName) return null;
+
+  const profileRaw = await fetchChessJson(`/pub/player/${encodeURIComponent(safeName)}`);
+  if (profileRaw?.notFound) {
+    throw new Error(`Chess.com player not found: ${safeName}`);
+  }
+
+  const apiUsername = profileRaw.username || safeName;
+  const chessComId = apiUsername.toLowerCase();
+  const statsRaw = await fetchChessJson(`/pub/player/${encodeURIComponent(apiUsername)}/stats`);
+  const profile = parseProfile(profileRaw, apiUsername);
+  const stats = parseStats(statsRaw?.notFound ? {} : statsRaw);
+  await upsertProfile(chessComId, profile, stats);
+
+  // upsertProfile marks sync_status = 'syncing'; restore complete for metadata-only refresh
+  await db.query(
+    `UPDATE chess_com_profiles
+     SET sync_status = 'complete',
+         updated_at = NOW()
+     WHERE chess_com_id = $1`,
+    [chessComId]
+  );
+
+  return getProfileRow(chessComId);
+}
+
+/**
+ * Fast presence sync — updates last_online / is_online / avatar from Chess.com player endpoint.
+ * Called on every profile page load so Online/Offline stays accurate.
+ */
+async function syncPresenceFromChessCom(username) {
+  const safeName = String(username || '').trim();
+  if (!safeName) return null;
+
+  const profileRaw = await fetchChessJson(`/pub/player/${encodeURIComponent(safeName)}`);
+  if (profileRaw?.notFound) {
+    throw new Error(`Chess.com player not found: ${safeName}`);
+  }
+
+  const profile = parseProfile(profileRaw, profileRaw.username || safeName);
+  const chessComId = (profile.username || safeName).toLowerCase();
+
+  await db.query(
+    `UPDATE chess_com_profiles
+     SET avatar_url = COALESCE($2, avatar_url),
+         name = COALESCE($3, name),
+         followers = $4,
+         league = COALESCE($5, league),
+         membership_status = COALESCE($6, membership_status),
+         verified = $7,
+         is_streamer = $8,
+         twitch_url = $9,
+         is_online = $10,
+         last_online_at = $11,
+         country_url = COALESCE($12, country_url),
+         country_code = COALESCE($13, country_code),
+         location = COALESCE($14, location),
+         profile_url = COALESCE($15, profile_url),
+         updated_at = NOW()
+     WHERE chess_com_id = $1`,
+    [
+      chessComId,
+      profile.avatar,
+      profile.name,
+      profile.followers,
+      profile.league,
+      profile.status,
+      profile.verified,
+      profile.isStreamer,
+      profile.twitchUrl,
+      profile.isOnline,
+      profile.lastOnlineAt,
+      profile.country,
+      profile.countryCode,
+      profile.location,
+      profile.profileUrl,
+    ]
+  );
+
+  return getProfileRow(chessComId);
+}
+
 async function needsSync(chessComId, maxAgeHours = 24) {
   const row = await getProfileRow(chessComId);
   if (!row || row.sync_status !== 'complete' || !row.last_synced_at) return true;
@@ -1105,7 +1190,7 @@ async function needsSync(chessComId, maxAgeHours = 24) {
 
 async function getProfileSummary(username) {
   const chessComId = username.trim().toLowerCase();
-  const profileRow = await getProfileRow(chessComId);
+  let profileRow = await getProfileRow(chessComId);
 
   if (!profileRow) {
     scheduleBackgroundSync(username);
@@ -1119,6 +1204,22 @@ async function getProfileSummary(username) {
       backgroundSync: true,
       error: null,
     };
+  }
+
+  // Always sync presence (online/offline + avatar) from Chess.com on profile view
+  try {
+    profileRow = (await syncPresenceFromChessCom(username)) || profileRow;
+  } catch (err) {
+    console.warn('[chess-com] presence sync failed:', err.message);
+    // Fallback: full metadata refresh if avatar still missing
+    const mappedPreview = mapDbProfileRow(profileRow);
+    if (!mappedPreview?.profile?.avatar) {
+      try {
+        profileRow = (await refreshProfileFromChessCom(username)) || profileRow;
+      } catch (refreshErr) {
+        console.warn('[chess-com] avatar/profile refresh failed:', refreshErr.message);
+      }
+    }
   }
 
   let backgroundSync = false;
@@ -1216,14 +1317,34 @@ async function attachPreviewPgns(chessComId, games, previewLimit = PREVIEW_PGN_L
   );
 }
 
-async function getRecentGames(chessComId, limit = 25, { attachPreviewPgn = false, includeTotal = true } = {}) {
+async function getRecentGames(
+  chessComId,
+  limit = 25,
+  { attachPreviewPgn = false, includeTotal = true, since = null, offset = 0 } = {}
+) {
   const id = chessComId.toLowerCase();
+  const safeLimit = Math.min(Math.max(Number(limit) || 25, 1), 200);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  const params = [id];
+  let where = 'chess_com_id = $1';
+
+  if (since) {
+    const sinceDate = new Date(since);
+    if (!Number.isNaN(sinceDate.getTime())) {
+      sinceDate.setHours(0, 0, 0, 0);
+      params.push(sinceDate.toISOString());
+      where += ` AND played_at >= $${params.length}`;
+    }
+  }
+
+  params.push(safeLimit, safeOffset);
   const { rows } = await db.query(
     `SELECT ${GAME_LIST_COLUMNS} FROM chess_com_games
-     WHERE chess_com_id = $1
+     WHERE ${where}
      ORDER BY played_at DESC NULLS LAST
-     LIMIT $2`,
-    [id, limit]
+     LIMIT $${params.length - 1}
+     OFFSET $${params.length}`,
+    params
   );
   let games = rows.map(mapDbGameRow);
   if (attachPreviewPgn) {
@@ -1232,14 +1353,24 @@ async function getRecentGames(chessComId, limit = 25, { attachPreviewPgn = false
 
   let total = games.length;
   if (includeTotal) {
+    const countParams = [id];
+    let countWhere = 'chess_com_id = $1';
+    if (since) {
+      const sinceDate = new Date(since);
+      if (!Number.isNaN(sinceDate.getTime())) {
+        sinceDate.setHours(0, 0, 0, 0);
+        countParams.push(sinceDate.toISOString());
+        countWhere += ` AND played_at >= $${countParams.length}`;
+      }
+    }
     const { rows: countRows } = await db.query(
-      'SELECT COUNT(*)::int AS count FROM chess_com_games WHERE chess_com_id = $1',
-      [id]
+      `SELECT COUNT(*)::int AS count FROM chess_com_games WHERE ${countWhere}`,
+      countParams
     );
     total = countRows[0]?.count || 0;
   }
 
-  return { games, total };
+  return { games, total, limit: safeLimit, offset: safeOffset };
 }
 
 async function getGamePgn(chessComId, uuid) {
@@ -1758,11 +1889,26 @@ function startYesterdaysSyncInBackground() {
   return yesterdaysSyncTask;
 }
 
-async function getRatingHistory(chessComId, months = 3) {
+async function getRatingHistory(chessComId, options = {}) {
   const id = chessComId.toLowerCase();
-  const safeMonths = Math.min(Math.max(Number(months) || 3, 1), 12);
-  const since = new Date();
-  since.setMonth(since.getMonth() - safeMonths);
+  const sinceParam = String(options.since || '').trim();
+  let since;
+  let months = null;
+
+  if (sinceParam) {
+    since = new Date(sinceParam);
+    if (Number.isNaN(since.getTime())) {
+      throw new Error('Invalid since date.');
+    }
+    since.setHours(0, 0, 0, 0);
+  } else if (options.all) {
+    since = new Date('2000-01-01');
+    months = null;
+  } else {
+    months = Math.min(Math.max(Number(options.months) || 3, 1), 12);
+    since = new Date();
+    since.setMonth(since.getMonth() - months);
+  }
 
   const { rows } = await db.query(
     `SELECT played_at, time_class, white_rating, black_rating, self_color, rated
@@ -1794,9 +1940,306 @@ async function getRatingHistory(chessComId, months = 3) {
     .filter((game) => game.timeClass && game.selfRating != null);
 
   return {
-    months: safeMonths,
+    months,
     since: since.toISOString(),
+    all: Boolean(options.all),
     games,
+  };
+}
+
+function emptyRecord() {
+  return { wins: 0, losses: 0, draws: 0 };
+}
+
+function bumpRecord(record, resultType) {
+  if (resultType === 'win') record.wins += 1;
+  else if (resultType === 'loss') record.losses += 1;
+  else if (resultType === 'draw') record.draws += 1;
+}
+
+async function getGameStatsForRange(chessComId, options = {}) {
+  const id = chessComId.toLowerCase();
+  const sinceParam = String(options.since || '').trim();
+  const params = [id];
+  let where = `chess_com_id = $1 AND rated = 1`;
+
+  let sinceIso = null;
+  if (sinceParam) {
+    const since = new Date(sinceParam);
+    if (Number.isNaN(since.getTime())) {
+      throw new Error('Invalid since date.');
+    }
+    since.setHours(0, 0, 0, 0);
+    sinceIso = since.toISOString();
+    params.push(sinceIso);
+    where += ` AND played_at >= $${params.length}`;
+  }
+
+  const { rows } = await db.query(
+    `SELECT time_class, self_result_type
+     FROM chess_com_games
+     WHERE ${where}`,
+    params
+  );
+
+  const totals = emptyRecord();
+  const records = {
+    bullet: emptyRecord(),
+    blitz: emptyRecord(),
+    rapid: emptyRecord(),
+    daily: emptyRecord(),
+  };
+
+  for (const row of rows) {
+    const resultType = String(row.self_result_type || '').toLowerCase();
+    bumpRecord(totals, resultType);
+    const tc = String(row.time_class || '').toLowerCase();
+    if (records[tc]) bumpRecord(records[tc], resultType);
+  }
+
+  const totalGames = totals.wins + totals.losses + totals.draws;
+  const winPercentage =
+    totalGames > 0 ? Math.round((totals.wins / totalGames) * 1000) / 10 : 0;
+
+  return {
+    since: sinceIso,
+    all: !sinceParam,
+    totalGames,
+    winPercentage,
+    totals,
+    records,
+  };
+}
+
+const RATING_TIME_CLASSES = ['bullet', 'blitz', 'rapid', 'daily'];
+
+function mapRatedGameRow(row) {
+  const isWhite = row.self_color === 'white';
+  const selfRating = isWhite ? row.white_rating : row.black_rating;
+  const timeClass = String(row.time_class || '').toLowerCase();
+  if (!RATING_TIME_CLASSES.includes(timeClass) || selfRating == null) return null;
+  return {
+    timeClass,
+    selfRating: Number(selfRating),
+    playedAt: row.played_at ? new Date(row.played_at).toISOString() : null,
+  };
+}
+
+function baselineRatingAtJoin(games, sinceEndMs) {
+  if (!games.length) return null;
+
+  let baseline = null;
+  for (const game of games) {
+    const playedMs = game.playedAt ? new Date(game.playedAt).getTime() : NaN;
+    if (Number.isNaN(playedMs)) continue;
+    if (playedMs <= sinceEndMs) {
+      baseline = game;
+      continue;
+    }
+    if (!baseline) baseline = game;
+    break;
+  }
+
+  if (!baseline) return null;
+  return {
+    rating: baseline.selfRating,
+    date: baseline.playedAt,
+  };
+}
+
+async function getRatingImprovementSince(chessComId, options = {}) {
+  const id = chessComId.toLowerCase();
+  let sinceDate = null;
+  let all = false;
+  if (typeof options === 'string') {
+    sinceDate = String(options).trim() || null;
+  } else {
+    sinceDate = String(options.since || '').trim() || null;
+    all = Boolean(options.all);
+  }
+
+  let sinceEndMs;
+  let sinceLabel = null;
+
+  if (all || !sinceDate) {
+    // Overall: baseline = first rated game in each time class
+    sinceEndMs = Number.NEGATIVE_INFINITY;
+  } else {
+    const since = new Date(sinceDate);
+    if (Number.isNaN(since.getTime())) {
+      throw new Error('Invalid since date.');
+    }
+    const sinceEnd = new Date(since);
+    sinceEnd.setHours(23, 59, 59, 999);
+    sinceEndMs = sinceEnd.getTime();
+    sinceLabel = since.toISOString().slice(0, 10);
+  }
+
+  const { rows } = await db.query(
+    `SELECT played_at, time_class, white_rating, black_rating, self_color, rated
+     FROM chess_com_games
+     WHERE chess_com_id = $1
+       AND rated = 1
+     ORDER BY played_at ASC NULLS LAST`,
+    [id]
+  );
+
+  const byClass = Object.fromEntries(RATING_TIME_CLASSES.map((tc) => [tc, []]));
+  for (const row of rows) {
+    const game = mapRatedGameRow(row);
+    if (!game) continue;
+    byClass[game.timeClass].push(game);
+  }
+
+  const improvements = {};
+  for (const timeClass of RATING_TIME_CLASSES) {
+    const baseline = baselineRatingAtJoin(byClass[timeClass], sinceEndMs);
+    improvements[timeClass] = {
+      baseline: baseline?.rating ?? null,
+      baselineDate: baseline?.date ?? null,
+    };
+  }
+
+  return {
+    since: sinceLabel,
+    all: all || !sinceDate,
+    improvements,
+  };
+}
+
+async function getPlayerAchievements(chessComId, options = {}) {
+  const id = chessComId.toLowerCase();
+  let sinceDate = null;
+  let all = false;
+  if (typeof options === 'string') {
+    sinceDate = String(options).trim() || null;
+  } else {
+    sinceDate = String(options.since || '').trim() || null;
+    all = Boolean(options.all);
+  }
+
+  let sinceIso = null;
+  let sinceEndMs = Number.NEGATIVE_INFINITY;
+  if (!all && sinceDate) {
+    const since = new Date(sinceDate);
+    if (Number.isNaN(since.getTime())) {
+      throw new Error('Invalid since date.');
+    }
+    since.setHours(0, 0, 0, 0);
+    sinceIso = since.toISOString();
+    const sinceEnd = new Date(since);
+    sinceEnd.setHours(23, 59, 59, 999);
+    sinceEndMs = sinceEnd.getTime();
+  }
+
+  const gameParams = [id];
+  let gameWhere = `chess_com_id = $1 AND rated = 1 AND played_at IS NOT NULL`;
+  if (sinceIso) {
+    gameParams.push(sinceIso);
+    gameWhere += ` AND played_at >= $${gameParams.length}`;
+  }
+
+  const { rows: gameRows } = await db.query(
+    `SELECT played_at, time_class, white_rating, black_rating, self_color, self_result_type, rated
+     FROM chess_com_games
+     WHERE ${gameWhere}
+     ORDER BY played_at ASC NULLS LAST`,
+    gameParams
+  );
+
+  const streak = analyzeWinStreaks(gameRows.map((row) => row.self_result_type));
+
+  // For ELO baseline we need full history (same as improvement), then current from last game in range or overall
+  const { rows: allRatedRows } = await db.query(
+    `SELECT played_at, time_class, white_rating, black_rating, self_color, rated
+     FROM chess_com_games
+     WHERE chess_com_id = $1 AND rated = 1
+     ORDER BY played_at ASC NULLS LAST`,
+    [id]
+  );
+
+  const byClass = Object.fromEntries(RATING_TIME_CLASSES.map((tc) => [tc, []]));
+  for (const row of allRatedRows) {
+    const game = mapRatedGameRow(row);
+    if (!game) continue;
+    byClass[game.timeClass].push(game);
+  }
+
+  const eloByTimeClass = {};
+  let bestEloGain = null;
+  for (const timeClass of RATING_TIME_CLASSES) {
+    const games = byClass[timeClass];
+    const baseline = baselineRatingAtJoin(games, sinceEndMs);
+    const inRange = sinceIso
+      ? games.filter((g) => g.playedAt && new Date(g.playedAt).getTime() >= new Date(sinceIso).getTime())
+      : games;
+    const latest = inRange.length ? inRange[inRange.length - 1] : games[games.length - 1] || null;
+    const current = latest?.selfRating ?? null;
+    const baselineRating = baseline?.rating ?? null;
+    const delta =
+      current != null && baselineRating != null ? current - baselineRating : null;
+    eloByTimeClass[timeClass] = {
+      baseline: baselineRating,
+      current,
+      delta,
+      games: inRange.length,
+    };
+    if (delta != null && (bestEloGain == null || delta > bestEloGain)) {
+      bestEloGain = delta;
+    }
+  }
+
+  let brilliantCount = 0;
+  try {
+    const brilliantParams = [id];
+    let brilliantWhere = `
+      LOWER(g.chess_com_id) = $1
+      AND (s4.is_brilliant IS TRUE OR s4.is_brilliant = 1)
+      AND (
+        (LOWER(g.self_color) = 'white' AND LOWER(s4.turn) = 'white')
+        OR (LOWER(g.self_color) = 'black' AND LOWER(s4.turn) = 'black')
+      )`;
+    if (sinceIso) {
+      brilliantParams.push(sinceIso);
+      brilliantWhere += ` AND g.played_at >= $${brilliantParams.length}`;
+    }
+    const { rows: brilliantRows } = await db.query(
+      `SELECT COUNT(*)::int AS count
+       FROM chess_com_brilliance_stage4 s4
+       INNER JOIN chess_com_games g ON g.chess_com_uuid = s4.chess_com_uuid
+       WHERE ${brilliantWhere}`,
+      brilliantParams
+    );
+    brilliantCount = Number(brilliantRows[0]?.count) || 0;
+  } catch (err) {
+    // Table may be missing in some envs — don't fail the whole achievements payload
+    console.warn('[achievements] brilliant count failed:', err.message);
+    brilliantCount = 0;
+  }
+
+  return {
+    since: sinceIso ? sinceIso.slice(0, 10) : null,
+    all: all || !sinceDate,
+    winStreak: {
+      highest: streak.highestWinStreak,
+      current: streak.currentWinStreak,
+      gameCount: streak.gameCount,
+      wins: streak.wins,
+      losses: streak.losses,
+      draws: streak.draws,
+      winRate:
+        streak.gameCount > 0
+          ? Math.round((streak.wins / streak.gameCount) * 1000) / 10
+          : 0,
+      milestones: streak.milestones,
+    },
+    eloGain: {
+      best: bestEloGain,
+      byTimeClass: eloByTimeClass,
+    },
+    brilliantMoves: {
+      count: brilliantCount,
+    },
   };
 }
 
@@ -1965,7 +2408,10 @@ module.exports = {
   syncPlayerFromChessCom,
   quickSyncPlayer,
   scheduleBackgroundSync,
+  getProfileRow,
   getProfileSummary,
+  refreshProfileFromChessCom,
+  syncPresenceFromChessCom,
   getBundle,
   getRecentGames,
   getGameByUuid,
@@ -1974,6 +2420,9 @@ module.exports = {
   getArchives,
   getMonthlyGames,
   getRatingHistory,
+  getRatingImprovementSince,
+  getPlayerAchievements,
+  getGameStatsForRange,
   getClubs,
   getPlayerWinStreaks,
   getPlayerGamesByDay,

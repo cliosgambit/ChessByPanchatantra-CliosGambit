@@ -1,0 +1,4307 @@
+{
+  "meta": {
+    "date": "2026-07-17T05:41:14.638Z",
+    "hosted": "https://stockfish-cbp.onrender.com",
+    "docs": "https://stockfish-cbp.onrender.com/docs",
+    "localEngine": "stockfish-windows-x86-64-avx2.exe",
+    "pgnSource": "user-provided annotated game (NAGs stripped for engine input)",
+    "result": "1-0",
+    "totalPlies": 75,
+    "hostedEngine": "Stockfish 18.1",
+    "hostedResponseShape": "timeline[] with engine_best_move, is_best_move, before_analysis, after_analysis"
+  },
+  "health": {
+    "ok": true,
+    "ms": 988,
+    "result": {
+      "status": "online",
+      "engine": "Stockfish",
+      "version": "18.1"
+    }
+  },
+  "hostedFullGame": {
+    "ok": true,
+    "ms": 94577,
+    "total_plies": 75,
+    "timelineLen": 75,
+    "msPerPly": 1261,
+    "settings": {
+      "movetime": 200,
+      "multipv": 3
+    },
+    "responseKeys": [
+      "ply",
+      "move_number",
+      "side",
+      "played_move",
+      "played_move_san",
+      "before_fen",
+      "after_fen",
+      "engine_best_move",
+      "engine_ponder",
+      "is_best_move",
+      "evaluation_before",
+      "evaluation_after",
+      "engine_info_before",
+      "engine_info_after",
+      "before_analysis",
+      "after_analysis"
+    ],
+    "coldMs": 94577,
+    "warmCachedMs": 1327,
+    "note": "Cold first call ~94.6s; immediate re-call returned cached result in ~1.3s"
+  },
+  "localFullGame": {
+    "ok": true,
+    "ms": 57902,
+    "errors": 0,
+    "analyzed": 75,
+    "msPerPly": 772,
+    "avgPlyMs": 772,
+    "minPlyMs": 0,
+    "maxPlyMs": 835
+  },
+  "perPly": [
+    {
+      "ply": 1,
+      "san": "d3",
+      "played": "d2d3",
+      "localMs": 0,
+      "localBest": "d7d5",
+      "localPrevBest": "e2e4",
+      "localEval": {
+        "type": "cp",
+        "value": 6
+      },
+      "localDepth": 13,
+      "localWinProb": {
+        "white": 49.4,
+        "black": 50.6
+      },
+      "hostedBest": "b8c6",
+      "hostedPrevBest": "e2e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 13
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 51.2,
+        "black": 48.8
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 7,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 66
+      },
+      "hostedNodesAfter": 19588,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 2,
+      "san": "d5",
+      "played": "d7d5",
+      "localMs": 775,
+      "localBest": "e2e4",
+      "localPrevBest": "e7e5",
+      "localEval": {
+        "type": "cp",
+        "value": -10
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 49,
+        "black": 51
+      },
+      "hostedBest": "e2e4",
+      "hostedPrevBest": "b8c6",
+      "hostedEval": {
+        "type": "cp",
+        "value": -12
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 48.9,
+        "black": 51.1
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 2,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 13
+      },
+      "hostedNodesAfter": 20593,
+      "hostedTimeMsAfter": 204
+    },
+    {
+      "ply": 3,
+      "san": "Nf3",
+      "played": "g1f3",
+      "localMs": 781,
+      "localBest": "g8f6",
+      "localPrevBest": "e2e4",
+      "localEval": {
+        "type": "cp",
+        "value": 7
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 49.300000000000004,
+        "black": 50.699999999999996
+      },
+      "hostedBest": "b8c6",
+      "hostedPrevBest": "e2e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 21
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 51.93,
+        "black": 48.07
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 14,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -12
+      },
+      "hostedNodesAfter": 23564,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 4,
+      "san": "c5",
+      "played": "c7c5",
+      "localMs": 782,
+      "localBest": "e2e4",
+      "localPrevBest": "g8f6",
+      "localEval": {
+        "type": "cp",
+        "value": 14
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 51.4,
+        "black": 48.6
+      },
+      "hostedBest": "e2e4",
+      "hostedPrevBest": "b8c6",
+      "hostedEval": {
+        "type": "cp",
+        "value": 26
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 52.39,
+        "black": 47.61
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 12,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 21
+      },
+      "hostedNodesAfter": 15211,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 5,
+      "san": "c3",
+      "played": "c2c3",
+      "localMs": 775,
+      "localBest": "g8f6",
+      "localPrevBest": "e2e4",
+      "localEval": {
+        "type": "cp",
+        "value": 36
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 46.4,
+        "black": 53.6
+      },
+      "hostedBest": "g8f6",
+      "hostedPrevBest": "e2e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 19
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 51.75,
+        "black": 48.25
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 17,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 26
+      },
+      "hostedNodesAfter": 25829,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 6,
+      "san": "Nc6",
+      "played": "b8c6",
+      "localMs": 790,
+      "localBest": "e2e4",
+      "localPrevBest": "g8f6",
+      "localEval": {
+        "type": "cp",
+        "value": -25
+      },
+      "localDepth": 13,
+      "localWinProb": {
+        "white": 47.5,
+        "black": 52.5
+      },
+      "hostedBest": "e2e4",
+      "hostedPrevBest": "g8f6",
+      "hostedEval": {
+        "type": "cp",
+        "value": 14
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 51.29,
+        "black": 48.71
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 39,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 19
+      },
+      "hostedNodesAfter": 24935,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 7,
+      "san": "Qc2",
+      "played": "d1c2",
+      "localMs": 790,
+      "localBest": "e7e5",
+      "localPrevBest": "e2e4",
+      "localEval": {
+        "type": "cp",
+        "value": 77
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 42.3,
+        "black": 57.7
+      },
+      "hostedBest": "g8f6",
+      "hostedPrevBest": "e2e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 58
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 55.32,
+        "black": 44.68
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 19,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 14
+      },
+      "hostedNodesAfter": 18702,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 8,
+      "san": "e5",
+      "played": "e7e5",
+      "localMs": 783,
+      "localBest": "e2e4",
+      "localPrevBest": "e7e5",
+      "localEval": {
+        "type": "cp",
+        "value": -71
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 42.9,
+        "black": 57.1
+      },
+      "hostedBest": "e2e4",
+      "hostedPrevBest": "g8f6",
+      "hostedEval": {
+        "type": "cp",
+        "value": -71
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 43.5,
+        "black": 56.5
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 0,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 58
+      },
+      "hostedNodesAfter": 25167,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 9,
+      "san": "e4",
+      "played": "e2e4",
+      "localMs": 784,
+      "localBest": "g8f6",
+      "localPrevBest": "e2e4",
+      "localEval": {
+        "type": "cp",
+        "value": 76
+      },
+      "localDepth": 18,
+      "localWinProb": {
+        "white": 42.400000000000006,
+        "black": 57.599999999999994
+      },
+      "hostedBest": "g8f6",
+      "hostedPrevBest": "e2e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 57
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 55.23,
+        "black": 44.77
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 19,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -71
+      },
+      "hostedNodesAfter": 20310,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 10,
+      "san": "d4",
+      "played": "d5d4",
+      "localMs": 794,
+      "localBest": "f1e2",
+      "localPrevBest": "g8f6",
+      "localEval": {
+        "type": "cp",
+        "value": -60
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 44,
+        "black": 56
+      },
+      "hostedBest": "b1a3",
+      "hostedPrevBest": "g8f6",
+      "hostedEval": {
+        "type": "cp",
+        "value": -47
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 45.68,
+        "black": 54.32
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 13,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 57
+      },
+      "hostedNodesAfter": 23779,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 11,
+      "san": "Be2",
+      "played": "f1e2",
+      "localMs": 814,
+      "localBest": "f8d6",
+      "localPrevBest": "f1e2",
+      "localEval": {
+        "type": "cp",
+        "value": 56
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 44.4,
+        "black": 55.6
+      },
+      "hostedBest": "h7h6",
+      "hostedPrevBest": "b1a3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 49
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 54.5,
+        "black": 45.5
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 7,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -47
+      },
+      "hostedNodesAfter": 22620,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 12,
+      "san": "f5",
+      "played": "f7f5",
+      "localMs": 834,
+      "localBest": "b1d2",
+      "localPrevBest": "f8e7",
+      "localEval": {
+        "type": "cp",
+        "value": 31
+      },
+      "localDepth": 11,
+      "localWinProb": {
+        "white": 53.1,
+        "black": 46.9
+      },
+      "hostedBest": "c2b3",
+      "hostedPrevBest": "h7h6",
+      "hostedEval": {
+        "type": "cp",
+        "value": 29
+      },
+      "hostedDepth": 8,
+      "hostedWinProb": {
+        "white": 52.67,
+        "black": 47.33
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 2,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 49
+      },
+      "hostedNodesAfter": 22256,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 13,
+      "san": "Bg5",
+      "played": "c1g5",
+      "localMs": 823,
+      "localBest": "f8e7",
+      "localPrevBest": "c2b3",
+      "localEval": {
+        "type": "cp",
+        "value": 22
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 47.8,
+        "black": 52.2
+      },
+      "hostedBest": "f8e7",
+      "hostedPrevBest": "c2b3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 52
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 54.77,
+        "black": 45.23
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 30,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 29
+      },
+      "hostedNodesAfter": 22933,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 14,
+      "san": "Be7",
+      "played": "f8e7",
+      "localMs": 826,
+      "localBest": "g5e7",
+      "localPrevBest": "f8e7",
+      "localEval": {
+        "type": "cp",
+        "value": -19
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 48.1,
+        "black": 51.9
+      },
+      "hostedBest": "g5e7",
+      "hostedPrevBest": "f8e7",
+      "hostedEval": {
+        "type": "cp",
+        "value": -49
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 45.5,
+        "black": 54.5
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 30,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 52
+      },
+      "hostedNodesAfter": 21050,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 15,
+      "san": "Bxe7",
+      "played": "g5e7",
+      "localMs": 835,
+      "localBest": "g8e7",
+      "localPrevBest": "g5e7",
+      "localEval": {
+        "type": "cp",
+        "value": 22
+      },
+      "localDepth": 13,
+      "localWinProb": {
+        "white": 47.8,
+        "black": 52.2
+      },
+      "hostedBest": "g8e7",
+      "hostedPrevBest": "g5e7",
+      "hostedEval": {
+        "type": "cp",
+        "value": 81
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 57.4,
+        "black": 42.6
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 59,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -49
+      },
+      "hostedNodesAfter": 22316,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 16,
+      "san": "Qxe7",
+      "played": "d8e7",
+      "localMs": 828,
+      "localBest": "c3d4",
+      "localPrevBest": "g8e7",
+      "localEval": {
+        "type": "cp",
+        "value": 9
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 50.9,
+        "black": 49.1
+      },
+      "hostedBest": "b1d2",
+      "hostedPrevBest": "g8e7",
+      "hostedEval": {
+        "type": "cp",
+        "value": 0
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 50,
+        "black": 50
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 9,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 81
+      },
+      "hostedNodesAfter": 18304,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 17,
+      "san": "Nbd2",
+      "played": "b1d2",
+      "localMs": 827,
+      "localBest": "g7g5",
+      "localPrevBest": "c3d4",
+      "localEval": {
+        "type": "cp",
+        "value": 17
+      },
+      "localDepth": 12,
+      "localWinProb": {
+        "white": 48.3,
+        "black": 51.7
+      },
+      "hostedBest": "g7g5",
+      "hostedPrevBest": "b1d2",
+      "hostedEval": {
+        "type": "cp",
+        "value": 38
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 53.49,
+        "black": 46.51
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 21,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 0
+      },
+      "hostedNodesAfter": 27485,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 18,
+      "san": "Nf6",
+      "played": "g8f6",
+      "localMs": 830,
+      "localBest": "c3d4",
+      "localPrevBest": "g7g5",
+      "localEval": {
+        "type": "cp",
+        "value": -3
+      },
+      "localDepth": 13,
+      "localWinProb": {
+        "white": 49.7,
+        "black": 50.3
+      },
+      "hostedBest": "e1g1",
+      "hostedPrevBest": "g7g5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 2
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 50.18,
+        "black": 49.82
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 5,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 38
+      },
+      "hostedNodesAfter": 21752,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 19,
+      "san": "O-O",
+      "played": "e1g1",
+      "localMs": 815,
+      "localBest": "e8g8",
+      "localPrevBest": "a1c1",
+      "localEval": {
+        "type": "cp",
+        "value": -7
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 50.7,
+        "black": 49.3
+      },
+      "hostedBest": "e8g8",
+      "hostedPrevBest": "e1g1",
+      "hostedEval": {
+        "type": "cp",
+        "value": 22
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 52.02,
+        "black": 47.98
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 29,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 2
+      },
+      "hostedNodesAfter": 22264,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 20,
+      "san": "O-O",
+      "played": "e8g8",
+      "localMs": 776,
+      "localBest": "c3d4",
+      "localPrevBest": "e8g8",
+      "localEval": {
+        "type": "cp",
+        "value": 5
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 50.5,
+        "black": 49.5
+      },
+      "hostedBest": "c3d4",
+      "hostedPrevBest": "e8g8",
+      "hostedEval": {
+        "type": "cp",
+        "value": 3
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 50.28,
+        "black": 49.72
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 2,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 22
+      },
+      "hostedNodesAfter": 22475,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 21,
+      "san": "Nc4",
+      "played": "d2c4",
+      "localMs": 784,
+      "localBest": "f5e4",
+      "localPrevBest": "c3d4",
+      "localEval": {
+        "type": "cp",
+        "value": 133
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 36.7,
+        "black": 63.3
+      },
+      "hostedBest": "f5e4",
+      "hostedPrevBest": "c3d4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 191
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 66.89,
+        "black": 33.11
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 58,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 3
+      },
+      "hostedNodesAfter": 24123,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 22,
+      "san": "b5",
+      "played": "b7b5",
+      "localMs": 781,
+      "localBest": "c4d2",
+      "localPrevBest": "f5e4",
+      "localEval": {
+        "type": "cp",
+        "value": -56
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 44.4,
+        "black": 55.6
+      },
+      "hostedBest": "c4d2",
+      "hostedPrevBest": "f5e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -82
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 42.51,
+        "black": 57.49
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 26,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 191
+      },
+      "hostedNodesAfter": 19342,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 23,
+      "san": "Ncd2",
+      "played": "c4d2",
+      "localMs": 777,
+      "localBest": "f5e4",
+      "localPrevBest": "c4d2",
+      "localEval": {
+        "type": "cp",
+        "value": 59
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 44.1,
+        "black": 55.9
+      },
+      "hostedBest": "f5e4",
+      "hostedPrevBest": "c4d2",
+      "hostedEval": {
+        "type": "cp",
+        "value": 95
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 58.66,
+        "black": 41.34
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 36,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -82
+      },
+      "hostedNodesAfter": 19670,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 24,
+      "san": "Bb7",
+      "played": "c8b7",
+      "localMs": 794,
+      "localBest": "c2b3",
+      "localPrevBest": "f5e4",
+      "localEval": {
+        "type": "cp",
+        "value": 55
+      },
+      "localDepth": 13,
+      "localWinProb": {
+        "white": 55.5,
+        "black": 44.5
+      },
+      "hostedBest": "c2b3",
+      "hostedPrevBest": "f5e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 54
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 54.95,
+        "black": 45.05
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 1,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 95
+      },
+      "hostedNodesAfter": 24832,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 25,
+      "san": "a4",
+      "played": "a2a4",
+      "localMs": 774,
+      "localBest": "b5b4",
+      "localPrevBest": "c2b3",
+      "localEval": {
+        "type": "cp",
+        "value": -16
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 51.6,
+        "black": 48.4
+      },
+      "hostedBest": "b5b4",
+      "hostedPrevBest": "c2b3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 11
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 51.01,
+        "black": 48.99
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 27,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 54
+      },
+      "hostedNodesAfter": 24831,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 26,
+      "san": "a6",
+      "played": "a7a6",
+      "localMs": 775,
+      "localBest": "a4b5",
+      "localPrevBest": "b5b4",
+      "localEval": {
+        "type": "cp",
+        "value": 96
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 59.6,
+        "black": 40.4
+      },
+      "hostedBest": "e4f5",
+      "hostedPrevBest": "b5b4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 80
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 57.31,
+        "black": 42.69
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 16,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 11
+      },
+      "hostedNodesAfter": 22727,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 27,
+      "san": "Ne1",
+      "played": "f3e1",
+      "localMs": 773,
+      "localBest": "f5e4",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 160
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 34,
+        "black": 66
+      },
+      "hostedBest": "f5e4",
+      "hostedPrevBest": "e4f5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 170
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 65.16,
+        "black": 34.84
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 10,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 80
+      },
+      "hostedNodesAfter": 22320,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 28,
+      "san": "Rac8",
+      "played": "a8c8",
+      "localMs": 776,
+      "localBest": "a4b5",
+      "localPrevBest": "f5e4",
+      "localEval": {
+        "type": "cp",
+        "value": 54
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 55.4,
+        "black": 44.6
+      },
+      "hostedBest": "a4b5",
+      "hostedPrevBest": "f5e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 57
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 55.23,
+        "black": 44.77
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 3,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Blunder"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 170
+      },
+      "hostedNodesAfter": 21953,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 29,
+      "san": "f4",
+      "played": "f2f4",
+      "localMs": 790,
+      "localBest": "f5e4",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 144
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 35.6,
+        "black": 64.4
+      },
+      "hostedBest": "f5e4",
+      "hostedPrevBest": "a4b5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 221
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 69.29,
+        "black": 30.71
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 77,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Interesting"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 57
+      },
+      "hostedNodesAfter": 18228,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 30,
+      "san": "fxe4",
+      "played": "f5e4",
+      "localMs": 782,
+      "localBest": "a4b5",
+      "localPrevBest": "e5f4",
+      "localEval": {
+        "type": "cp",
+        "value": -167
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 33.3,
+        "black": 66.7
+      },
+      "hostedBest": "a4b5",
+      "hostedPrevBest": "f5e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -150
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 36.53,
+        "black": 63.47
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 17,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 221
+      },
+      "hostedNodesAfter": 22428,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 31,
+      "san": "dxe4",
+      "played": "d3e4",
+      "localMs": 795,
+      "localBest": "c5c4",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 234
+      },
+      "localDepth": 18,
+      "localWinProb": {
+        "white": 26.6,
+        "black": 73.4
+      },
+      "hostedBest": "c5c4",
+      "hostedPrevBest": "a4b5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 240
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 70.76,
+        "black": 29.24
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 6,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -150
+      },
+      "hostedNodesAfter": 21591,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 32,
+      "san": "exf4",
+      "played": "e5f4",
+      "localMs": 772,
+      "localBest": "a4b5",
+      "localPrevBest": "c5c4",
+      "localEval": {
+        "type": "cp",
+        "value": -67
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 43.3,
+        "black": 56.7
+      },
+      "hostedBest": "a4b5",
+      "hostedPrevBest": "c5c4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -57
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 44.77,
+        "black": 55.23
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 10,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 240
+      },
+      "hostedNodesAfter": 22159,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 33,
+      "san": "Rxf4",
+      "played": "f1f4",
+      "localMs": 769,
+      "localBest": "c5c4",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 243
+      },
+      "localDepth": 18,
+      "localWinProb": {
+        "white": 25.7,
+        "black": 74.3
+      },
+      "hostedBest": "c5c4",
+      "hostedPrevBest": "a4b5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 295
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 74.77,
+        "black": 25.23
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 52,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Interesting"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -57
+      },
+      "hostedNodesAfter": 20333,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 34,
+      "san": "Qd6",
+      "played": "e7d6",
+      "localMs": 771,
+      "localBest": "f4f5",
+      "localPrevBest": "c5c4",
+      "localEval": {
+        "type": "cp",
+        "value": -219
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 28.1,
+        "black": 71.9
+      },
+      "hostedBest": "f4f5",
+      "hostedPrevBest": "c5c4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -228
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 30.16,
+        "black": 69.84
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 9,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 295
+      },
+      "hostedNodesAfter": 22892,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 35,
+      "san": "Rh4",
+      "played": "f4h4",
+      "localMs": 788,
+      "localBest": "c5c4",
+      "localPrevBest": "f4f5",
+      "localEval": {
+        "type": "cp",
+        "value": 277
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 22.3,
+        "black": 77.7
+      },
+      "hostedBest": "g7g5",
+      "hostedPrevBest": "f4f5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 294
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 74.7,
+        "black": 25.3
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 17,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -228
+      },
+      "hostedNodesAfter": 19829,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 36,
+      "san": "c4",
+      "played": "c5c4",
+      "localMs": 783,
+      "localBest": "a4b5",
+      "localPrevBest": "c5c4",
+      "localEval": {
+        "type": "cp",
+        "value": -280
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 22,
+        "black": 78
+      },
+      "hostedBest": "e4e5",
+      "hostedPrevBest": "g7g5",
+      "hostedEval": {
+        "type": "cp",
+        "value": -288
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 25.72,
+        "black": 74.28
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 8,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 294
+      },
+      "hostedNodesAfter": 17661,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 37,
+      "san": "Qd1",
+      "played": "c2d1",
+      "localMs": 825,
+      "localBest": "d4d3",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 366
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 13.399999999999999,
+        "black": 86.6
+      },
+      "hostedBest": "d4c3",
+      "hostedPrevBest": "e4e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 359
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 78.95,
+        "black": 21.05
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 7,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -288
+      },
+      "hostedNodesAfter": 16297,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 38,
+      "san": "d3",
+      "played": "d4d3",
+      "localMs": 785,
+      "localBest": "e2h5",
+      "localPrevBest": "c6e5",
+      "localEval": {
+        "type": "cp",
+        "value": -368
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 13.2,
+        "black": 86.8
+      },
+      "hostedBest": "e2g4",
+      "hostedPrevBest": "d4c3",
+      "hostedEval": {
+        "type": "cp",
+        "value": -353
+      },
+      "hostedDepth": 13,
+      "hostedWinProb": {
+        "white": 21.42,
+        "black": 78.58
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 15,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 359
+      },
+      "hostedNodesAfter": 19923,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 39,
+      "san": "Bh5",
+      "played": "e2h5",
+      "localMs": 782,
+      "localBest": "g7g5",
+      "localPrevBest": "e2h5",
+      "localEval": {
+        "type": "cp",
+        "value": 336
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 16.400000000000002,
+        "black": 83.6
+      },
+      "hostedBest": "d6c5",
+      "hostedPrevBest": "e2g4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 438
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 83.38,
+        "black": 16.62
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 102,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -353
+      },
+      "hostedNodesAfter": 20797,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 40,
+      "san": "Qe7",
+      "played": "d6e7",
+      "localMs": 786,
+      "localBest": "e1f3",
+      "localPrevBest": "g7g5",
+      "localEval": {
+        "type": "cp",
+        "value": -312
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 18.799999999999997,
+        "black": 81.2
+      },
+      "hostedBest": "d1f3",
+      "hostedPrevBest": "d6c5",
+      "hostedEval": {
+        "type": "cp",
+        "value": -330
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 22.88,
+        "black": 77.12
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 18,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 438
+      },
+      "hostedNodesAfter": 18749,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 41,
+      "san": "Qf3",
+      "played": "d1f3",
+      "localMs": 784,
+      "localBest": "g7g5",
+      "localPrevBest": "e1f3",
+      "localEval": {
+        "type": "cp",
+        "value": 411
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 9.725,
+        "black": 90.275
+      },
+      "hostedBest": "e7c5",
+      "hostedPrevBest": "d1f3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 356
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 78.77,
+        "black": 21.23
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 55,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -330
+      },
+      "hostedNodesAfter": 17369,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 42,
+      "san": "Nd5",
+      "played": "f6d5",
+      "localMs": 786,
+      "localBest": "f3g3",
+      "localPrevBest": "g7g5",
+      "localEval": {
+        "type": "cp",
+        "value": -166
+      },
+      "localDepth": 18,
+      "localWinProb": {
+        "white": 33.4,
+        "black": 66.6
+      },
+      "hostedBest": "f3g3",
+      "hostedPrevBest": "e7c5",
+      "hostedEval": {
+        "type": "cp",
+        "value": -152
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 36.36,
+        "black": 63.64
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 14,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 356
+      },
+      "hostedNodesAfter": 20398,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 43,
+      "san": "Qh3",
+      "played": "f3h3",
+      "localMs": 794,
+      "localBest": "d5f4",
+      "localPrevBest": "f3g3",
+      "localEval": {
+        "type": "cp",
+        "value": 341
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 15.899999999999999,
+        "black": 84.1
+      },
+      "hostedBest": "d5f4",
+      "hostedPrevBest": "f3g3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 317
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 76.26,
+        "black": 23.74
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 24,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -152
+      },
+      "hostedNodesAfter": 22187,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 44,
+      "san": "Nf4",
+      "played": "d5f4",
+      "localMs": 789,
+      "localBest": "h4f4",
+      "localPrevBest": "d5f4",
+      "localEval": {
+        "type": "cp",
+        "value": -323
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 17.7,
+        "black": 82.3
+      },
+      "hostedBest": "h4f4",
+      "hostedPrevBest": "d5f4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -326
+      },
+      "hostedDepth": 13,
+      "hostedWinProb": {
+        "white": 23.14,
+        "black": 76.86
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 3,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": {
+        "label": "Good"
+      },
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 317
+      },
+      "hostedNodesAfter": 30486,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 45,
+      "san": "Qg4",
+      "played": "h3g4",
+      "localMs": 791,
+      "localBest": "c6e5",
+      "localPrevBest": "h4f4",
+      "localEval": {
+        "type": "cp",
+        "value": 429
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 9.275,
+        "black": 90.725
+      },
+      "hostedBest": "f4e2",
+      "hostedPrevBest": "h4f4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 464
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 84.66,
+        "black": 15.34
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 35,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -326
+      },
+      "hostedNodesAfter": 17744,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 46,
+      "san": "Qf6",
+      "played": "e7f6",
+      "localMs": 786,
+      "localBest": "e1f3",
+      "localPrevBest": "c6e5",
+      "localEval": {
+        "type": "cp",
+        "value": -256
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 24.4,
+        "black": 75.6
+      },
+      "hostedBest": "e1f3",
+      "hostedPrevBest": "f4e2",
+      "hostedEval": {
+        "type": "cp",
+        "value": -266
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 27.3,
+        "black": 72.7
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 10,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 464
+      },
+      "hostedNodesAfter": 19382,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 47,
+      "san": "Nef3",
+      "played": "e1f3",
+      "localMs": 776,
+      "localBest": "c6e5",
+      "localPrevBest": "e1f3",
+      "localEval": {
+        "type": "cp",
+        "value": 280
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 22,
+        "black": 78
+      },
+      "hostedBest": "g7g6",
+      "hostedPrevBest": "e1f3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 285
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 74.07,
+        "black": 25.93
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 5,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -266
+      },
+      "hostedNodesAfter": 18649,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 48,
+      "san": "Ne5",
+      "played": "c6e5",
+      "localMs": 778,
+      "localBest": "f3e5",
+      "localPrevBest": "c6e5",
+      "localEval": {
+        "type": "cp",
+        "value": -262
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 23.799999999999997,
+        "black": 76.2
+      },
+      "hostedBest": "f3e5",
+      "hostedPrevBest": "g7g6",
+      "hostedEval": {
+        "type": "cp",
+        "value": -239
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 29.32,
+        "black": 70.68
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 23,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 285
+      },
+      "hostedNodesAfter": 24321,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 49,
+      "san": "Nxe5",
+      "played": "f3e5",
+      "localMs": 775,
+      "localBest": "f6e5",
+      "localPrevBest": "f3e5",
+      "localEval": {
+        "type": "cp",
+        "value": 295
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 20.5,
+        "black": 79.5
+      },
+      "hostedBest": "f6e5",
+      "hostedPrevBest": "f3e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 243
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 70.99,
+        "black": 29.01
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 52,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -239
+      },
+      "hostedNodesAfter": 21097,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 50,
+      "san": "Ne2+",
+      "played": "f4e2",
+      "localMs": 778,
+      "localBest": "g1h1",
+      "localPrevBest": "f6e5",
+      "localEval": {
+        "type": "cp",
+        "value": -198
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 30.2,
+        "black": 69.8
+      },
+      "hostedBest": "g1h1",
+      "hostedPrevBest": "f6e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": -196
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 32.7,
+        "black": 67.3
+      },
+      "hostedLines": 2,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 2,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 243
+      },
+      "hostedNodesAfter": 21742,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 51,
+      "san": "Kh1",
+      "played": "g1h1",
+      "localMs": 671,
+      "localBest": "f6e5",
+      "localPrevBest": "g1h1",
+      "localEval": {
+        "type": "cp",
+        "value": 212
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 28.799999999999997,
+        "black": 71.2
+      },
+      "hostedBest": "f6e5",
+      "hostedPrevBest": "g1h1",
+      "hostedEval": {
+        "type": "cp",
+        "value": 182
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 66.15,
+        "black": 33.85
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 30,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -196
+      },
+      "hostedNodesAfter": 20859,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 52,
+      "san": "Qxe5",
+      "played": "f6e5",
+      "localMs": 781,
+      "localBest": "a4b5",
+      "localPrevBest": "f6e5",
+      "localEval": {
+        "type": "cp",
+        "value": -213
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 28.700000000000003,
+        "black": 71.3
+      },
+      "hostedBest": "a4b5",
+      "hostedPrevBest": "f6e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": -166
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 35.18,
+        "black": 64.82
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 47,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": {
+        "label": "Good"
+      },
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 182
+      },
+      "hostedNodesAfter": 23103,
+      "hostedTimeMsAfter": 286
+    },
+    {
+      "ply": 53,
+      "san": "Nf3",
+      "played": "d2f3",
+      "localMs": 779,
+      "localBest": "e5f6",
+      "localPrevBest": "d2f3",
+      "localEval": {
+        "type": "cp",
+        "value": 200
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 30,
+        "black": 70
+      },
+      "hostedBest": "e5e7",
+      "hostedPrevBest": "a4b5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 215
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 68.82,
+        "black": 31.18
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 15,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -166
+      },
+      "hostedNodesAfter": 17519,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 54,
+      "san": "Qf6",
+      "played": "e5f6",
+      "localMs": 778,
+      "localBest": "e4e5",
+      "localPrevBest": "e5f6",
+      "localEval": {
+        "type": "cp",
+        "value": -202
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 29.8,
+        "black": 70.2
+      },
+      "hostedBest": "e4e5",
+      "hostedPrevBest": "e5e7",
+      "hostedEval": {
+        "type": "cp",
+        "value": -163
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 35.43,
+        "black": 64.57
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 39,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 215
+      },
+      "hostedNodesAfter": 17823,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 55,
+      "san": "Qd7",
+      "played": "g4d7",
+      "localMs": 792,
+      "localBest": "b7c6",
+      "localPrevBest": "e4e5",
+      "localEval": {
+        "type": "cp",
+        "value": 212
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 28.799999999999997,
+        "black": 71.2
+      },
+      "hostedBest": "b7c6",
+      "hostedPrevBest": "e4e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 204
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 67.94,
+        "black": 32.06
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 8,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -163
+      },
+      "hostedNodesAfter": 22430,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 56,
+      "san": "Bc6",
+      "played": "b7c6",
+      "localMs": 786,
+      "localBest": "d7h3",
+      "localPrevBest": "b7c6",
+      "localEval": {
+        "type": "cp",
+        "value": -231
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 26.9,
+        "black": 73.1
+      },
+      "hostedBest": "d7a7",
+      "hostedPrevBest": "b7c6",
+      "hostedEval": {
+        "type": "cp",
+        "value": -198
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 32.54,
+        "black": 67.46
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 33,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 204
+      },
+      "hostedNodesAfter": 17625,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 57,
+      "san": "Qg4",
+      "played": "d7g4",
+      "localMs": 781,
+      "localBest": "e2f4",
+      "localPrevBest": "d7f5",
+      "localEval": {
+        "type": "cp",
+        "value": 240
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 26,
+        "black": 74
+      },
+      "hostedBest": "g7g6",
+      "hostedPrevBest": "d7a7",
+      "hostedEval": {
+        "type": "cp",
+        "value": 263
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 72.48,
+        "black": 27.52
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 23,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -198
+      },
+      "hostedNodesAfter": 17437,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 58,
+      "san": "Bb7",
+      "played": "c6b7",
+      "localMs": 775,
+      "localBest": "e4e5",
+      "localPrevBest": "e2f4",
+      "localEval": {
+        "type": "cp",
+        "value": -202
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 29.8,
+        "black": 70.2
+      },
+      "hostedBest": "e4e5",
+      "hostedPrevBest": "g7g6",
+      "hostedEval": {
+        "type": "cp",
+        "value": -179
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 34.09,
+        "black": 65.91
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 23,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 263
+      },
+      "hostedNodesAfter": 17789,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 59,
+      "san": "e5",
+      "played": "e4e5",
+      "localMs": 782,
+      "localBest": "f6e7",
+      "localPrevBest": "g4d7",
+      "localEval": {
+        "type": "cp",
+        "value": 227
+      },
+      "localDepth": 15,
+      "localWinProb": {
+        "white": 27.3,
+        "black": 72.7
+      },
+      "hostedBest": "f6e7",
+      "hostedPrevBest": "e4e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 140
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 62.61,
+        "black": 37.39
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 87,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -179
+      },
+      "hostedNodesAfter": 19513,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 60,
+      "san": "Qe7",
+      "played": "f6e7",
+      "localMs": 780,
+      "localBest": "a4b5",
+      "localPrevBest": "f6e7",
+      "localEval": {
+        "type": "cp",
+        "value": -183
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 31.7,
+        "black": 68.3
+      },
+      "hostedBest": "a4b5",
+      "hostedPrevBest": "f6e7",
+      "hostedEval": {
+        "type": "cp",
+        "value": -197
+      },
+      "hostedDepth": 9,
+      "hostedWinProb": {
+        "white": 32.62,
+        "black": 67.38
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 14,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 140
+      },
+      "hostedNodesAfter": 19385,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 61,
+      "san": "Qh3",
+      "played": "g4h3",
+      "localMs": 781,
+      "localBest": "e2f4",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 307
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 19.3,
+        "black": 80.7
+      },
+      "hostedBest": "e2f4",
+      "hostedPrevBest": "a4b5",
+      "hostedEval": {
+        "type": "cp",
+        "value": 299
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 75.04,
+        "black": 24.96
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 8,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -197
+      },
+      "hostedNodesAfter": 18329,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 62,
+      "san": "Bxf3",
+      "played": "b7f3",
+      "localMs": 777,
+      "localBest": "h5f3",
+      "localPrevBest": "e2f4",
+      "localEval": {
+        "type": "cp",
+        "value": -93
+      },
+      "localDepth": 14,
+      "localWinProb": {
+        "white": 40.7,
+        "black": 59.3
+      },
+      "hostedBest": "h5f3",
+      "hostedPrevBest": "e2f4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -77
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 42.96,
+        "black": 57.04
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 16,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 299
+      },
+      "hostedNodesAfter": 21626,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 63,
+      "san": "gxf3",
+      "played": "g2f3",
+      "localMs": 776,
+      "localBest": "e7e5",
+      "localPrevBest": "h5f3",
+      "localEval": {
+        "type": "cp",
+        "value": 312
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 18.799999999999997,
+        "black": 81.2
+      },
+      "hostedBest": "e7e5",
+      "hostedPrevBest": "h5f3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 254
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 71.81,
+        "black": 28.19
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 58,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Interesting"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -77
+      },
+      "hostedNodesAfter": 22246,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 64,
+      "san": "Qxe5",
+      "played": "e7e5",
+      "localMs": 778,
+      "localBest": "a4b5",
+      "localPrevBest": "c8c6",
+      "localEval": {
+        "type": "cp",
+        "value": -309
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 19.1,
+        "black": 80.9
+      },
+      "hostedBest": "h5g6",
+      "hostedPrevBest": "e7e5",
+      "hostedEval": {
+        "type": "cp",
+        "value": -318
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 23.67,
+        "black": 76.33
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 9,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 254
+      },
+      "hostedNodesAfter": 21639,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 65,
+      "san": "Bg4",
+      "played": "h5g4",
+      "localMs": 772,
+      "localBest": "e2f4",
+      "localPrevBest": "a4b5",
+      "localEval": {
+        "type": "cp",
+        "value": 460
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 8.5,
+        "black": 91.5
+      },
+      "hostedBest": "e2f4",
+      "hostedPrevBest": "h5g6",
+      "hostedEval": {
+        "type": "cp",
+        "value": 453
+      },
+      "hostedDepth": 14,
+      "hostedWinProb": {
+        "white": 84.13,
+        "black": 15.87
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 7,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Inaccuracy"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -318
+      },
+      "hostedNodesAfter": 23560,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 66,
+      "san": "h6",
+      "played": "h7h6",
+      "localMs": 787,
+      "localBest": "g4c8",
+      "localPrevBest": "e2f4",
+      "localEval": {
+        "type": "cp",
+        "value": 263
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 76.3,
+        "black": 23.700000000000003
+      },
+      "hostedBest": "g4c8",
+      "hostedPrevBest": "e2f4",
+      "hostedEval": {
+        "type": "cp",
+        "value": 212
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 68.58,
+        "black": 31.42
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 51,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Blunder"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 453
+      },
+      "hostedNodesAfter": 21582,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 67,
+      "san": "Bxc8",
+      "played": "g4c8",
+      "localMs": 783,
+      "localBest": "g8h7",
+      "localPrevBest": "g4c8",
+      "localEval": {
+        "type": "cp",
+        "value": -265
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 76.5,
+        "black": 23.5
+      },
+      "hostedBest": "g8h8",
+      "hostedPrevBest": "g4c8",
+      "hostedEval": {
+        "type": "cp",
+        "value": -257
+      },
+      "hostedDepth": 10,
+      "hostedWinProb": {
+        "white": 27.96,
+        "black": 72.04
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 8,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 212
+      },
+      "hostedNodesAfter": 22334,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 68,
+      "san": "Rxc8",
+      "played": "f8c8",
+      "localMs": 777,
+      "localBest": "h3c8",
+      "localPrevBest": "e5c7",
+      "localEval": {
+        "type": "cp",
+        "value": 510
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 92.75,
+        "black": 7.25
+      },
+      "hostedBest": "h3c8",
+      "hostedPrevBest": "g8h8",
+      "hostedEval": {
+        "type": "cp",
+        "value": 411
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 81.96,
+        "black": 18.04
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 99,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": {
+        "label": "Mistake"
+      },
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -257
+      },
+      "hostedNodesAfter": 27619,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 69,
+      "san": "Qxc8+",
+      "played": "h3c8",
+      "localMs": 778,
+      "localBest": "g8h7",
+      "localPrevBest": "h3c8",
+      "localEval": {
+        "type": "cp",
+        "value": -475
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 91.875,
+        "black": 8.125
+      },
+      "hostedBest": "g8h7",
+      "hostedPrevBest": "h3c8",
+      "hostedEval": {
+        "type": "cp",
+        "value": -378
+      },
+      "hostedDepth": 14,
+      "hostedWinProb": {
+        "white": 19.91,
+        "black": 80.09
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 97,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 411
+      },
+      "hostedNodesAfter": 29483,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 70,
+      "san": "Kh7",
+      "played": "g8h7",
+      "localMs": 793,
+      "localBest": "c8g4",
+      "localPrevBest": "g8h7",
+      "localEval": {
+        "type": "cp",
+        "value": 489
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 92.225,
+        "black": 7.775000000000006
+      },
+      "hostedBest": "h4e4",
+      "hostedPrevBest": "g8h7",
+      "hostedEval": {
+        "type": "cp",
+        "value": 443
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 83.63,
+        "black": 16.37
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 46,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -378
+      },
+      "hostedNodesAfter": 39462,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 71,
+      "san": "Rg4",
+      "played": "h4g4",
+      "localMs": 783,
+      "localBest": "h6h5",
+      "localPrevBest": "h4e4",
+      "localEval": {
+        "type": "cp",
+        "value": -480
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 92,
+        "black": 8
+      },
+      "hostedBest": "e5f6",
+      "hostedPrevBest": "h4e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -423
+      },
+      "hostedDepth": 11,
+      "hostedWinProb": {
+        "white": 17.4,
+        "black": 82.6
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": true,
+      "evalGapCp": 57,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 443
+      },
+      "hostedNodesAfter": 28987,
+      "hostedTimeMsAfter": 201
+    },
+    {
+      "ply": 72,
+      "san": "Qd5",
+      "played": "e5d5",
+      "localMs": 782,
+      "localBest": "c8f8",
+      "localPrevBest": "a6a5",
+      "localEval": {
+        "type": "cp",
+        "value": 467
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 91.675,
+        "black": 8.325000000000003
+      },
+      "hostedBest": "g4e4",
+      "hostedPrevBest": "e5f6",
+      "hostedEval": {
+        "type": "cp",
+        "value": 437
+      },
+      "hostedDepth": 13,
+      "hostedWinProb": {
+        "white": 83.33,
+        "black": 16.67
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": false,
+      "prevBestAgree": false,
+      "evalGapCp": 30,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -423
+      },
+      "hostedNodesAfter": 35970,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 73,
+      "san": "Qc7",
+      "played": "c8c7",
+      "localMs": 773,
+      "localBest": "d5f3",
+      "localPrevBest": "c8f8",
+      "localEval": {
+        "type": "cp",
+        "value": -395
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 89.5,
+        "black": 10.5
+      },
+      "hostedBest": "d5f3",
+      "hostedPrevBest": "g4e4",
+      "hostedEval": {
+        "type": "cp",
+        "value": -408
+      },
+      "hostedDepth": 14,
+      "hostedWinProb": {
+        "white": 18.21,
+        "black": 81.79
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": false,
+      "evalGapCp": 13,
+      "playedWasEngineBest": {
+        "local": false,
+        "hosted": false
+      },
+      "annotation": null,
+      "hostedIsBestMove": false,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 437
+      },
+      "hostedNodesAfter": 32575,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 74,
+      "san": "Qxf3+",
+      "played": "d5f3",
+      "localMs": 788,
+      "localBest": "g4g2",
+      "localPrevBest": "d5f3",
+      "localEval": {
+        "type": "cp",
+        "value": 422
+      },
+      "localDepth": 16,
+      "localWinProb": {
+        "white": 90.55,
+        "black": 9.450000000000003
+      },
+      "hostedBest": "g4g2",
+      "hostedPrevBest": "d5f3",
+      "hostedEval": {
+        "type": "cp",
+        "value": 348
+      },
+      "hostedDepth": 14,
+      "hostedWinProb": {
+        "white": 78.27,
+        "black": 21.73
+      },
+      "hostedLines": 1,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 74,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": -408
+      },
+      "hostedNodesAfter": 31599,
+      "hostedTimeMsAfter": 200
+    },
+    {
+      "ply": 75,
+      "san": "Rg2",
+      "played": "g4g2",
+      "localMs": 507,
+      "localBest": "f3f6",
+      "localPrevBest": "g4g2",
+      "localEval": {
+        "type": "cp",
+        "value": -397
+      },
+      "localDepth": 17,
+      "localWinProb": {
+        "white": 89.7,
+        "black": 10.299999999999997
+      },
+      "hostedBest": "f3f6",
+      "hostedPrevBest": "g4g2",
+      "hostedEval": {
+        "type": "cp",
+        "value": -410
+      },
+      "hostedDepth": 12,
+      "hostedWinProb": {
+        "white": 18.1,
+        "black": 81.9
+      },
+      "hostedLines": 3,
+      "bestmoveAgree": true,
+      "prevBestAgree": true,
+      "evalGapCp": 13,
+      "playedWasEngineBest": {
+        "local": true,
+        "hosted": true
+      },
+      "annotation": null,
+      "hostedIsBestMove": true,
+      "hostedEvalBefore": {
+        "type": "cp",
+        "value": 348
+      },
+      "hostedNodesAfter": 27928,
+      "hostedTimeMsAfter": 200
+    }
+  ],
+  "annotatedFocus": [
+    {
+      "ply": 12,
+      "san": "f5",
+      "played": "f7f5",
+      "judgment": "Mistake",
+      "localPrevBest": "f8e7",
+      "hostedPrevBest": "h7h6",
+      "enginesAgreeOnBest": false,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 31
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 29
+      },
+      "evalGapCp": 2
+    },
+    {
+      "ply": 13,
+      "san": "Bg5",
+      "played": "c1g5",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "c2b3",
+      "hostedPrevBest": "c2b3",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 22
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 52
+      },
+      "evalGapCp": 30
+    },
+    {
+      "ply": 21,
+      "san": "Nc4",
+      "played": "d2c4",
+      "judgment": "Mistake",
+      "localPrevBest": "c3d4",
+      "hostedPrevBest": "c3d4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 133
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 191
+      },
+      "evalGapCp": 58
+    },
+    {
+      "ply": 22,
+      "san": "b5",
+      "played": "b7b5",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "f5e4",
+      "hostedPrevBest": "f5e4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -56
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -82
+      },
+      "evalGapCp": 26
+    },
+    {
+      "ply": 24,
+      "san": "Bb7",
+      "played": "c8b7",
+      "judgment": "Mistake",
+      "localPrevBest": "f5e4",
+      "hostedPrevBest": "f5e4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 55
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 54
+      },
+      "evalGapCp": 1
+    },
+    {
+      "ply": 25,
+      "san": "a4",
+      "played": "a2a4",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "c2b3",
+      "hostedPrevBest": "c2b3",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -16
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 11
+      },
+      "evalGapCp": 27
+    },
+    {
+      "ply": 26,
+      "san": "a6",
+      "played": "a7a6",
+      "judgment": "Mistake",
+      "localPrevBest": "b5b4",
+      "hostedPrevBest": "b5b4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 96
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 80
+      },
+      "evalGapCp": 16
+    },
+    {
+      "ply": 27,
+      "san": "Ne1",
+      "played": "f3e1",
+      "judgment": "Mistake",
+      "localPrevBest": "a4b5",
+      "hostedPrevBest": "e4f5",
+      "enginesAgreeOnBest": false,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 160
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 170
+      },
+      "evalGapCp": 10
+    },
+    {
+      "ply": 28,
+      "san": "Rac8",
+      "played": "a8c8",
+      "judgment": "Blunder",
+      "localPrevBest": "f5e4",
+      "hostedPrevBest": "f5e4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 54
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 57
+      },
+      "evalGapCp": 3
+    },
+    {
+      "ply": 29,
+      "san": "f4",
+      "played": "f2f4",
+      "judgment": "Interesting",
+      "localPrevBest": "a4b5",
+      "hostedPrevBest": "a4b5",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 144
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 221
+      },
+      "evalGapCp": 77
+    },
+    {
+      "ply": 31,
+      "san": "dxe4",
+      "played": "d3e4",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "a4b5",
+      "hostedPrevBest": "a4b5",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 234
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 240
+      },
+      "evalGapCp": 6
+    },
+    {
+      "ply": 32,
+      "san": "exf4",
+      "played": "e5f4",
+      "judgment": "Mistake",
+      "localPrevBest": "c5c4",
+      "hostedPrevBest": "c5c4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -67
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -57
+      },
+      "evalGapCp": 10
+    },
+    {
+      "ply": 33,
+      "san": "Rxf4",
+      "played": "f1f4",
+      "judgment": "Interesting",
+      "localPrevBest": "a4b5",
+      "hostedPrevBest": "a4b5",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 243
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 295
+      },
+      "evalGapCp": 52
+    },
+    {
+      "ply": 42,
+      "san": "Nd5",
+      "played": "f6d5",
+      "judgment": "Mistake",
+      "localPrevBest": "g7g5",
+      "hostedPrevBest": "e7c5",
+      "enginesAgreeOnBest": false,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -166
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -152
+      },
+      "evalGapCp": 14
+    },
+    {
+      "ply": 43,
+      "san": "Qh3",
+      "played": "f3h3",
+      "judgment": "Mistake",
+      "localPrevBest": "f3g3",
+      "hostedPrevBest": "f3g3",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 341
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 317
+      },
+      "evalGapCp": 24
+    },
+    {
+      "ply": 44,
+      "san": "Nf4",
+      "played": "d5f4",
+      "judgment": "Good",
+      "localPrevBest": "d5f4",
+      "hostedPrevBest": "d5f4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": true,
+      "playedMatchedHostedBest": true,
+      "hostedIsBestMove": true,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -323
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -326
+      },
+      "evalGapCp": 3
+    },
+    {
+      "ply": 45,
+      "san": "Qg4",
+      "played": "h3g4",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "h4f4",
+      "hostedPrevBest": "h4f4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 429
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 464
+      },
+      "evalGapCp": 35
+    },
+    {
+      "ply": 46,
+      "san": "Qf6",
+      "played": "e7f6",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "c6e5",
+      "hostedPrevBest": "f4e2",
+      "enginesAgreeOnBest": false,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -256
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -266
+      },
+      "evalGapCp": 10
+    },
+    {
+      "ply": 52,
+      "san": "Qxe5",
+      "played": "f6e5",
+      "judgment": "Good",
+      "localPrevBest": "f6e5",
+      "hostedPrevBest": "f6e5",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": true,
+      "playedMatchedHostedBest": true,
+      "hostedIsBestMove": true,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -213
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -166
+      },
+      "evalGapCp": 47
+    },
+    {
+      "ply": 61,
+      "san": "Qh3",
+      "played": "g4h3",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "a4b5",
+      "hostedPrevBest": "a4b5",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 307
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 299
+      },
+      "evalGapCp": 8
+    },
+    {
+      "ply": 62,
+      "san": "Bxf3",
+      "played": "b7f3",
+      "judgment": "Mistake",
+      "localPrevBest": "e2f4",
+      "hostedPrevBest": "e2f4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": -93
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": -77
+      },
+      "evalGapCp": 16
+    },
+    {
+      "ply": 63,
+      "san": "gxf3",
+      "played": "g2f3",
+      "judgment": "Interesting",
+      "localPrevBest": "h5f3",
+      "hostedPrevBest": "h5f3",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 312
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 254
+      },
+      "evalGapCp": 58
+    },
+    {
+      "ply": 65,
+      "san": "Bg4",
+      "played": "h5g4",
+      "judgment": "Inaccuracy",
+      "localPrevBest": "a4b5",
+      "hostedPrevBest": "h5g6",
+      "enginesAgreeOnBest": false,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 460
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 453
+      },
+      "evalGapCp": 7
+    },
+    {
+      "ply": 66,
+      "san": "h6",
+      "played": "h7h6",
+      "judgment": "Blunder",
+      "localPrevBest": "e2f4",
+      "hostedPrevBest": "e2f4",
+      "enginesAgreeOnBest": true,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 263
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 212
+      },
+      "evalGapCp": 51
+    },
+    {
+      "ply": 68,
+      "san": "Rxc8",
+      "played": "f8c8",
+      "judgment": "Mistake",
+      "localPrevBest": "e5c7",
+      "hostedPrevBest": "g8h8",
+      "enginesAgreeOnBest": false,
+      "playedMatchedLocalBest": false,
+      "playedMatchedHostedBest": false,
+      "hostedIsBestMove": false,
+      "localEvalAfter": {
+        "type": "cp",
+        "value": 510
+      },
+      "hostedEvalAfter": {
+        "type": "cp",
+        "value": 411
+      },
+      "evalGapCp": 99
+    }
+  ],
+  "efficiency": {
+    "hosted": {
+      "mode": "POST /analyze-game one-shot",
+      "settings": {
+        "movetime": 200,
+        "multipv": 3
+      },
+      "totalMs": 94577,
+      "msPerPly": 1261,
+      "networkRoundTrips": 1,
+      "warmCachedMs": 1327,
+      "coldMs": 94577
+    },
+    "local": {
+      "mode": "analyzePosition loop (persistent UCI)",
+      "settings": {
+        "multipv": 3,
+        "internalMovetimes": "current~200ms + prev MultiPV~80ms + first-move scores"
+      },
+      "totalMs": 57902,
+      "msPerPly": 772,
+      "avgPlyMs": 772,
+      "minPlyMs": 0,
+      "maxPlyMs": 835,
+      "networkRoundTrips": 0,
+      "httpEquivalentIfProxied": "75 × POST /api/analyze"
+    },
+    "speedup": {
+      "cold": {
+        "hostedVsLocalTotal": "0.61x (local/hosted)",
+        "localVsHostedTotal": "1.63x (hosted/local)",
+        "winner": "local faster (cold)"
+      },
+      "warmCached": {
+        "hostedVsLocalTotal": "43.63x (local/hosted)",
+        "winner": "hosted much faster when cached"
+      },
+      "winner": "local faster (cold)"
+    },
+    "singlePlyAvg": {
+      "hostedAnalyzeMs": 281,
+      "localAnalyzeMs": 737
+    }
+  },
+  "agreement": {
+    "pliesCompared": 75,
+    "bestmoveMatches": 49,
+    "bestmoveAgreementRate": "65.3%",
+    "prevBestMatches": 47,
+    "prevBestAgreementRate": "62.7%",
+    "avgEvalGapCp": 26,
+    "medianEvalGapCp": 17,
+    "evalGapsOver50cp": 14,
+    "evalGapsOver100cp": 1,
+    "isBestMoveRateHosted": "30.7%",
+    "isBestMoveRateLocal": "32.0%"
+  },
+  "verdict": {
+    "hostedOnline": true,
+    "hostedAnalyzeGameOk": true,
+    "localFullGameOk": true,
+    "bestmoveAgreement": "65.3%",
+    "prevBestAgreement": "62.7%",
+    "avgEvalGapCp": 26,
+    "fullGameHostedMs": 94577,
+    "fullGameLocalMs": 57902,
+    "efficiencyWinner": "local faster (cold)",
+    "annotatedJudgmentsChecked": 25,
+    "annotatedMistakesWherePlayedNotLocalBest": 20,
+    "annotatedMistakesWherePlayedNotHostedBest": 20,
+    "hostedIsBestMoveTrueCount": 23,
+    "notes": [
+      "Hosted /analyze-game COLD: ~94.6s for 75 plies at movetime=200 multipv=3.",
+      "Hosted /analyze-game WARM/CACHED: ~1.3s for same PGN on immediate re-request.",
+      "Local full-game loop: ~57.9s on this machine (persistent UCI, no network).",
+      "Cold batch: LOCAL faster (~1.6x). Cached batch: HOSTED much faster.",
+      "Bestmove agreement after-position: 65.3% at shallow search.",
+      "Avg eval gap: 26 cp (median 17)."
+    ],
+    "fullGameHostedWarmCachedMs": 1327
+  },
+  "hostedSampleTimelineEntry": {
+    "ply": 14,
+    "move_number": 7,
+    "side": "black",
+    "played_move": "f8e7",
+    "played_move_san": "Be7",
+    "before_fen": "r1bqkbnr/pp4pp/2n5/2p1ppB1/3pP3/2PP1N2/PPQ1BPPP/RN2K2R b KQkq - 1 7",
+    "after_fen": "r1bqk1nr/pp2b1pp/2n5/2p1ppB1/3pP3/2PP1N2/PPQ1BPPP/RN2K2R w KQkq - 2 8",
+    "engine_best_move": "f8e7",
+    "engine_ponder": "g5e7",
+    "is_best_move": true,
+    "evaluation_before": {
+      "cp": 52,
+      "mate": null
+    },
+    "evaluation_after": {
+      "cp": -49,
+      "mate": null
+    },
+    "engine_info_before": {
+      "depth": 10,
+      "nodes": 22933,
+      "time_ms": 200,
+      "pv": [
+        "f8e7",
+        "g5e7",
+        "g8e7",
+        "c3d4",
+        "c5d4",
+        "e1g1",
+        "e7g6"
+      ]
+    },
+    "engine_info_after": {
+      "depth": 9,
+      "nodes": 21050,
+      "time_ms": 200,
+      "pv": [
+        "g5e7",
+        "g8e7",
+        "c3d4",
+        "c5d4",
+        "b1d2",
+        "e7g6"
+      ]
+    },
+    "before_analysis": {
+      "fen": "r1bqkbnr/pp4pp/2n5/2p1ppB1/3pP3/2PP1N2/PPQ1BPPP/RN2K2R b KQkq - 1 7",
+      "bestmove": "f8e7",
+      "ponder": "g5e7",
+      "previous_fen_bestmove": "c2b3",
+      "requested_depth": null,
+      "requested_movetime": 200,
+      "multipv": 3,
+      "win_probability": {
+        "white": 54.77,
+        "black": 45.23
+      },
+      "analysis": [
+        {
+          "rank": 1,
+          "bestmove": "f8e7",
+          "cp": 52,
+          "mate": null,
+          "depth": 10,
+          "seldepth": 13,
+          "nodes": 22933,
+          "nps": 114665,
+          "time_ms": 200,
+          "pv": [
+            "f8e7",
+            "g5e7",
+            "g8e7",
+            "c3d4",
+            "c5d4",
+            "e1g1",
+            "e7g6"
+          ],
+          "first_move_score": {
+            "cp": -83,
+            "mate": null
+          }
+        },
+        {
+          "rank": 2,
+          "bestmove": "g8f6",
+          "cp": 1,
+          "mate": null,
+          "depth": 10,
+          "seldepth": 15,
+          "nodes": 22933,
+          "nps": 114665,
+          "time_ms": 200,
+          "pv": [
+            "g8f6",
+            "c3d4",
+            "c5d4",
+            "b1d2",
+            "f8e7",
+            "e4f5",
+            "c8f5",
+            "e1g1",
+            "e8g8"
+          ],
+          "first_move_score": {
+            "cp": 4,
+            "mate": null
+          }
+        },
+        {
+          "rank": 3,
+          "bestmove": "d8c7",
+          "cp": -35,
+          "mate": null,
+          "depth": 10,
+          "seldepth": 14,
+          "nodes": 22933,
+          "nps": 114665,
+          "time_ms": 200,
+          "pv": [
+            "d8c7",
+            "c3d4"
+          ],
+          "first_move_score": {
+            "cp": 29,
+            "mate": null
+          }
+        }
+      ],
+      "cached": true
+    },
+    "after_analysis": {
+      "fen": "r1bqk1nr/pp2b1pp/2n5/2p1ppB1/3pP3/2PP1N2/PPQ1BPPP/RN2K2R w KQkq - 2 8",
+      "bestmove": "g5e7",
+      "ponder": "g8e7",
+      "previous_fen_bestmove": "f8e7",
+      "requested_depth": null,
+      "requested_movetime": 200,
+      "multipv": 3,
+      "win_probability": {
+        "white": 45.5,
+        "black": 54.5
+      },
+      "analysis": [
+        {
+          "rank": 1,
+          "bestmove": "g5e7",
+          "cp": -49,
+          "mate": null,
+          "depth": 9,
+          "seldepth": 12,
+          "nodes": 21050,
+          "nps": 105250,
+          "time_ms": 200,
+          "pv": [
+            "g5e7",
+            "g8e7",
+            "c3d4",
+            "c5d4",
+            "b1d2",
+            "e7g6"
+          ],
+          "first_move_score": {
+            "cp": -74,
+            "mate": null
+          }
+        },
+        {
+          "rank": 2,
+          "bestmove": "h2h4",
+          "cp": -76,
+          "mate": null,
+          "depth": 9,
+          "seldepth": 18,
+          "nodes": 21050,
+          "nps": 105250,
+          "time_ms": 200,
+          "pv": [
+            "h2h4",
+            "h7h6",
+            "g5e7",
+            "d8e7",
+            "c3d4",
+            "c5d4",
+            "e1g1",
+            "g8f6",
+            "b1d2",
+            "e8g8",
+            "a2a3",
+            "f6h5"
+          ],
+          "first_move_score": {
+            "cp": 48,
+            "mate": null
+          }
+        },
+        {
+          "rank": 3,
+          "bestmove": "g5d2",
+          "cp": -83,
+          "mate": null,
+          "depth": 9,
+          "seldepth": 16,
+          "nodes": 21050,
+          "nps": 105250,
+          "time_ms": 200,
+          "pv": [
+            "g5d2",
+            "g8f6",
+            "e1g1",
+            "e8g8",
+            "c3d4",
+            "c5d4",
+            "d2g5",
+            "f5f4",
+            "g5f6",
+            "f8f6"
+          ],
+          "first_move_score": {
+            "cp": 61,
+            "mate": null
+          }
+        }
+      ],
+      "cached": true
+    }
+  },
+  "singlePlyHostedAnalyzeVsLocal": [
+    {
+      "ply": 1,
+      "san": "d3",
+      "hostedAnalyzeMs": 313,
+      "localAnalyzeMs": 0,
+      "hostedBest": "b8c6",
+      "localBest": "d7d5",
+      "agree": false
+    },
+    {
+      "ply": 14,
+      "san": "Be7",
+      "hostedAnalyzeMs": 267,
+      "localAnalyzeMs": 826,
+      "hostedBest": "g5e7",
+      "localBest": "g5e7",
+      "agree": true
+    },
+    {
+      "ply": 28,
+      "san": "Rac8",
+      "hostedAnalyzeMs": 278,
+      "localAnalyzeMs": 776,
+      "hostedBest": "a4b5",
+      "localBest": "a4b5",
+      "agree": true
+    },
+    {
+      "ply": 44,
+      "san": "Nf4",
+      "hostedAnalyzeMs": 289,
+      "localAnalyzeMs": 789,
+      "hostedBest": "h4f4",
+      "localBest": "h4f4",
+      "agree": true
+    },
+    {
+      "ply": 66,
+      "san": "h6",
+      "hostedAnalyzeMs": 263,
+      "localAnalyzeMs": 787,
+      "hostedBest": "g4c8",
+      "localBest": "g4c8",
+      "agree": true
+    },
+    {
+      "ply": 75,
+      "san": "Rg2",
+      "hostedAnalyzeMs": 277,
+      "localAnalyzeMs": 507,
+      "hostedBest": "f3f6",
+      "localBest": "f3f6",
+      "agree": true
+    }
+  ]
+}

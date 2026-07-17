@@ -383,9 +383,13 @@ function mapDbProfileRow(row) {
     closed: 'Closed',
   };
 
+  const lastOnlineMs = row.last_online_at ? new Date(row.last_online_at).getTime() : NaN;
+  const isOnline =
+    Number.isFinite(lastOnlineMs) && Date.now() - lastOnlineMs < 5 * 60 * 1000;
+
   return {
     profile: {
-      avatar: row.avatar_url,
+      avatar: row.avatar_url || profileJson.avatar || profileJson.raw?.avatar || null,
       username: row.username,
       name: row.name,
       country: row.country_url,
@@ -398,6 +402,7 @@ function mapDbProfileRow(row) {
             year: 'numeric',
           })
         : profileJson.joinedDate || null,
+      joinedAt: row.joined_at || profileJson.joinedAt || null,
       followers: row.followers,
       league: row.league,
       title: row.title,
@@ -406,9 +411,9 @@ function mapDbProfileRow(row) {
       verified: row.verified,
       isStreamer: row.is_streamer,
       twitchUrl: row.twitch_url,
-      isOnline: row.is_online,
-      lastOnline: row.last_online_at
-        ? new Date(row.last_online_at).toLocaleString('en-US', {
+      isOnline,
+      lastOnline: Number.isFinite(lastOnlineMs)
+        ? new Date(lastOnlineMs).toLocaleString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric',

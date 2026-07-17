@@ -6,7 +6,7 @@ export function LegacyUsersRedirect() {
     return <Navigate to={`/players/${encodeURIComponent(userId)}/game/${encodeURIComponent(gameId)}`} replace />;
   }
   if (userId) {
-    return <Navigate to={`/players/${encodeURIComponent(userId)}`} replace />;
+    return <Navigate to={`/players/${encodeURIComponent(userId)}/new`} replace />;
   }
   return <Navigate to="/players" replace />;
 }

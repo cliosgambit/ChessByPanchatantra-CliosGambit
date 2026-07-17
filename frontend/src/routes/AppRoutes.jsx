@@ -87,8 +87,13 @@ function AppRoutesContent() {
               <Route path="/puzzles/lichess/:puzzleId" element={<LichessPuzzleView />} />
               <Route path="/puzzles/chesscom" element={<ChessComPuzzles />} />
               <Route path="/puzzles/chesscom/:puzzleId" element={<ViewPuzzle />} />
-              <Route path="/players/:userId" element={<UserProfilePage />} />
               <Route path="/players/:userId/game/:gameId" element={<ChessComGamePage />} />
+              <Route path="/players/:userId/new" element={<UserProfilePage />} />
+              <Route path="/players/:userId/legacy" element={<UserProfilePage />} />
+              <Route
+                path="/players/:userId"
+                element={<Navigate to="new" replace />}
+              />
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/students" element={<Students />} />
                 <Route path="/students/batches/:batchId" element={<BatchDetailPage />} />

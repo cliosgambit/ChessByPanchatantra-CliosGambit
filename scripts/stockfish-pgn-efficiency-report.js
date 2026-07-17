@@ -112,9 +112,19 @@ function normalizeUci(v) {
   return s.split(/\s+/)[0] || null;
 }
 
-function hostedScore(analysis) {
-  if (!analysis) return null;
-  const top = analysis.analysis?.[0];
+function hostedScoreFromEval(e) {
+  if (!e) return null;
+  if (e.mate != null) return { type: 'mate', value: e.mate };
+  if (e.cp != null) return { type: 'cp', value: e.cp };
+  return null;
+}
+
+function hostedScore(timelineEntry) {
+  if (!timelineEntry) return null;
+  // New shape: evaluation_after / after_analysis
+  const fromEval = hostedScoreFromEval(timelineEntry.evaluation_after);
+  if (fromEval) return fromEval;
+  const top = timelineEntry.after_analysis?.analysis?.[0] || timelineEntry.analysis?.[0];
   if (!top) return null;
   if (top.mate != null) return { type: 'mate', value: top.mate };
   if (top.cp != null) return { type: 'cp', value: top.cp };
@@ -261,11 +271,13 @@ function pct(n, d) {
     const p = plies[i];
     const loc = localTimeline[i];
     const ht = hostedTimeline[i] || null;
-    const ha = ht?.analysis || null;
+    const after = ht?.after_analysis || ht?.analysis || null;
+    const before = ht?.before_analysis || null;
 
-    const hostedBest = normalizeUci(ha?.bestmove);
-    const hostedPrev = normalizeUci(ha?.previous_fen_bestmove);
-    const hScore = hostedScore(ha);
+    const hostedBest = normalizeUci(after?.bestmove);
+    const hostedPrev =
+      normalizeUci(ht?.engine_best_move) || normalizeUci(before?.bestmove);
+    const hScore = hostedScore(ht);
     const lScore = loc.score;
 
     const bestMatch = loc.bestmove && hostedBest ? loc.bestmove === hostedBest : null;
@@ -302,9 +314,10 @@ function pct(n, d) {
       hostedBest,
       hostedPrevBest: hostedPrev,
       hostedEval: hScore,
-      hostedDepth: ha?.analysis?.[0]?.depth ?? ha?.requested_depth ?? null,
-      hostedWinProb: ha?.win_probability ?? null,
-      hostedLines: ha?.analysis?.length ?? 0,
+      hostedDepth: ht?.engine_info_after?.depth ?? after?.analysis?.[0]?.depth ?? null,
+      hostedWinProb: after?.win_probability ?? null,
+      hostedLines: after?.analysis?.length ?? 0,
+      hostedIsBestMove: ht?.is_best_move ?? null,
       bestmoveAgree: bestMatch,
       prevBestAgree: prevMatch,
       evalGapCp,

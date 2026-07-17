@@ -110,7 +110,7 @@ function ChessComGamePage() {
                 { label: 'Students', to: '/students' },
                 {
                   label: profileUsername || 'Profile',
-                  to: `/players/${encodeURIComponent(profileUsername)}`,
+                  to: `/players/${encodeURIComponent(profileUsername)}/new`,
                 },
                 { label: 'Game' },
               ]}
@@ -136,7 +136,7 @@ function ChessComGamePage() {
               { label: 'Students', to: '/students' },
               {
                 label: profileUsername || 'Profile',
-                to: `/players/${encodeURIComponent(profileUsername)}`,
+                to: `/players/${encodeURIComponent(profileUsername)}/new`,
               },
               { label: 'Game' },
             ]}

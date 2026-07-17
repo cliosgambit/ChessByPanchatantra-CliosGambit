@@ -306,7 +306,7 @@ function Students() {
       setError('Add a Chess.com ID before viewing the report.');
       return;
     }
-    navigate(`/players/${encodeURIComponent(username)}`, {
+    navigate(`/players/${encodeURIComponent(username)}/new`, {
       state: { from: '/students', fromLabel: 'Back to Students', tab: 'report' },
     });
   };

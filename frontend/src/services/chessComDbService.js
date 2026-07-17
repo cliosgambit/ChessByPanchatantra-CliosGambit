@@ -49,6 +49,25 @@ export async function fetchChessComGamesFromDb(username, limit = 25) {
   );
 }
 
+export async function fetchChessComGamesForRange(
+  username,
+  { since, all = false, limit = 25, offset = 0 } = {}
+) {
+  const params = new URLSearchParams({
+    limit: String(Math.min(Number(limit) || 25, 200)),
+    offset: String(Math.max(Number(offset) || 0, 0)),
+    total: 'true',
+    previewPgn: 'true',
+  });
+  const sinceDate = String(since || '').trim().slice(0, 10);
+  if (!all && sinceDate) {
+    params.set('since', sinceDate);
+  }
+  return apiFetch(
+    `${API_BASE}/${encodeURIComponent(username)}/games?${params.toString()}`
+  );
+}
+
 export async function fetchChessComMonthlyGamesFromDb(
   username,
   { months = 12, perMonth = 8, previewPgn = true } = {}
@@ -63,9 +82,52 @@ export async function fetchChessComMonthlyGamesFromDb(
   );
 }
 
-export async function fetchChessComRatingHistoryFromDb(username, { months = 3 } = {}) {
+export async function fetchChessComRatingHistoryFromDb(username, { months = 3, since, all = false } = {}) {
+  const sinceDate = String(since || '').trim().slice(0, 10);
+  if (sinceDate) {
+    return apiFetch(
+      `${API_BASE}/${encodeURIComponent(username)}/rating-history?since=${encodeURIComponent(sinceDate)}`
+    );
+  }
+  if (all) {
+    return apiFetch(
+      `${API_BASE}/${encodeURIComponent(username)}/rating-history?all=true`
+    );
+  }
   return apiFetch(
     `${API_BASE}/${encodeURIComponent(username)}/rating-history?months=${months}`
+  );
+}
+
+export async function fetchChessComRatingImprovementFromDb(username, { since, all = false } = {}) {
+  const sinceDate = String(since || '').trim().slice(0, 10);
+  if (all || !sinceDate) {
+    return apiFetch(
+      `${API_BASE}/${encodeURIComponent(username)}/rating-improvement?all=true`
+    );
+  }
+  return apiFetch(
+    `${API_BASE}/${encodeURIComponent(username)}/rating-improvement?since=${encodeURIComponent(sinceDate)}`
+  );
+}
+
+export async function fetchChessComGameStatsForRange(username, { since, all = false } = {}) {
+  const sinceDate = String(since || '').trim().slice(0, 10);
+  if (all || !sinceDate) {
+    return apiFetch(`${API_BASE}/${encodeURIComponent(username)}/game-stats?all=true`);
+  }
+  return apiFetch(
+    `${API_BASE}/${encodeURIComponent(username)}/game-stats?since=${encodeURIComponent(sinceDate)}`
+  );
+}
+
+export async function fetchChessComAchievements(username, { since, all = false } = {}) {
+  const sinceDate = String(since || '').trim().slice(0, 10);
+  if (all || !sinceDate) {
+    return apiFetch(`${API_BASE}/${encodeURIComponent(username)}/achievements?all=true`);
+  }
+  return apiFetch(
+    `${API_BASE}/${encodeURIComponent(username)}/achievements?since=${encodeURIComponent(sinceDate)}`
   );
 }
 

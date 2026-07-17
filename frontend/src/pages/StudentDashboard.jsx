@@ -16,7 +16,7 @@ function StudentDashboard() {
       icon: <FiUser aria-hidden />,
       onClick: () => {
         if (!chessComId) return;
-        navigate(`/players/${encodeURIComponent(chessComId)}`, {
+        navigate(`/players/${encodeURIComponent(chessComId)}/new`, {
           state: { from: '/dashboard', fromLabel: 'Back to Dashboard', tab: 'report' },
         });
       },
