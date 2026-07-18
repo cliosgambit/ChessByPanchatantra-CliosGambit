@@ -6,6 +6,8 @@ const router = express.Router();
 router.post('/chess-com/sync/:username', controller.syncPlayer);
 router.get('/chess-com/yesterdays-games', controller.getYesterdaysGames);
 router.post('/chess-com/yesterdays-games/sync', controller.syncYesterdaysGames);
+router.get('/chess-com/auto-sync/status', controller.getAutoSyncStatus);
+router.get('/chess-com/background-jobs', controller.getBackgroundJobsStatus);
 router.get('/chess-com/puzzle/random', controller.getRandomDailyPuzzle);
 router.post('/chess-com/puzzle/ingest', controller.ingestRandomPuzzle);
 router.get('/chess-com/puzzle/saved', controller.listChesscomRandomPuzzles);
@@ -18,6 +20,7 @@ router.get('/chess-com/brilliant-puzzles/by-move/:moveId', controller.getBrillia
 router.post('/chess-com/brilliant-puzzles/:moveId/verify', controller.verifyBrilliantPuzzle);
 router.post('/chess-com/brilliant-puzzles/:moveId/save', controller.saveBrilliantPuzzle);
 router.post('/chess-com/brilliant-puzzles/:moveId/unsave', controller.unsaveBrilliantPuzzle);
+router.get('/chess-com/proxy-image', controller.proxyImage);
 router.get('/chess-com/:username/profile', controller.getProfile);
 router.get('/chess-com/:username/bundle', controller.getBundle);
 router.get('/chess-com/:username/monthly-games', controller.getMonthlyGames);

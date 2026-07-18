@@ -16,6 +16,8 @@
     "chess.js": "^1.2.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.9.4",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "jwt-decode": "^4.0.0",
     "react": "^19.1.0",
     "react-chessboard": "^4.7.3",

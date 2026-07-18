@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Center, Spinner } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import { getRoleHomePath } from '../services/authService';
+import { normalizeRole } from '../utils/roles';
 
 function ProtectedRoute({ allowedRoles, requireAuth = true }) {
   const { isAuthenticated, user, isAuthLoading } = useAuth();
@@ -21,9 +22,8 @@ function ProtectedRoute({ allowedRoles, requireAuth = true }) {
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
-    const role = (user?.role || '').toLowerCase();
-    const isAdmin = role === 'admin';
-    const allowed = isAdmin || allowedRoles.map((r) => r.toLowerCase()).includes(role);
+    const role = normalizeRole(user?.role);
+    const allowed = allowedRoles.map((r) => r.toLowerCase()).includes(role);
 
     if (!allowed) {
       const fallback = getRoleHomePath(user?.role);

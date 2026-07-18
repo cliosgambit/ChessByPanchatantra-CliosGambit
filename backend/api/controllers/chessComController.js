@@ -9,13 +9,34 @@ exports.getYesterdaysGames = async (req, res) => {
       timeZone,
       attachPreviewPgn: req.query.previewPgn !== 'false',
     });
+    const autoSync = syncService.getAutoSyncStatus();
     res.json({
       ...result,
-      syncInProgress: syncService.isYesterdaysSyncInProgress(),
+      syncInProgress:
+        syncService.isYesterdaysSyncInProgress() || syncService.isAutoSyncInProgress(),
+      autoSync,
     });
   } catch (err) {
     console.error('Chess.com tracked games error:', err);
     res.status(500).json({ error: err.message || 'Failed to load games.' });
+  }
+};
+
+exports.getAutoSyncStatus = async (_req, res) => {
+  try {
+    res.json(syncService.getAutoSyncStatus());
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to load auto-sync status.' });
+  }
+};
+
+exports.getBackgroundJobsStatus = async (_req, res) => {
+  try {
+    const movesBackfill = require('../services/chessComMovesBackfillService');
+    res.json(await movesBackfill.getBackgroundJobsStatus());
+  } catch (err) {
+    console.error('Background jobs status error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load background jobs.' });
   }
 };
 
@@ -49,6 +70,13 @@ exports.syncPlayer = async (req, res) => {
     }
     const forceFull = req.query.full === 'true';
     const result = await syncService.syncPlayerFromChessCom(username, { forceFull });
+    try {
+      require('../services/chessComMovesBackfillService').wakeMovesBackfill(
+        `after-sync:${username}`
+      );
+    } catch {
+      /* non-fatal */
+    }
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('Chess.com sync error:', err);
@@ -262,6 +290,55 @@ exports.getWinStreaks = async (req, res) => {
   } catch (err) {
     console.error('Chess.com win streaks error:', err);
     res.status(500).json({ error: err.message || 'Failed to load win streaks.' });
+  }
+};
+
+const PROXY_IMAGE_HOST_RE =
+  /(^|\.)chess\.com$|(^|\.)chesscomfiles\.com$|(^|\.)chesscomcdn\.com$/i;
+
+/** Proxy Chess.com CDN images so the frontend can inline them for PDF export. */
+exports.proxyImage = async (req, res) => {
+  try {
+    const rawUrl = String(req.query.url || '').trim();
+    if (!rawUrl) {
+      return res.status(400).json({ error: 'Missing url.' });
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      return res.status(400).json({ error: 'Invalid url.' });
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol) || !PROXY_IMAGE_HOST_RE.test(parsed.hostname)) {
+      return res.status(400).json({ error: 'Host not allowed.' });
+    }
+
+    const upstream = await fetch(parsed.toString(), {
+      headers: {
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'User-Agent': 'CLIO-ReportPDF/1.0',
+      },
+    });
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: 'Failed to fetch image.' });
+    }
+
+    const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+    if (!/^image\//i.test(contentType)) {
+      return res.status(400).json({ error: 'URL is not an image.' });
+    }
+
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(200).send(buffer);
+  } catch (err) {
+    console.error('Chess.com proxy image error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to proxy image.' });
   }
 };
 

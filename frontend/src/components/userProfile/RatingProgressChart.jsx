@@ -113,6 +113,7 @@ export { RANGE_FILTERS, computeSinceDate };
  * @param {string} [props.activeRange] controlled range key
  * @param {(key: string) => void} [props.onActiveRangeChange]
  * @param {'dark'|'light'} [props.theme]
+ * @param {string} [props.subtitle]
  */
 function RatingProgressChart({
   username,
@@ -125,6 +126,7 @@ function RatingProgressChart({
   activeRange: controlledRange,
   onActiveRangeChange,
   theme = 'dark',
+  subtitle = null,
 }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -282,7 +284,7 @@ function RatingProgressChart({
             {activeConfig.label} · {rangeLabel}
           </h3>
           <p className="chess-rating-chart-subtitle">
-            Rated games only · click a rating card above to switch
+            {subtitle || 'Rated games only · click a rating card above to switch'}
           </p>
         </div>
         {!hideTabs && !showRangeFilters && (
@@ -339,8 +341,52 @@ function RatingProgressChart({
         ) : error ? (
           <div className="chess-rating-chart-empty chess-rating-chart-empty--error">{error}</div>
         ) : chartData.length === 0 ? (
-          <div className="chess-rating-chart-empty">
-            No rated {activeConfig.label.toLowerCase()} games {emptyRangeLabel}.
+          <div className="chess-rating-chart-empty-graph">
+            <div className="chess-rating-chart-meta chess-rating-chart-meta--empty">
+              <span>
+                <strong>0</strong> games
+              </span>
+            </div>
+            <div className="chess-rating-chart-empty-graph-frame">
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <LineChart data={[]} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis
+                    dataKey="game"
+                    type="number"
+                    domain={[1, 10]}
+                    ticks={[1, 5, 10]}
+                    tick={{ fill: palette.tick, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: palette.axis }}
+                    label={{
+                      value: 'Game #',
+                      position: 'insideBottom',
+                      offset: -2,
+                      fill: palette.label,
+                      fontSize: 11,
+                    }}
+                  />
+                  <YAxis
+                    domain={[800, 2200]}
+                    tick={{ fill: palette.tick, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: palette.axis }}
+                    width={44}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rating"
+                    stroke={activeConfig.color}
+                    strokeWidth={2.5}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="chess-rating-chart-empty-overlay">
+                No rated {activeConfig.label.toLowerCase()} games {emptyRangeLabel}.
+              </div>
+            </div>
           </div>
         ) : (
           <>

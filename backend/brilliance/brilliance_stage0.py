@@ -234,8 +234,28 @@ def _sacrifice_exposure_empty():
     }
 
 
+def _side_capture_see(board, square, color):
+    """
+    SEE for color's LVA capture on square.
+    Sets side-to-move so defender recaptures are priced correctly.
+    Returns None when no legal capture exists.
+    """
+    lva = opponent_lva_capture_move(board, square, color)
+    if not lva:
+        return None
+    b = board.copy()
+    b.turn = color
+    return see(b, lva)
+
+
 def _compensation_from_attacked_squares(board, attack_squares, color):
-    """Highest-value enemy piece on squares attacked from a given origin."""
+    """
+    Highest-value enemy piece on attack_squares that we can actually win.
+
+    Merely attacking is not compensation: the piece must be legal to capture
+    with SEE > 0. Defended pieces (any same-color defender) are excluded —
+    attacking a guarded queen does not compensate a hanging knight.
+    """
     opp = not color
     best_value = 0
     best_square = None
@@ -244,6 +264,14 @@ def _compensation_from_attacked_squares(board, attack_squares, color):
     for sq in attack_squares:
         piece = board.piece_at(sq)
         if not piece or piece.color != opp or piece.piece_type == chess.KING:
+            continue
+
+        # Defended = not real hanging compensation (SEE of RxQ can still be > 0).
+        if board.attackers(opp, sq):
+            continue
+
+        capture_see = _side_capture_see(board, sq, color)
+        if capture_see is None or capture_see <= OPP_SEE_EN_PRISE_THRESHOLD:
             continue
 
         piece_val = PIECE_VALUES.get(piece.piece_type, 0)
@@ -260,14 +288,14 @@ def _compensation_from_attacked_squares(board, attack_squares, color):
 
 
 def _enemy_compensation_from_square(board, square, color):
-    """Highest-value enemy piece threatened by a friendly piece on square."""
+    """Highest-value enemy piece we can profitably win from square's attacks."""
     return _compensation_from_attacked_squares(board, board.attacks(square), color)
 
 
 def _enemy_compensation_from_move(board_before, board_after, move, color):
     """
-    Highest-value enemy piece newly threatened by the moving piece's destination.
-    Used to detect favorable trades (e.g. abandon bishop but fork a rook).
+    Highest-value enemy piece newly winable from the mover's destination.
+    Used to detect favorable trades (e.g. abandon bishop but fork a hanging rook).
     """
     from_sq = move.from_square
     to_sq = move.to_square
@@ -290,15 +318,15 @@ def _merge_compensation(*comps):
 
 def _compensation_for_piece(board_after, piece_sq, color, mover_compensation):
     """
-    Compensation for abandoning piece_sq: mover's new threats plus the piece's
-    own attacks (e.g. pawn@b5 pressuring queen while en prise).
+    Compensation for abandoning piece_sq: mover's new winable threats plus the
+    piece's own winable attacks (e.g. pawn@b7 taking an undefended queen).
     """
     piece_comp = _enemy_compensation_from_square(board_after, piece_sq, color)
     return _merge_compensation(mover_compensation, piece_comp)
 
 
 def _is_favorable_trade(exposed_value, compensation_value):
-    """True when threatened enemy material >= abandoned friendly material."""
+    """True when winable enemy material >= abandoned friendly material."""
     return (
         exposed_value >= SACRIFICE_SCAN_MIN_PIECE_VALUE
         and compensation_value >= exposed_value

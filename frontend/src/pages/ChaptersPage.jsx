@@ -12,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import { useRoleChapterAccess } from '../hooks/useRoleChapterAccess';
+import { canManageContent } from '../utils/roles';
 import ModuleDetails from './ModuleDetails';
 
 const boardThemes = [
@@ -128,7 +129,7 @@ function StudentChaptersPage() {
 
 function ChaptersPage() {
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const isAdmin = canManageContent(user?.role);
 
   if (isAdmin) {
     return <ModuleDetails />;

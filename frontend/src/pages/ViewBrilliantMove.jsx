@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box } from '@chakra-ui/react';
+import { FiExternalLink, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
-import LoadingPanel from '../components/common/LoadingPanel';
-import ErrorPanel from '../components/common/ErrorPanel';
 import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import BrilliantMoveBoardView from '../components/brilliantMoves/BrilliantMoveBoardView';
 import BrilliantMoveVerificationBar from '../components/brilliantMoves/BrilliantMoveVerificationBar';
@@ -11,8 +9,17 @@ import {
   fetchBrilliantMovesFromDb,
   fetchChessComGameMovesFromDb,
 } from '../services/chessComDbService';
-import '../components/userProfile/ChessComProfilePage.css';
 import './ViewBrilliantMove.css';
+
+const BREADCRUMB = [
+  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Brilliant Moves', to: '/brilliant-moves' },
+];
+
+function formatScore(value) {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  return Number(value).toFixed(2);
+}
 
 function ViewBrilliantMove() {
   const navigate = useNavigate();
@@ -23,10 +30,10 @@ function ViewBrilliantMove() {
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showMove, setShowMove] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadGameList() {
       try {
         const data = await fetchBrilliantMovesFromDb({ limit: 1000 });
@@ -35,7 +42,6 @@ function ViewBrilliantMove() {
         if (!cancelled) setGameList([]);
       }
     }
-
     loadGameList();
     return () => {
       cancelled = true;
@@ -44,15 +50,11 @@ function ViewBrilliantMove() {
 
   const gameNav = useMemo(() => {
     const currentIndex = gameList.findIndex((row) => String(row.id) === String(moveId));
-    if (currentIndex < 0) {
-      return { prevId: null, nextId: null, positionLabel: null };
-    }
-
+    if (currentIndex < 0) return { prevId: null, nextId: null, positionLabel: null };
     return {
       prevId: currentIndex > 0 ? gameList[currentIndex - 1].id : null,
-      nextId:
-        currentIndex < gameList.length - 1 ? gameList[currentIndex + 1].id : null,
-      positionLabel: `Game ${currentIndex + 1} of ${gameList.length}`,
+      nextId: currentIndex < gameList.length - 1 ? gameList[currentIndex + 1].id : null,
+      positionLabel: `${currentIndex + 1} / ${gameList.length}`,
     };
   }, [gameList, moveId]);
 
@@ -62,10 +64,12 @@ function ViewBrilliantMove() {
 
   useEffect(() => {
     let cancelled = false;
+    setShowMove(false);
 
     async function load() {
       setLoading(true);
       setError(null);
+      setMoveHistory([]);
       try {
         const data = await fetchBrilliantMoveFromDb(moveId);
         if (cancelled) return;
@@ -74,7 +78,10 @@ function ViewBrilliantMove() {
         if (data?.chessComId && data?.uuid) {
           setHistoryLoading(true);
           try {
-            const historyData = await fetchChessComGameMovesFromDb(data.chessComId, data.uuid);
+            const historyData = await fetchChessComGameMovesFromDb(
+              data.chessComId,
+              data.uuid
+            );
             if (!cancelled) setMoveHistory(historyData.moves || []);
           } catch {
             if (!cancelled) setMoveHistory([]);
@@ -83,7 +90,10 @@ function ViewBrilliantMove() {
           }
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load brilliant move.');
+        if (!cancelled) {
+          setError(err.message || 'Failed to load brilliant move.');
+          setMove(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -95,47 +105,130 @@ function ViewBrilliantMove() {
     };
   }, [moveId]);
 
-  return (
-    <Box className="chess-profile-page">
-      {!loading && !error && move && <BrilliantMoveVerificationBar move={move} />}
-
-      <div className="chess-profile-header-wrap">
-        <div className="chess-profile-header-card view-brilliant-move-page-header">
-          <PageBreadcrumb
-            items={[
-              { label: 'Dashboard', to: '/dashboard' },
-              { label: 'Brilliant Moves', to: '/brilliant-moves' },
-              { label: moveId ? `Move #${moveId}` : 'Move' },
-            ]}
-          />
+  if (loading) {
+    return (
+      <div className="brilliant-view-page">
+        <div className="brilliant-view-side">
+          <PageBreadcrumb items={[...BREADCRUMB, { label: 'Move' }]} />
+          <p className="brilliant-view-muted">Loading…</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="chess-profile-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        <main className="chess-profile-main">
-          <section className="chess-profile-panel view-brilliant-move-panel">
-            <div className="chess-profile-panel-body view-brilliant-move-body">
-              {loading ? (
-                <LoadingPanel message="Loading brilliant move..." />
-              ) : error ? (
-                <ErrorPanel title="Unable to load brilliant move" message={error} />
-              ) : (
-                <BrilliantMoveBoardView
-                  move={move}
-                  moveHistory={moveHistory}
-                  historyLoading={historyLoading}
-                  prevGameId={gameNav.prevId}
-                  nextGameId={gameNav.nextId}
-                  gamePositionLabel={gameNav.positionLabel}
-                  onPrevGame={() => goToGame(gameNav.prevId)}
-                  onNextGame={() => goToGame(gameNav.nextId)}
-                />
-              )}
-            </div>
-          </section>
-        </main>
+  if (error || !move) {
+    return (
+      <div className="brilliant-view-page">
+        <div className="brilliant-view-side">
+          <PageBreadcrumb items={[...BREADCRUMB, { label: 'Move' }]} />
+          <p className="brilliant-view-error">{error || 'Brilliant move not found.'}</p>
+        </div>
       </div>
-    </Box>
+    );
+  }
+
+  return (
+    <div className="brilliant-view-page">
+      <BrilliantMoveVerificationBar move={move} />
+
+      <aside className="brilliant-view-side">
+        <PageBreadcrumb items={[...BREADCRUMB, { label: `#${move.id}` }]} />
+
+        <h1 className="brilliant-view-title">Brilliant Move #{move.id}</h1>
+        <p className="brilliant-view-sub">
+          {[move.classification, move.playerRating != null ? `R${move.playerRating}` : null, move.playedDate]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+
+        <section className="brilliant-view-card">
+          <h2>Game</h2>
+          <p>{move.players || '—'}</p>
+          <p className="brilliant-view-muted">
+            {[move.timeControl, move.playedDate].filter(Boolean).join(' · ')}
+          </p>
+          {move.gameUrl ? (
+            <a href={move.gameUrl} target="_blank" rel="noreferrer">
+              Open on Chess.com <FiExternalLink aria-hidden />
+            </a>
+          ) : null}
+        </section>
+
+        <section className="brilliant-view-card">
+          <h2>Details</h2>
+          <dl className="brilliant-view-dl">
+            <div>
+              <dt>Turn</dt>
+              <dd>{move.turn === 'white' ? 'White' : 'Black'}</dd>
+            </div>
+            <div>
+              <dt>Class</dt>
+              <dd>{move.classification || '—'}</dd>
+            </div>
+            <div>
+              <dt>Type</dt>
+              <dd>{move.sacType && move.sacType !== '—' ? move.sacType : '—'}</dd>
+            </div>
+            <div>
+              <dt>Score</dt>
+              <dd>{formatScore(move.brillianceScore)}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="brilliant-view-card">
+          <h2>Brilliant move</h2>
+          {!showMove ? (
+            <button type="button" className="brilliant-view-btn" onClick={() => setShowMove(true)}>
+              Show move
+            </button>
+          ) : (
+            <p className="brilliant-view-san">
+              {move.sanMove}
+              {move.uciMove ? <span> · {move.uciMove}</span> : null}
+            </p>
+          )}
+        </section>
+
+        <section className="brilliant-view-card">
+          <h2>Browse</h2>
+          <div className="brilliant-view-browse">
+            <button
+              type="button"
+              className="brilliant-view-btn brilliant-view-btn--ghost"
+              onClick={() => goToGame(gameNav.prevId)}
+              disabled={gameNav.prevId == null}
+            >
+              <FiChevronLeft aria-hidden /> Prev
+            </button>
+            <button
+              type="button"
+              className="brilliant-view-btn"
+              onClick={() => goToGame(gameNav.nextId)}
+              disabled={gameNav.nextId == null}
+            >
+              Next <FiChevronRight aria-hidden />
+            </button>
+          </div>
+          {gameNav.positionLabel ? (
+            <p className="brilliant-view-muted">{gameNav.positionLabel}</p>
+          ) : null}
+        </section>
+      </aside>
+
+      <main className="brilliant-view-main">
+        <BrilliantMoveBoardView
+          move={move}
+          moveHistory={moveHistory}
+          historyLoading={historyLoading}
+          prevGameId={gameNav.prevId}
+          nextGameId={gameNav.nextId}
+          gamePositionLabel={gameNav.positionLabel}
+          onPrevGame={() => goToGame(gameNav.prevId)}
+          onNextGame={() => goToGame(gameNav.nextId)}
+        />
+      </main>
+    </div>
   );
 }
 

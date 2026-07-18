@@ -1,0 +1,90 @@
+.floating-camera {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 41, 0.18);
+  background: #0f1729;
+  box-shadow: 0 12px 32px rgba(15, 23, 41, 0.28);
+  user-select: none;
+  touch-action: none;
+}
+
+.floating-camera--dragging {
+  cursor: grabbing;
+}
+
+.floating-camera__bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 28px;
+  padding: 0 8px;
+  background: rgba(15, 23, 41, 0.92);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.floating-camera--dragging .floating-camera__bar {
+  cursor: grabbing;
+}
+
+.floating-camera__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.floating-camera__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.floating-camera__video {
+  display: block;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: cover;
+  background: #111827;
+  transform: scaleX(-1);
+}
+
+.floating-camera-error {
+  position: fixed;
+  left: 16px;
+  top: 96px;
+  z-index: 2001;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(185, 28, 28, 0.25);
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(15, 23, 41, 0.12);
+}
+
+.floating-camera-error button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}

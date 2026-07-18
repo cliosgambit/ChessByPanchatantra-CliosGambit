@@ -31,6 +31,7 @@ import {
   Center,
 } from '@chakra-ui/react';
 import { useAuth } from '../AppContext';
+import { isAdmin } from '../utils/roles';
 
 function AccessControlPage() {
   const { user } = useAuth();
@@ -138,7 +139,7 @@ function AccessControlPage() {
     }));
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || !isAdmin(user.role)) {
     return (
       <Center h="100vh">
         <Text>Access denied. Admin privileges required.</Text>

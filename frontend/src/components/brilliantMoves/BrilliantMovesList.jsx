@@ -6,7 +6,6 @@ import './BrilliantMovesList.css';
 
 const PREVIEW_ANIMATION_MS = 280;
 const PREVIEW_HIDE_DELAY_MS = 120;
-const DOUBLE_TAP_MS = 350;
 
 function ReviewedCell({ row }) {
   const status = row.verificationStatus || 'pending';
@@ -32,7 +31,6 @@ function ReviewedCell({ row }) {
 function BrilliantMovesList({ rows }) {
   const navigate = useNavigate();
   const hideTimer = useRef(null);
-  const lastTouchRef = useRef({ time: 0, id: null });
   const [previewMounted, setPreviewMounted] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -99,29 +97,6 @@ function BrilliantMovesList({ rows }) {
     [clearTimers, navigate]
   );
 
-  const handleMovePointer = useCallback(
-    (row, event, trigger) => {
-      if (trigger === 'click' && event.detail > 1) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      openMove(row);
-    },
-    [openMove]
-  );
-
-  const handleMoveTouchEnd = useCallback(
-    (row, event) => {
-      const now = Date.now();
-      const last = lastTouchRef.current;
-      const isDouble = last.id === row.id && now - last.time <= DOUBLE_TAP_MS;
-
-      lastTouchRef.current = { time: now, id: row.id };
-      handleMovePointer(row, event, isDouble ? 'double-tap' : 'tap');
-    },
-    [handleMovePointer]
-  );
-
   useEffect(() => () => clearTimers(), [clearTimers]);
 
   const previewFen = hoveredRow?.fenAfterMove || hoveredRow?.fenBeforeMove;
@@ -173,40 +148,40 @@ function BrilliantMovesList({ rows }) {
               key={row.id}
               className={`chess-brilliant-moves-row-wrap${
                 isHovered ? ' chess-brilliant-moves-row-wrap--hovered' : ''
-              }`}
+              }${moveClickable ? ' chess-brilliant-moves-row-wrap--clickable' : ''}`}
               onMouseEnter={(event) => {
                 if (hasPreview) handleRowHover(row, event.currentTarget);
               }}
             >
-              <div className="chess-brilliant-moves-row" role="row">
+              <div
+                className="chess-brilliant-moves-row"
+                role={moveClickable ? 'link' : 'row'}
+                tabIndex={moveClickable ? 0 : undefined}
+                aria-label={
+                  moveClickable ? `View brilliant move ${row.sanMove}` : undefined
+                }
+                onClick={() => {
+                  if (moveClickable) openMove(row);
+                }}
+                onKeyDown={(event) => {
+                  if (!moveClickable) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openMove(row);
+                  }
+                }}
+              >
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--player">
                   <div className="chess-game-player-line self">
-                    <span className="chess-game-player-name">{row.chessComId || row.players}</span>
+                    <span className="chess-game-player-name">
+                      {row.chessComId || row.players}
+                    </span>
                   </div>
                 </div>
 
-                {moveClickable ? (
-                  <div
-                    className="chess-brilliant-moves-col chess-brilliant-moves-col--move chess-brilliant-move-cell"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`View brilliant move ${row.sanMove}`}
-                    onClick={(event) => handleMovePointer(row, event, 'click')}
-                    onDoubleClick={(event) => handleMovePointer(row, event, 'double-click')}
-                    onTouchEnd={(event) => handleMoveTouchEnd(row, event)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        handleMovePointer(row, event, 'keyboard');
-                      }
-                    }}
-                  >
-                    <span className="chess-brilliant-move-link">{row.sanMove}</span>
-                  </div>
-                ) : (
-                  <div className="chess-brilliant-moves-col chess-brilliant-moves-col--move">
-                    <span>{row.sanMove}</span>
-                  </div>
-                )}
+                <div className="chess-brilliant-moves-col chess-brilliant-moves-col--move">
+                  <span className="chess-brilliant-move-link">{row.sanMove}</span>
+                </div>
 
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--class">
                   {row.classification}

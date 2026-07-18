@@ -21,7 +21,7 @@ import {
   VALID_DAY_FILTER_KEYS,
 } from '../utils/allGamesFilters';
 import '../components/userProfile/ChessComProfilePage.css';
-import './AllGames.css';
+import './BrilliantMoves.css';
 
 const STATS_POLL_MS = 1500;
 
@@ -94,7 +94,8 @@ function BrilliantMoves() {
   const setActiveFilter = useCallback(
     (day) => {
       if (!VALID_DAY_FILTER_KEYS.has(day) || day === activeFilterRef.current) return;
-      setSearchParams(day === 'all' ? {} : { day }, { replace: true });
+      // Default URL (no ?day) means today — persist `all` explicitly so it doesn't snap back.
+      setSearchParams(day === 'today' ? {} : { day }, { replace: true });
     },
     [setSearchParams]
   );
@@ -182,9 +183,9 @@ function BrilliantMoves() {
   }, [activeFilter, loadPipelineStats, reloadMoves]);
 
   return (
-    <Box className="chess-profile-page">
+    <Box className="chess-profile-page brilliant-moves-page">
       <div className="chess-profile-header-wrap">
-        <div className="chess-profile-header-card" style={{ marginTop: '1rem', paddingBottom: '1rem' }}>
+        <div className="chess-profile-header-card">
           <PageBreadcrumb
             items={[
               { label: 'Dashboard', to: '/dashboard' },
@@ -274,7 +275,7 @@ function BrilliantMoves() {
         </div>
       </div>
 
-      <div className="chess-profile-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      <div className="chess-profile-layout">
         <main className="chess-profile-main">
           <section className="chess-profile-panel chess-games-panel">
             <header className="chess-profile-panel-header">

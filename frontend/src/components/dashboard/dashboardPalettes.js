@@ -11,7 +11,7 @@ export const DASHBOARD_SECTIONS = [
     iconBg: '#DB2777',
     textColor: '#9D174D',
     icon: FiFeather,
-    roles: ['admin'],
+    roles: ['admin', 'coach'],
   },
   {
     id: 'curriculum',
@@ -22,7 +22,7 @@ export const DASHBOARD_SECTIONS = [
     iconBg: '#7C3AED',
     textColor: '#5B21B6',
     icon: FiBookOpen,
-    roles: ['admin'],
+    roles: ['admin', 'coach'],
   },
   {
     id: 'principles',
@@ -33,7 +33,7 @@ export const DASHBOARD_SECTIONS = [
     iconBg: '#EA580C',
     textColor: '#9A3412',
     icon: FiCompass,
-    roles: ['admin'],
+    roles: ['admin', 'coach'],
   },
   {
     id: 'users',
@@ -44,6 +44,6 @@ export const DASHBOARD_SECTIONS = [
     iconBg: '#0284C7',
     textColor: '#0C4A6E',
     icon: FiUsers,
-    roles: ['admin'],
+    roles: ['admin', 'coach'],
   },
 ];

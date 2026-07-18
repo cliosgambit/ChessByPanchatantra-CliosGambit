@@ -4,7 +4,7 @@ const { authenticate, authorizeRoles } = require('../middleware/authMiddleware')
 
 const router = express.Router();
 
-router.use('/batches', authenticate, authorizeRoles('admin'));
+router.use('/batches', authenticate, authorizeRoles('admin', 'coach'));
 
 function normalizeName(value) {
   return String(value || '').trim();

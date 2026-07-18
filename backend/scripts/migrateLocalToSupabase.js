@@ -49,11 +49,7 @@ const TABLES = [
   { name: 'chess_com_clubs', sql: 'chess_com_clubs', api: 'chess_com_clubs', pk: 'id' },
   { name: 'chess_com_sync_raw', sql: 'chess_com_sync_raw', api: 'chess_com_sync_raw', pk: 'id' },
   { name: 'chess_com_brilliance_runs', sql: 'chess_com_brilliance_runs', api: 'chess_com_brilliance_runs', pk: 'chess_com_uuid' },
-  { name: 'chess_com_brilliance_stage0', sql: 'chess_com_brilliance_stage0', api: 'chess_com_brilliance_stage0', pk: 'id' },
-  { name: 'chess_com_brilliance_stage1', sql: 'chess_com_brilliance_stage1', api: 'chess_com_brilliance_stage1', pk: 'id' },
-  { name: 'chess_com_brilliance_stage2', sql: 'chess_com_brilliance_stage2', api: 'chess_com_brilliance_stage2', pk: 'id' },
-  { name: 'chess_com_brilliance_stage3', sql: 'chess_com_brilliance_stage3', api: 'chess_com_brilliance_stage3', pk: 'id' },
-  { name: 'chess_com_brilliance_stage4', sql: 'chess_com_brilliance_stage4', api: 'chess_com_brilliance_stage4', pk: 'id' },
+  { name: 'brilliant_moves', sql: 'brilliant_moves', api: 'brilliant_moves', pk: 'id' },
   { name: 'brilliant_move_puzzles', sql: 'brilliant_move_puzzles', api: 'brilliant_move_puzzles', pk: 'id' },
 ];
 

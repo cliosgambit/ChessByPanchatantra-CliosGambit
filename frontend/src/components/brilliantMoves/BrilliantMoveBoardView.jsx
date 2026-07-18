@@ -1,30 +1,57 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import FenHoverPreview from '../userProfile/FenHoverPreview';
-import BrilliantMoveHistoryPanel from './BrilliantMoveHistoryPanel';
-import '../userProfile/ChessComGamePage.css';
+import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Chessboard } from 'react-chessboard';
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronsLeft,
+  FiChevronsRight,
+} from 'react-icons/fi';
 
-const MAX_BOARD_SIZE = 440;
+const BOARD_MIN = 300;
+const BOARD_MAX = 820;
+const HISTORY_WIDTH = 220;
+const TOOLBAR_H = 42;
+const AREA_PAD = 20;
 
-function formatAccuracy(value) {
-  if (value == null) return '—';
-  return `${value}%`;
+const NOTATION_STYLE = {
+  lineHeight: 1.15,
+  fontWeight: 700,
+  opacity: 0.95,
+};
+
+function isRankAxisSquare(square, orientation) {
+  const file = square[0];
+  return orientation === 'white' ? file === 'a' : file === 'h';
 }
 
-function formatPlayerLine(name, username) {
-  const primary = name || username || '—';
-  const secondary =
-    name && username && name.toLowerCase() !== String(username).toLowerCase()
-      ? username
-      : null;
-
-  return { primary, secondary };
+function isFileAxisSquare(square, orientation) {
+  const rank = square[1];
+  return orientation === 'white' ? rank === '1' : rank === '8';
 }
 
-function isEditableTarget(target) {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
-}
+const BoardSquare = forwardRef(function BoardSquare(
+  { square, squareColor, style, children, boardOrientation },
+  ref
+) {
+  const rankAxis = isRankAxisSquare(square, boardOrientation);
+  const fileAxis = isFileAxisSquare(square, boardOrientation);
+  const corner = rankAxis && fileAxis;
+  const className = [
+    'brilliant-board-square',
+    rankAxis && 'brilliant-board-square--rank',
+    fileAxis && 'brilliant-board-square--file',
+    corner && 'brilliant-board-square--corner',
+    `brilliant-board-square--${squareColor}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <div ref={ref} style={style} className={className} data-square={square}>
+      {children}
+    </div>
+  );
+});
 
 function findBrilliantMoveIndex(moves, brilliantMove) {
   if (!moves?.length || !brilliantMove) return -1;
@@ -36,41 +63,33 @@ function findBrilliantMoveIndex(moves, brilliantMove) {
   }
 
   if (!brilliantMove.sanMove) return -1;
-
   const targetColor = brilliantMove.turn === 'white' ? 'w' : 'b';
   return moves.findIndex((m) => m.san === brilliantMove.sanMove && m.color === targetColor);
 }
 
-function PlayerBarContent({ name, username, rating, color }) {
-  const { primary, secondary } = formatPlayerLine(name, username);
-
-  return (
-    <div className="view-brilliant-move-player-bar-main">
-      <span className={`view-brilliant-move-player-piece view-brilliant-move-player-piece--${color}`}>
-        {color === 'white' ? 'W' : 'B'}
-      </span>
-      <div className="view-brilliant-move-player-text">
-        <span className="view-brilliant-move-player-primary">{primary}</span>
-        {secondary && <span className="view-brilliant-move-player-secondary">{secondary}</span>}
-      </div>
-      <span className="view-brilliant-move-player-rating">{rating ?? '—'}</span>
-    </div>
-  );
+function buildMovePairs(moves) {
+  const pairs = [];
+  for (let i = 0; i < moves.length; i += 2) {
+    pairs.push({
+      number: Math.floor(i / 2) + 1,
+      whiteIndex: i,
+      white: moves[i] || null,
+      blackIndex: i + 1 < moves.length ? i + 1 : null,
+      black: moves[i + 1] || null,
+    });
+  }
+  return pairs;
 }
 
-function InfoRow({ label, value, highlight = false }) {
-  return (
-    <div className="view-brilliant-move-info-row">
-      <span className="view-brilliant-move-info-label">{label}</span>
-      <span
-        className={`view-brilliant-move-info-value${
-          highlight ? ' view-brilliant-move-info-value--move' : ''
-        }`}
-      >
-        {value}
-      </span>
-    </div>
-  );
+function parseUciMove(uci) {
+  if (!uci || typeof uci !== 'string' || uci.length < 4) return null;
+  return { from: uci.slice(0, 2), to: uci.slice(2, 4) };
+}
+
+function isEditableTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
 }
 
 function BrilliantMoveBoardView({
@@ -83,15 +102,23 @@ function BrilliantMoveBoardView({
   onPrevGame,
   onNextGame,
 }) {
-  const boardWrapRef = useRef(null);
-  const [boardSize, setBoardSize] = useState(MAX_BOARD_SIZE);
+  const areaRef = useRef(null);
+  const scrollRef = useRef(null);
+  const [boardWidth, setBoardWidth] = useState(420);
   const [moveIndex, setMoveIndex] = useState(-1);
 
   const navMoves = useMemo(() => moveHistory || [], [moveHistory]);
+  const pairs = useMemo(() => buildMovePairs(navMoves), [navMoves]);
+  const orientation = move?.turn === 'white' ? 'white' : 'black';
 
   const brilliantIndex = useMemo(
     () => findBrilliantMoveIndex(navMoves, move),
     [navMoves, move]
+  );
+
+  const renderSquare = useCallback(
+    (props) => <BoardSquare {...props} boardOrientation={orientation} />,
+    [orientation]
   );
 
   useEffect(() => {
@@ -125,160 +152,195 @@ function BrilliantMoveBoardView({
         goToMove(moveIndex + 1);
       }
     };
-
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [moveIndex, goToMove]);
 
   useEffect(() => {
-    const el = boardWrapRef.current;
-    if (!el) return undefined;
+    const area = areaRef.current;
+    if (!area) return undefined;
 
     const updateSize = () => {
-      const width = el.getBoundingClientRect().width;
-      setBoardSize(Math.min(MAX_BOARD_SIZE, Math.floor(width)));
+      const rect = area.getBoundingClientRect();
+      const availableW = rect.width - HISTORY_WIDTH - AREA_PAD * 2 - 12;
+      const availableH = rect.height - AREA_PAD * 2 - TOOLBAR_H;
+      const size = Math.floor(
+        Math.max(BOARD_MIN, Math.min(BOARD_MAX, availableW, availableH))
+      );
+      setBoardWidth(size);
     };
 
     updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(el);
-    return () => observer.disconnect();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(area);
+    window.addEventListener('resize', updateSize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
   }, []);
 
-  if (!move) return null;
+  useEffect(() => {
+    if (moveIndex < 0 || !scrollRef.current) return;
+    const active = scrollRef.current.querySelector(`#brilliant-move-${moveIndex}`);
+    active?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [moveIndex]);
 
-  const orientation = move.turn === 'white' ? 'white' : 'black';
-  const whiteOnBottom = orientation === 'white';
   const currentMove = moveIndex >= 0 ? navMoves[moveIndex] : null;
   const hasNavHistory = navMoves.length > 0;
-  const boardFen = hasNavHistory
-    ? moveIndex < 0
-      ? navMoves[0]?.before || move.fenBeforeMove || move.fenAfterMove
-      : currentMove?.after || move.fenAfterMove
-    : move.fenAfterMove || move.fenBeforeMove;
+  const boardFen = !move
+    ? null
+    : hasNavHistory
+      ? moveIndex < 0
+        ? navMoves[0]?.before || move.fenBeforeMove || move.fenAfterMove
+        : currentMove?.after || move.fenAfterMove
+      : move.fenAfterMove || move.fenBeforeMove;
+
   const boardLastMove =
     hasNavHistory && currentMove?.from && currentMove?.to
       ? { from: currentMove.from, to: currentMove.to }
-      : null;
+      : parseUciMove(move?.uciMove);
+
   const isBrilliantPosition = hasNavHistory
     ? moveIndex === brilliantIndex && brilliantIndex >= 0
-    : Boolean(move.fenAfterMove || move.fenBeforeMove);
+    : Boolean(move?.fenAfterMove || move?.fenBeforeMove);
 
-  const topPlayer = whiteOnBottom
-    ? {
-        color: 'black',
-        name: move.blackName,
-        username: move.blackUsername,
-        rating: move.blackRating ?? (move.turn === 'black' ? move.playerRating : null),
-      }
-    : {
-        color: 'white',
-        name: move.whiteName,
-        username: move.whiteUsername,
-        rating: move.whiteRating ?? (move.turn === 'white' ? move.playerRating : null),
+  const lastMoveStyles = useMemo(() => {
+    if (!boardLastMove?.from || !boardLastMove?.to) return {};
+    if (isBrilliantPosition) {
+      return {
+        [boardLastMove.from]: { background: 'rgba(212, 167, 44, 0.78)' },
+        [boardLastMove.to]: { background: 'rgba(212, 167, 44, 0.95)' },
       };
+    }
+    return {
+      [boardLastMove.from]: { background: 'rgba(235, 236, 59, 0.72)' },
+      [boardLastMove.to]: { background: 'rgba(235, 236, 59, 0.85)' },
+    };
+  }, [boardLastMove?.from, boardLastMove?.to, isBrilliantPosition]);
 
-  const bottomPlayer = whiteOnBottom
-    ? {
-        color: 'white',
-        name: move.whiteName,
-        username: move.whiteUsername,
-        rating: move.whiteRating ?? (move.turn === 'white' ? move.playerRating : null),
-      }
-    : {
-        color: 'black',
-        name: move.blackName,
-        username: move.blackUsername,
-        rating: move.blackRating ?? (move.turn === 'black' ? move.playerRating : null),
-      };
-
-  const gameAccuracy =
-    move.whiteAccuracy != null || move.blackAccuracy != null
-      ? `W ${formatAccuracy(move.whiteAccuracy)} · B ${formatAccuracy(move.blackAccuracy)}`
-      : '—';
+  if (!move) return null;
 
   const statusLabel =
     moveIndex < 0
       ? 'Start'
-      : `Move ${moveIndex + 1} of ${navMoves.length}${
-          isBrilliantPosition ? ' · Brilliant move' : ''
-        }`;
+      : `Move ${moveIndex + 1}/${navMoves.length}${isBrilliantPosition ? ' · Brilliant' : ''}`;
+
+  const moveBtnClass = (index) => {
+    if (index == null) return 'brilliant-hist-btn brilliant-hist-btn--empty';
+    const classes = ['brilliant-hist-btn'];
+    if (index === moveIndex) classes.push('brilliant-hist-btn--active');
+    if (index === brilliantIndex) classes.push('brilliant-hist-btn--brilliant');
+    return classes.join(' ');
+  };
+
+  const lineClass = (pair) => {
+    const classes = ['brilliant-hist-line'];
+    if (pair.whiteIndex === moveIndex || pair.blackIndex === moveIndex) {
+      classes.push('brilliant-hist-line--active');
+    }
+    if (pair.whiteIndex === brilliantIndex || pair.blackIndex === brilliantIndex) {
+      classes.push('brilliant-hist-line--brilliant');
+    }
+    return classes.join(' ');
+  };
+
+  const panelHeight = boardWidth + TOOLBAR_H;
 
   return (
-    <div className="view-brilliant-move-layout">
-      <aside className="view-brilliant-move-side-box view-brilliant-move-side-box--info">
-        <header className="view-brilliant-move-side-header">Move Info</header>
-        <div className="view-brilliant-move-info-list">
-          <InfoRow label="Move" value={move.sanMove} highlight />
-          <InfoRow label="Class" value={move.classification} />
-          <InfoRow label="Type" value={move.sacType} />
-          <InfoRow label="Turn" value={move.turn === 'white' ? 'White' : 'Black'} />
-          <InfoRow label="Match" value={move.players} />
-          <InfoRow label="Player Accuracy" value={formatAccuracy(move.playerAccuracy)} />
-          <InfoRow label="Game Accuracy" value={gameAccuracy} />
-          <InfoRow label="Brilliant" value={move.isBrilliant ? 'Yes' : 'No'} />
+    <div className="brilliant-board-area" ref={areaRef}>
+      <div className="brilliant-board-panel" style={{ width: boardWidth }}>
+        <div className="brilliant-board-toolbar">
+          <span>
+            {isBrilliantPosition ? `Brilliant · ${move.sanMove}` : statusLabel}
+          </span>
         </div>
-        {move.gameUrl && (
-          <a
-            href={move.gameUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="view-brilliant-move-game-link"
-          >
-            Open game on Chess.com
-          </a>
-        )}
-      </aside>
-
-      <div className="view-brilliant-move-main">
-        <div className="view-brilliant-move-player-bar view-brilliant-move-player-bar--top">
-          <PlayerBarContent {...topPlayer} />
-          <span className="view-brilliant-move-bar-meta">{move.playedDate}</span>
-        </div>
-
-        <div className="view-brilliant-move-board-stage">
+        <div className="brilliant-board-frame" style={{ width: boardWidth, height: boardWidth }}>
           {boardFen ? (
-            <div className="view-brilliant-move-board-wrap" ref={boardWrapRef}>
-              <FenHoverPreview
-                fen={boardFen}
-                uciMove={!hasNavHistory ? move.uciMove : undefined}
-                lastMove={boardLastMove}
-                orientation={orientation}
-                boardId="view-brilliant-move-board"
-                boardSize={boardSize}
-                brilliantHighlight={isBrilliantPosition}
-                showBoardNotation
-              />
-            </div>
+            <Chessboard
+              id="BrilliantMoveBoard"
+              position={boardFen}
+              boardOrientation={orientation}
+              boardWidth={boardWidth}
+              arePiecesDraggable={false}
+              showBoardNotation
+              customSquare={renderSquare}
+              customNotationStyle={NOTATION_STYLE}
+              customDarkSquareStyle={{ backgroundColor: '#B58863' }}
+              customLightSquareStyle={{ backgroundColor: '#F0D9B5' }}
+              customSquareStyles={lastMoveStyles}
+              animationDuration={150}
+            />
           ) : (
-            <p className="view-brilliant-move-no-fen">No position available for this move.</p>
+            <p className="brilliant-board-empty">No position available.</p>
           )}
-        </div>
-
-        <div className="view-brilliant-move-player-bar view-brilliant-move-player-bar--bottom">
-          <PlayerBarContent {...bottomPlayer} />
-          <span className="view-brilliant-move-bar-meta">{move.timeControl}</span>
         </div>
       </div>
 
-      <BrilliantMoveHistoryPanel
-        moves={navMoves}
-        loading={historyLoading}
-        moveIndex={moveIndex}
-        brilliantIndex={brilliantIndex}
-        onSelectMove={goToMove}
-        onGoToStart={() => goToMove(-1)}
-        onGoToPrevious={() => goToMove(moveIndex - 1)}
-        onGoToNext={() => goToMove(moveIndex + 1)}
-        onGoToEnd={() => goToMove(navMoves.length - 1)}
-        statusLabel={statusLabel}
-        canNavigate={navMoves.length > 0}
-        prevGameDisabled={prevGameId == null}
-        nextGameDisabled={nextGameId == null}
-        gamePositionLabel={gamePositionLabel}
-        onPrevGame={onPrevGame}
-        onNextGame={onNextGame}
-      />
+      <aside className="brilliant-hist" style={{ height: panelHeight }} aria-label="Move history">
+        <header className="brilliant-hist-head">
+          <span>Moves</span>
+          <span className="brilliant-hist-head-meta">{statusLabel}</span>
+        </header>
+        <div className="brilliant-hist-list" ref={scrollRef}>
+          {historyLoading ? (
+            <p className="brilliant-hist-empty">Loading…</p>
+          ) : !pairs.length ? (
+            <p className="brilliant-hist-empty">No moves.</p>
+          ) : (
+            pairs.map((pair) => (
+              <div key={pair.number} className={lineClass(pair)}>
+                <span className="brilliant-hist-num">{pair.number}.</span>
+                <button
+                  type="button"
+                  id={`brilliant-move-${pair.whiteIndex}`}
+                  className={moveBtnClass(pair.whiteIndex)}
+                  onClick={() => goToMove(pair.whiteIndex)}
+                >
+                  {pair.white?.san || ''}
+                </button>
+                <button
+                  type="button"
+                  id={
+                    pair.blackIndex != null ? `brilliant-move-${pair.blackIndex}` : undefined
+                  }
+                  className={moveBtnClass(pair.blackIndex)}
+                  onClick={() => pair.blackIndex != null && goToMove(pair.blackIndex)}
+                  disabled={pair.blackIndex == null}
+                >
+                  {pair.black?.san || ''}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="brilliant-hist-footer">
+          <div className="brilliant-hist-controls">
+            <button type="button" onClick={() => goToMove(-1)} disabled={!navMoves.length || moveIndex < 0} aria-label="Start">
+              <FiChevronsLeft />
+            </button>
+            <button type="button" onClick={() => goToMove(moveIndex - 1)} disabled={!navMoves.length || moveIndex < 0} aria-label="Previous">
+              <FiChevronLeft />
+            </button>
+            <button type="button" onClick={() => goToMove(moveIndex + 1)} disabled={!navMoves.length || moveIndex >= navMoves.length - 1} aria-label="Next">
+              <FiChevronRight />
+            </button>
+            <button type="button" onClick={() => goToMove(navMoves.length - 1)} disabled={!navMoves.length || moveIndex >= navMoves.length - 1} aria-label="End">
+              <FiChevronsRight />
+            </button>
+          </div>
+          <div className="brilliant-hist-browse">
+            <button type="button" onClick={onPrevGame} disabled={prevGameId == null}>
+              Prev game
+            </button>
+            <span>{gamePositionLabel || ''}</span>
+            <button type="button" onClick={onNextGame} disabled={nextGameId == null}>
+              Next game
+            </button>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

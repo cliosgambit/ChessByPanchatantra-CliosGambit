@@ -47,6 +47,36 @@
   justify-content: flex-end;
 }
 
+.students-sync-all {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.students-sync-meta {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--stu-muted);
+  white-space: nowrap;
+}
+
+.students-sync-meta--row {
+  display: block;
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.students-sync-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  vertical-align: middle;
+}
+
 .students-muted {
   margin: 0;
   color: var(--stu-muted);
@@ -755,6 +785,16 @@
   .students-header-actions .students-btn {
     flex: 1;
     justify-content: center;
+  }
+
+  .students-sync-all {
+    flex: 1;
+    align-items: stretch;
+  }
+
+  .students-sync-all .students-sync-meta {
+    text-align: center;
+    white-space: normal;
   }
 
   .students-filters {

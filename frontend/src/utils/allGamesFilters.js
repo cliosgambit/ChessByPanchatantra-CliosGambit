@@ -11,7 +11,8 @@ export const VALID_DAY_FILTER_KEYS = new Set(DAY_FILTER_OPTIONS.map((filter) => 
 
 export function resolveDayFilter(searchParams) {
   const day = searchParams.get('day');
-  return VALID_DAY_FILTER_KEYS.has(day) ? day : 'all';
+  // Default to today for a faster first paint on /all-games
+  return VALID_DAY_FILTER_KEYS.has(day) ? day : 'today';
 }
 
 export function dayFilterButtonLabel(filter, filterLabels) {

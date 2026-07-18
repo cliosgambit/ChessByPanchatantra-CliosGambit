@@ -8,12 +8,14 @@ import {
   FiGrid,
   FiList,
 } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 import {
   deleteLibraryStory,
   fetchLibraryStories,
 } from '../services/libraryService';
 import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import PaginationBar from '../components/common/PaginationBar';
+import { canManageContent } from '../utils/roles';
 import './Library.css';
 
 const ITEMS_PER_PAGE = 50;
@@ -22,9 +24,28 @@ const VIEW_KEY = 'libraryViewMode';
 const PREVIEW_ANIMATION_MS = 280;
 const PREVIEW_HIDE_DELAY_MS = 120;
 
+const USAGE_OPTIONS = [
+  { value: 'all', label: 'Both' },
+  { value: 'used', label: 'Used' },
+  { value: 'unused', label: 'Unused' },
+];
+
+function clampMenuPosition(x, y, menuWidth = 180, menuHeight = 140) {
+  const pad = 8;
+  const maxX = window.innerWidth - menuWidth - pad;
+  const maxY = window.innerHeight - menuHeight - pad;
+  return {
+    x: Math.max(pad, Math.min(x, maxX)),
+    y: Math.max(pad, Math.min(y, maxY)),
+  };
+}
+
 function Library() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManage = canManageContent(user?.role);
   const tableWrapRef = useRef(null);
+  const menuRef = useRef(null);
   const hideTimer = useRef(null);
 
   const [stories, setStories] = useState([]);
@@ -32,6 +53,7 @@ function Library() {
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState('');
+  const [usageFilter, setUsageFilter] = useState('all');
   const [viewMode, setViewMode] = useState(() => {
     try {
       const saved = localStorage.getItem(VIEW_KEY);
@@ -41,6 +63,7 @@ function Library() {
     }
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [contextMenu, setContextMenu] = useState(null);
 
   const [hoveredStory, setHoveredStory] = useState(null);
   const [previewMounted, setPreviewMounted] = useState(false);
@@ -72,6 +95,27 @@ function Library() {
     }
   }, [viewMode]);
 
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const close = (e) => {
+      if (menuRef.current?.contains(e.target)) return;
+      setContextMenu(null);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [contextMenu]);
+
   const clearTimers = useCallback(() => {
     clearTimeout(hideTimer.current);
   }, []);
@@ -91,7 +135,7 @@ function Library() {
 
   const handleRowHover = useCallback(
     (story, rowEl) => {
-      if (!story?.cover_image) {
+      if (contextMenu || !story?.cover_image) {
         clearTimers();
         setPreviewVisible(false);
         setPreviewMounted(false);
@@ -105,7 +149,7 @@ function Library() {
       setPreviewMounted(true);
       revealPreview();
     },
-    [clearTimers, updatePreviewPosition, revealPreview]
+    [clearTimers, updatePreviewPosition, revealPreview, contextMenu]
   );
 
   const scheduleHide = useCallback(() => {
@@ -135,14 +179,27 @@ function Library() {
     }
   }, [viewMode, clearTimers]);
 
+  const usageCounts = useMemo(() => {
+    let used = 0;
+    let unused = 0;
+    for (const story of stories) {
+      if (story.is_used) used += 1;
+      else unused += 1;
+    }
+    return { all: stories.length, used, unused };
+  }, [stories]);
+
   const filteredStories = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return stories;
     return stories.filter((story) => {
+      if (usageFilter === 'used' && !story.is_used) return false;
+      if (usageFilter === 'unused' && story.is_used) return false;
+      if (!q) return true;
       const haystack = [
         story.title,
         story.subheading,
         story.status,
+        story.is_used ? 'used' : 'unused',
         String(story.moral_count ?? ''),
         String(story.image_count ?? ''),
       ]
@@ -151,12 +208,11 @@ function Library() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [stories, search]);
+  }, [stories, search, usageFilter]);
 
-  // Reset page to 1 when search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, usageFilter]);
 
   const totalPages = Math.ceil(filteredStories.length / ITEMS_PER_PAGE);
   const paginatedStories = useMemo(() => {
@@ -164,7 +220,25 @@ function Library() {
     return filteredStories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredStories, currentPage]);
 
+  const openContextMenu = (e, story) => {
+    if (!canManage) return;
+    e.preventDefault();
+    e.stopPropagation();
+    clearTimers();
+    setPreviewVisible(false);
+    setPreviewMounted(false);
+    setHoveredStory(null);
+    const { x, y } = clampMenuPosition(e.clientX, e.clientY);
+    setContextMenu({ x, y, story });
+  };
+
+  const handleEdit = (story) => {
+    setContextMenu(null);
+    navigate(`/library/${story.id}`, { state: { edit: true } });
+  };
+
   const handleDelete = async (story) => {
+    setContextMenu(null);
     if (!window.confirm(`Delete story “${story.title}”?`)) return;
     setDeletingId(story.id);
     try {
@@ -193,9 +267,11 @@ function Library() {
             <h1>Library</h1>
             <p className="library-muted">Create and manage stories for CLIO.</p>
           </div>
-          <Link to="/library/new" className="library-btn library-btn--primary">
-            <FiPlus aria-hidden /> Add Story
-          </Link>
+          {canManage ? (
+            <Link to="/library/new" className="library-btn library-btn--primary">
+              <FiPlus aria-hidden /> Add Story
+            </Link>
+          ) : null}
         </header>
 
         <div className="library-toolbar">
@@ -209,6 +285,25 @@ function Library() {
               aria-label="Search stories"
             />
           </label>
+
+          <div className="library-usage-filter" role="group" aria-label="Usage filter">
+            {USAGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`library-usage-filter-btn${
+                  usageFilter === opt.value ? ' is-active' : ''
+                }`}
+                aria-pressed={usageFilter === opt.value}
+                onClick={() => setUsageFilter(opt.value)}
+              >
+                <span>{opt.label}</span>
+                <span className="library-usage-filter-count">
+                  {usageCounts[opt.value]}
+                </span>
+              </button>
+            ))}
+          </div>
 
           <div className="library-view-toggle" role="group" aria-label="View mode">
             <button
@@ -238,9 +333,11 @@ function Library() {
         <div className="library-empty">
           <h2>No stories yet</h2>
           <p>Add your first story to get started.</p>
-          <Link to="/library/new" className="library-btn library-btn--primary">
-            <FiPlus aria-hidden /> Add Story
-          </Link>
+          {canManage ? (
+            <Link to="/library/new" className="library-btn library-btn--primary">
+              <FiPlus aria-hidden /> Add Story
+            </Link>
+          ) : null}
         </div>
       )}
 
@@ -257,10 +354,13 @@ function Library() {
             {paginatedStories.map((story) => (
               <article
                 key={story.id}
-                className="library-card library-card--clickable"
+                className={`library-card library-card--clickable${
+                  contextMenu?.story?.id === story.id ? ' library-card--menu-open' : ''
+                }`}
                 role="link"
                 tabIndex={0}
                 onClick={() => openStory(story.id)}
+                onContextMenu={(e) => openContextMenu(e, story)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -281,35 +381,21 @@ function Library() {
                     <span className={`library-status library-status--${story.status}`}>
                       {story.status}
                     </span>
+                    <span
+                      className={`library-usage-badge${
+                        story.is_used
+                          ? ' library-usage-badge--used'
+                          : ' library-usage-badge--unused'
+                      }`}
+                    >
+                      {story.is_used ? 'Used' : 'Unused'}
+                    </span>
                     <span className="library-muted">
                       {story.moral_count || 0} morals · {story.image_count || 0} images
                     </span>
                   </div>
                   <h2>{story.title}</h2>
                   {story.subheading ? <p className="library-card-sub">{story.subheading}</p> : null}
-                  <div className="library-card-actions">
-                    <button
-                      type="button"
-                      className="library-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/library/${story.id}`, { state: { edit: true } });
-                      }}
-                    >
-                      <FiEdit2 aria-hidden /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="library-btn library-btn--danger"
-                      disabled={deletingId === story.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(story);
-                      }}
-                    >
-                      <FiTrash2 aria-hidden /> Delete
-                    </button>
-                  </div>
                 </div>
               </article>
             ))}
@@ -337,9 +423,9 @@ function Library() {
                   <th scope="col">Cover</th>
                   <th scope="col">Title</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Usage</th>
                   <th scope="col">Morals</th>
                   <th scope="col">Images</th>
-                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -350,9 +436,12 @@ function Library() {
                       key={story.id}
                       className={`library-table-row${
                         hoveredStory?.id === story.id && previewMounted ? ' is-previewing' : ''
+                      }${
+                        contextMenu?.story?.id === story.id ? ' is-menu-open' : ''
                       }`}
                       onMouseEnter={(e) => handleRowHover(story, e.currentTarget)}
                       onClick={() => openStory(story.id)}
+                      onContextMenu={(e) => openContextMenu(e, story)}
                     >
                       <td>{serialNumber}</td>
                       <td>
@@ -377,33 +466,19 @@ function Library() {
                           {story.status}
                         </span>
                       </td>
+                      <td>
+                        <span
+                          className={`library-usage-badge${
+                            story.is_used
+                              ? ' library-usage-badge--used'
+                              : ' library-usage-badge--unused'
+                          }`}
+                        >
+                          {story.is_used ? 'Used' : 'Unused'}
+                        </span>
+                      </td>
                       <td>{story.moral_count || 0}</td>
                       <td>{story.image_count || 0}</td>
-                      <td>
-                        <div className="library-table-actions">
-                          <button
-                            type="button"
-                            className="library-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/library/${story.id}`, { state: { edit: true } });
-                            }}
-                          >
-                            <FiEdit2 aria-hidden /> Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="library-btn library-btn--danger"
-                            disabled={deletingId === story.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(story);
-                            }}
-                          >
-                            <FiTrash2 aria-hidden /> Delete
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}
@@ -434,6 +509,35 @@ function Library() {
           />
         </>
       )}
+
+      {contextMenu ? (
+        <div
+          ref={menuRef}
+          className="library-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          role="menu"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <p className="library-context-menu-title">{contextMenu.story.title}</p>
+          <button
+            type="button"
+            className="library-context-menu-item"
+            role="menuitem"
+            onClick={() => handleEdit(contextMenu.story)}
+          >
+            <FiEdit2 aria-hidden /> Edit
+          </button>
+          <button
+            type="button"
+            className="library-context-menu-item library-context-menu-item--danger"
+            role="menuitem"
+            disabled={deletingId === contextMenu.story.id}
+            onClick={() => handleDelete(contextMenu.story)}
+          >
+            <FiTrash2 aria-hidden /> Delete
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

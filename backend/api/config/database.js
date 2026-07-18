@@ -5,6 +5,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { AsyncLocalStorage } = require('async_hooks');
 const { Mutex } = require('async-mutex');
 require('dotenv').config();
 
@@ -79,7 +80,12 @@ function translateSqliteToPostgres(sql) {
     `to_char(($1)::timestamptz, 'MM')`
   );
 
-  // Integer flag columns (rated, verified, …) — SQLite used 0/1, not boolean
+  // Integer flag columns (rated, verified, …) — SQLite used 0/1, not boolean.
+  // Rewrite IS TRUE / IS FALSE first — a bare TRUE→1 pass would produce invalid "IS 1".
+  s = s.replace(/\bIS\s+NOT\s+TRUE\b/gi, '<> 1');
+  s = s.replace(/\bIS\s+NOT\s+FALSE\b/gi, '<> 0');
+  s = s.replace(/\bIS\s+TRUE\b/gi, '= 1');
+  s = s.replace(/\bIS\s+FALSE\b/gi, '= 0');
   s = s.replace(/\b=\s*TRUE\b/gi, '= 1');
   s = s.replace(/\b=\s*FALSE\b/gi, '= 0');
   s = s.replace(/\bTRUE\b/g, '1');
@@ -144,11 +150,16 @@ async function ensurePgReady() {
   return pgReady;
 }
 
-/** Held client while app uses BEGIN/COMMIT/ROLLBACK across pooled connections. */
-let pgTxClient = null;
-let pgTxDepth = 0;
-const pgTxMutex = new Mutex();
-let pgTxRelease = null;
+/**
+ * Per-async-chain Postgres transaction client.
+ * Never route unrelated queries onto an open TX — that caused 25P02 cascades
+ * when workers / HTTP handlers hitchhiked on brilliance sync transactions.
+ */
+const pgTxAls = new AsyncLocalStorage();
+
+function getPgTxStore() {
+  return pgTxAls.getStore() || null;
+}
 
 async function runOnPg(clientOrPool, sql, params = []) {
   const values = (params || []).map(serializePgParam);
@@ -159,7 +170,11 @@ async function runOnPg(clientOrPool, sql, params = []) {
       rowCount: result.rowCount ?? result.rows.length,
     };
   } catch (err) {
+    // Unique-violation retry is only safe outside a transaction. Inside a TX a
+    // failed statement aborts the whole transaction (25P02 on any retry).
+    const inTx = Boolean(getPgTxStore());
     if (
+      !inTx &&
       /duplicate key|unique constraint/i.test(err.message || '') &&
       /^\s*INSERT\s+INTO\b/i.test(sql) &&
       !/\bON\s+CONFLICT\b/i.test(sql)
@@ -180,6 +195,18 @@ async function runOnPg(clientOrPool, sql, params = []) {
   }
 }
 
+async function releasePgTxClient(store) {
+  if (!store?.client) return;
+  const client = store.client;
+  store.client = null;
+  store.depth = 0;
+  try {
+    client.release();
+  } catch {
+    /* ignore */
+  }
+}
+
 async function queryPostgres(text, params = []) {
   await ensurePgReady();
   const sql = translateSqliteToPostgres(text);
@@ -190,55 +217,59 @@ async function queryPostgres(text, params = []) {
       : null;
 
   if (txnCmd === 'BEGIN') {
-    if (pgTxDepth === 0) {
-      pgTxRelease = await pgTxMutex.acquire();
-      pgTxClient = await getPool().connect();
-      await pgTxClient.query('BEGIN');
-      pgTxDepth = 1;
-    } else {
-      await pgTxClient.query(`SAVEPOINT nest_${pgTxDepth}`);
-      pgTxDepth += 1;
+    const store = getPgTxStore();
+    if (store?.client) {
+      await store.client.query(`SAVEPOINT nest_${store.depth}`);
+      store.depth += 1;
+      return { rows: [], rowCount: 0 };
     }
+    const client = await getPool().connect();
+    try {
+      await client.query('BEGIN');
+    } catch (err) {
+      try {
+        client.release();
+      } catch {
+        /* ignore */
+      }
+      throw err;
+    }
+    // Bind this async chain only — concurrent workers keep using the pool.
+    pgTxAls.enterWith({ client, depth: 1 });
     return { rows: [], rowCount: 0 };
   }
 
   if (txnCmd === 'COMMIT') {
-    if (!pgTxClient || pgTxDepth <= 0) return { rows: [], rowCount: 0 };
-    pgTxDepth -= 1;
-    if (pgTxDepth === 0) {
-      await pgTxClient.query('COMMIT');
-      pgTxClient.release();
-      pgTxClient = null;
-      if (pgTxRelease) {
-        pgTxRelease();
-        pgTxRelease = null;
+    const store = getPgTxStore();
+    if (!store?.client || store.depth <= 0) return { rows: [], rowCount: 0 };
+    store.depth -= 1;
+    if (store.depth === 0) {
+      try {
+        await store.client.query('COMMIT');
+      } finally {
+        await releasePgTxClient(store);
       }
     } else {
-      await pgTxClient.query(`RELEASE SAVEPOINT nest_${pgTxDepth}`);
+      await store.client.query(`RELEASE SAVEPOINT nest_${store.depth}`);
     }
     return { rows: [], rowCount: 0 };
   }
 
   if (txnCmd === 'ROLLBACK') {
-    if (!pgTxClient) return { rows: [], rowCount: 0 };
-    if (pgTxDepth <= 1) {
+    const store = getPgTxStore();
+    if (!store?.client) return { rows: [], rowCount: 0 };
+    if (store.depth <= 1) {
       try {
-        await pgTxClient.query('ROLLBACK');
+        await store.client.query('ROLLBACK');
       } catch {
         /* ignore */
       }
-      pgTxClient.release();
-      pgTxClient = null;
-      pgTxDepth = 0;
-      if (pgTxRelease) {
-        pgTxRelease();
-        pgTxRelease = null;
-      }
+      await releasePgTxClient(store);
     } else {
-      pgTxDepth -= 1;
+      store.depth -= 1;
       try {
-        await pgTxClient.query(`ROLLBACK TO SAVEPOINT nest_${pgTxDepth}`);
-        await pgTxClient.query(`RELEASE SAVEPOINT nest_${pgTxDepth}`);
+        await store.client.query(`ROLLBACK TO SAVEPOINT nest_${store.depth}`);
+        await store.client.query(`RELEASE SAVEPOINT nest_${store.depth}`);
       } catch {
         /* ignore */
       }
@@ -246,23 +277,55 @@ async function queryPostgres(text, params = []) {
     return { rows: [], rowCount: 0 };
   }
 
-  const runner = pgTxClient || getPool();
+  const store = getPgTxStore();
+  const runner = store?.client || getPool();
   return runOnPg(runner, sql, params);
 }
 
 async function withTransactionPostgres(fn) {
-  await queryPostgres('BEGIN');
+  const existing = getPgTxStore();
+  if (existing?.client) {
+    await existing.client.query(`SAVEPOINT nest_${existing.depth}`);
+    existing.depth += 1;
+    try {
+      const result = await fn();
+      existing.depth -= 1;
+      await existing.client.query(`RELEASE SAVEPOINT nest_${existing.depth}`);
+      return result;
+    } catch (err) {
+      existing.depth -= 1;
+      try {
+        await existing.client.query(`ROLLBACK TO SAVEPOINT nest_${existing.depth}`);
+        await existing.client.query(`RELEASE SAVEPOINT nest_${existing.depth}`);
+      } catch {
+        /* ignore */
+      }
+      throw err;
+    }
+  }
+
+  const client = await getPool().connect();
+  const store = { client, depth: 1 };
   try {
-    const result = await fn();
-    await queryPostgres('COMMIT');
+    await client.query('BEGIN');
+    const result = await pgTxAls.run(store, fn);
+    await client.query('COMMIT');
     return result;
   } catch (err) {
     try {
-      await queryPostgres('ROLLBACK');
+      await client.query('ROLLBACK');
     } catch {
       /* ignore */
     }
     throw err;
+  } finally {
+    store.client = null;
+    store.depth = 0;
+    try {
+      client.release();
+    } catch {
+      /* ignore */
+    }
   }
 }
 

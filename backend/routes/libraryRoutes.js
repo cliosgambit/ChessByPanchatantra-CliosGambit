@@ -8,7 +8,7 @@ const {
 
 const router = express.Router();
 
-router.use('/library', authenticate, authorizeRoles('admin'));
+router.use('/library', authenticate, authorizeRoles('admin', 'coach'));
 
 /** POST /api/library/upload — save image(s) under frontend/public/story_images */
 router.post(
@@ -170,7 +170,8 @@ const LIBRARY_STORY_LIST_SQL = `
          s.created_by, s.created_at, s.updated_at,
          COALESCE(s.cover_image, fi.image_url) AS cover_image_resolved,
          COALESCE(ic.cnt, 0)::int AS image_count,
-         COALESCE(mc.cnt, 0)::int AS moral_count
+         COALESCE(mc.cnt, 0)::int AS moral_count,
+         CASE WHEN COALESCE(uc.cnt, 0) > 0 THEN 1 ELSE 0 END AS is_used
   FROM Stories s
   LEFT JOIN LATERAL (
     SELECT si.image_url
@@ -189,6 +190,11 @@ const LIBRARY_STORY_LIST_SQL = `
     FROM story_moral_mapping
     GROUP BY story_id
   ) mc ON mc.story_id = s.id
+  LEFT JOIN (
+    SELECT story_id, COUNT(*)::int AS cnt
+    FROM module_stories
+    GROUP BY story_id
+  ) uc ON uc.story_id = s.id
   ORDER BY s.updated_at DESC, s.id DESC`;
 
 function mapLibraryStoryListRow(row) {
@@ -203,6 +209,7 @@ function mapLibraryStoryListRow(row) {
     updated_at: row.updated_at,
     image_count: Number(row.image_count) || 0,
     moral_count: Number(row.moral_count) || 0,
+    is_used: Boolean(Number(row.is_used)),
   };
 }
 

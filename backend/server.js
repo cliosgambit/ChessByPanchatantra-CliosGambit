@@ -228,6 +228,19 @@ const startServerAndServices = async () => {
 
   // Brilliance results sync into app SQLite during normal analysis (no cloud backfill).
 
+  // Continuous Chess.com sync for all tracked students (startup + every 5 minutes).
+  try {
+    const chessComSyncService = require('./api/services/chessComSyncService');
+    chessComSyncService.startAutoSyncScheduler({
+      intervalMs: 60 * 1000,
+      runOnStart: true,
+    });
+  } catch (syncErr) {
+    console.warn('⚠️ Chess.com auto-sync scheduler failed to start:', syncErr.message);
+  }
+
+  // No brilliance / moves-backfill workers — opening a game runs review analysis on demand.
+
   // Never auto-open browser tabs — nodemon restarts were spawning a new tab on every reload.
   // Use frontend dev server (npm start in /frontend → :3000) for daily development.
   // Set OPEN_BROWSER=true only if you explicitly want one tab opened on backend start.

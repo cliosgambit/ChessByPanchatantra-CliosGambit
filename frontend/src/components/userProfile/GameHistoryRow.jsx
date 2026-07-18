@@ -32,6 +32,8 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover, extraColumn }) 
   const showAccuracy = game.hasAccuracy;
   const gameId = getChessComGameId(game);
   const canReview = Boolean(gameId && onSelect);
+  const isReviewed = game.brillianceRun?.stage4Status === 'completed';
+  const stage4PassedCount = Number(game.brillianceRun?.stage4BrilliantCount) || 0;
 
   const handleMouseEnter = () => {
     if (onRowHover && gameId) {
@@ -102,6 +104,13 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover, extraColumn }) 
             <span>{game.whiteAccuracy}</span>
             <span>{game.blackAccuracy}</span>
           </div>
+        ) : isReviewed ? (
+          <span
+            className="chess-stage4-passed"
+            title={`${stage4PassedCount} Stage 4 passed move${stage4PassedCount === 1 ? '' : 's'}`}
+          >
+            {stage4PassedCount}
+          </span>
         ) : canReview ? (
           <span className="chess-game-review-btn" aria-hidden="true">
             Review

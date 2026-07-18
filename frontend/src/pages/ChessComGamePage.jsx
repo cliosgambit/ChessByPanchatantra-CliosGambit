@@ -89,11 +89,58 @@ function ChessComGamePage() {
     return sanitizeChessComPgn(game.pgn);
   }, [game?.pgn]);
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Students', to: '/students' },
+    {
+      label: profileUsername || 'Profile',
+      to: `/players/${encodeURIComponent(profileUsername)}`,
+    },
+    { label: 'Game' },
+  ];
+
   if (loading && !game) {
     return (
-      <div className="chess-game-page">
-        <div className="chess-game-page-inner">
-          <div className="chess-game-page-empty">Loading game…</div>
+      <div className="chess-game-page chess-game-page--test">
+        <div className="chess-game-page-inner chess-game-page-inner--test">
+          <header className="chess-game-page-topbar">
+            <PageBreadcrumb items={breadcrumbItems} />
+            <div className="chess-game-page-meta chess-game-page-meta--skeleton" aria-hidden>
+              <span className="chess-game-skel-chip" />
+              <span className="chess-game-skel-chip chess-game-skel-chip--short" />
+            </div>
+          </header>
+
+          <div className="chess-game-loading" role="status" aria-live="polite" aria-busy="true">
+            <div className="chess-game-loading-layout">
+              <aside className="chess-game-loading-panel chess-game-loading-panel--moves">
+                <div className="chess-game-skel-line chess-game-skel-line--title" />
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="chess-game-skel-line" />
+                ))}
+              </aside>
+
+              <section className="chess-game-loading-board-col">
+                <div className="chess-game-skel-player" />
+                <div className="chess-game-loading-board">
+                  <div className="chess-game-loading-overlay">
+                    <span className="chess-game-loading-spinner" aria-hidden />
+                    <p className="chess-game-loading-title">Loading game</p>
+                    <p className="chess-game-loading-sub">Fetching moves and analysis…</p>
+                  </div>
+                </div>
+                <div className="chess-game-skel-player" />
+              </section>
+
+              <aside className="chess-game-loading-panel">
+                <div className="chess-game-skel-line chess-game-skel-line--title" />
+                <div className="chess-game-skel-block" />
+                <div className="chess-game-skel-line" />
+                <div className="chess-game-skel-line chess-game-skel-line--medium" />
+                <div className="chess-game-skel-block chess-game-skel-block--tall" />
+              </aside>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -101,22 +148,12 @@ function ChessComGamePage() {
 
   if (!game || !initialPgn) {
     return (
-      <div className="chess-game-page">
-        <div className="chess-game-page-inner">
+      <div className="chess-game-page chess-game-page--test">
+        <div className="chess-game-page-inner chess-game-page-inner--test">
           <header className="chess-game-page-topbar">
-            <PageBreadcrumb
-              items={[
-                { label: 'Dashboard', to: '/dashboard' },
-                { label: 'Students', to: '/students' },
-                {
-                  label: profileUsername || 'Profile',
-                  to: `/players/${encodeURIComponent(profileUsername)}/new`,
-                },
-                { label: 'Game' },
-              ]}
-            />
+            <PageBreadcrumb items={breadcrumbItems} />
           </header>
-          <div className="chess-game-page-empty">
+          <div className="chess-game-page-empty chess-game-page-empty--light">
             {error || 'Game data not found. Sync games from the player profile first.'}
           </div>
         </div>
@@ -136,7 +173,7 @@ function ChessComGamePage() {
               { label: 'Students', to: '/students' },
               {
                 label: profileUsername || 'Profile',
-                to: `/players/${encodeURIComponent(profileUsername)}/new`,
+                to: `/players/${encodeURIComponent(profileUsername)}`,
               },
               { label: 'Game' },
             ]}

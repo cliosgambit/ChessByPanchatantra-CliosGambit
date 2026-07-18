@@ -18,14 +18,30 @@ function authenticate(req, res, next) {
   }
 }
 
+function normalizeRole(role) {
+  return String(role || '').trim().toLowerCase();
+}
+
+/** True only for admin. */
+function isAdmin(role) {
+  return normalizeRole(role) === 'admin';
+}
+
+/** Admin + coach content management (not tables/settings). */
+function canManageContent(role) {
+  const r = normalizeRole(role);
+  return r === 'admin' || r === 'coach';
+}
+
 function authorizeRoles(...roles) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required.' });
     }
 
-    const role = (req.user.role || '').toLowerCase();
-    if (role === 'admin' || roles.includes(role)) {
+    const role = normalizeRole(req.user.role);
+    const allowed = roles.map((r) => String(r).toLowerCase());
+    if (allowed.includes(role)) {
       return next();
     }
 
@@ -33,4 +49,10 @@ function authorizeRoles(...roles) {
   };
 }
 
-module.exports = { authenticate, authorizeRoles };
+module.exports = {
+  authenticate,
+  authorizeRoles,
+  isAdmin,
+  canManageContent,
+  normalizeRole,
+};

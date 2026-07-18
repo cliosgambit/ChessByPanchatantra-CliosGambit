@@ -56,6 +56,18 @@ function matchesQuery(haystacks, query) {
   );
 }
 
+function formatLastSync(value) {
+  if (!value) return 'Never synced';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'Never synced';
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function Students() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('students'); // 'students' | 'batches'
@@ -96,6 +108,26 @@ function Students() {
       setLoading(false);
     }
   }, []);
+
+  const refreshStudentsQuiet = useCallback(async () => {
+    try {
+      const studentsData = await fetchStudents();
+      setStudents(studentsData.students || []);
+    } catch {
+      /* keep existing rows if refresh fails */
+    }
+  }, []);
+
+  const latestSyncAt = useMemo(() => {
+    let latest = null;
+    for (const s of students) {
+      if (!s?.chess_last_synced_at) continue;
+      const t = new Date(s.chess_last_synced_at).getTime();
+      if (Number.isNaN(t)) continue;
+      if (latest == null || t > latest) latest = t;
+    }
+    return latest != null ? new Date(latest).toISOString() : null;
+  }, [students]);
 
   const loadBatches = useCallback(async () => {
     setLoading(true);
@@ -300,14 +332,14 @@ function Students() {
     }
   };
 
-  const openChessReport = (student) => {
+  const openChessProfile = (student) => {
     const username = String(student?.chess_com_id || '').trim();
     if (!username) {
-      setError('Add a Chess.com ID before viewing the report.');
+      setError('Add a Chess.com ID before viewing the profile.');
       return;
     }
-    navigate(`/players/${encodeURIComponent(username)}/new`, {
-      state: { from: '/students', fromLabel: 'Back to Students', tab: 'report' },
+    navigate(`/players/${encodeURIComponent(username)}`, {
+      state: { from: '/students', fromLabel: 'Back to Students' },
     });
   };
 
@@ -328,6 +360,7 @@ function Students() {
             `${result.archivesFetched ?? 0} month(s), ${result.gamesUpserted ?? 0} games` +
             (result.durationMs != null ? ` · ${Math.round(result.durationMs / 1000)}s` : '')
       );
+      await refreshStudentsQuiet();
     } catch (err) {
       setError(err.message || 'Sync all failed.');
     } finally {
@@ -352,6 +385,7 @@ function Students() {
           ` · ${result.gamesUpserted ?? 0} new games` +
           (result.totalGamesInDb != null ? ` · ${result.totalGamesInDb} total in DB` : '')
       );
+      await refreshStudentsQuiet();
     } catch (err) {
       setError(err.message || `Sync failed for ${username}.`);
     } finally {
@@ -414,18 +448,23 @@ function Students() {
           <div className="students-header-actions">
             {tab === 'students' ? (
               <>
-                <button
-                  type="button"
-                  className="students-btn"
-                  onClick={handleSyncAll}
-                  disabled={busy || syncingAll || loading}
-                >
-                  <FiRefreshCw
-                    aria-hidden
-                    className={syncingAll ? 'students-spin' : undefined}
-                  />
-                  {syncingAll ? 'Syncing…' : 'Sync all'}
-                </button>
+                <div className="students-sync-all">
+                  <button
+                    type="button"
+                    className="students-btn"
+                    onClick={handleSyncAll}
+                    disabled={busy || syncingAll || loading}
+                  >
+                    <FiRefreshCw
+                      aria-hidden
+                      className={syncingAll ? 'students-spin' : undefined}
+                    />
+                    {syncingAll ? 'Syncing…' : 'Sync all'}
+                  </button>
+                  <span className="students-sync-meta" title={latestSyncAt || undefined}>
+                    Last sync · {formatLastSync(latestSyncAt)}
+                  </span>
+                </div>
                 <button
                   type="button"
                   className="students-btn students-btn--primary"
@@ -642,7 +681,7 @@ function Students() {
                       key={s.id}
                       className={s.chess_com_id ? 'students-row--clickable' : ''}
                       onClick={() => {
-                        if (s.chess_com_id) openChessReport(s);
+                        if (s.chess_com_id) openChessProfile(s);
                       }}
                     >
                       <td>
@@ -688,24 +727,35 @@ function Students() {
                         <button
                           type="button"
                           className="students-icon-btn"
-                          title="Chess.com report"
-                          onClick={() => openChessReport(s)}
+                          title="Chess.com profile"
+                          onClick={() => openChessProfile(s)}
                           disabled={busy || !s.chess_com_id}
                         >
                           <FiEye aria-hidden />
                         </button>
-                        <button
-                          type="button"
-                          className="students-icon-btn"
-                          title="Sync Chess.com"
-                          onClick={() => handleSync(s)}
-                          disabled={busy || !s.chess_com_id || syncingId === s.id}
-                        >
-                          <FiRefreshCw
-                            aria-hidden
-                            className={syncingId === s.id ? 'students-spin' : undefined}
-                          />
-                        </button>
+                        <div className="students-sync-cell">
+                          <button
+                            type="button"
+                            className="students-icon-btn"
+                            title={
+                              s.chess_com_id
+                                ? `Sync Chess.com · Last sync ${formatLastSync(s.chess_last_synced_at)}`
+                                : 'Add a Chess.com ID to sync'
+                            }
+                            onClick={() => handleSync(s)}
+                            disabled={busy || !s.chess_com_id || syncingId === s.id}
+                          >
+                            <FiRefreshCw
+                              aria-hidden
+                              className={syncingId === s.id ? 'students-spin' : undefined}
+                            />
+                          </button>
+                          {s.chess_com_id ? (
+                            <span className="students-sync-meta students-sync-meta--row">
+                              {formatLastSync(s.chess_last_synced_at)}
+                            </span>
+                          ) : null}
+                        </div>
                         <button
                           type="button"
                           className="students-icon-btn"

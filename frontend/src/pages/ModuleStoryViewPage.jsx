@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiChevronLeft, FiChevronRight, FiEdit2 } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchChapterStory } from '../services/modulesService';
 import './LibraryStoryView.css';
@@ -17,8 +16,6 @@ function imageUrlsFromStory(story) {
 function ModuleStoryViewPage() {
   const { moduleId, chapterId, storyId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
 
   const [story, setStory] = useState(null);
   const [chapter, setChapter] = useState(null);
@@ -128,23 +125,6 @@ function ModuleStoryViewPage() {
             <PageBreadcrumb
               items={[...breadcrumbItems, { label: story.title || 'Story' }]}
             />
-            {isAdmin ? (
-              <button
-                type="button"
-                className="story-view-edit"
-                onClick={() =>
-                  navigate(`/library/${story.id}`, {
-                    state: {
-                      edit: true,
-                      from: storyPath,
-                      fromLabel: 'Back to Story',
-                    },
-                  })
-                }
-              >
-                <FiEdit2 aria-hidden /> Edit
-              </button>
-            ) : null}
           </div>
 
           <h1>{story.title}</h1>

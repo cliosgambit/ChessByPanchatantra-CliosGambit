@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { IoFlame } from 'react-icons/io5';
-import { FiCheck, FiX } from 'react-icons/fi';
 import { fetchChessComWinStreaksFromDb } from '../../services/chessComDbService';
+import WinStreakBadges from './WinStreakBadges';
+import './ChessComProfilePage.css';
 
 const STREAK_VARIANTS = {
   yesterday: {
@@ -32,39 +33,6 @@ function StreakCard({ label, value, meta, emptyHint, variant = 'yesterday' }) {
         </span>
       </div>
       <div className="chess-win-streak-meta">{showEmpty ? emptyHint : meta}</div>
-    </div>
-  );
-}
-
-function MilestoneChips({ milestones = [], emptyLabel }) {
-  if (!milestones.length) {
-    return <div className="chess-streak-milestones-empty">{emptyLabel}</div>;
-  }
-
-  return (
-    <div className="chess-streak-milestones" role="list" aria-label="Win streak milestones">
-      {milestones.map((m) => (
-        <span
-          key={m.length}
-          role="listitem"
-          className={`chess-streak-milestone${m.achieved ? ' chess-streak-milestone--achieved' : ''}`}
-          title={
-            m.achieved
-              ? `Achieved ${m.label}${m.times > 1 ? ` (${m.times}×)` : ''}`
-              : `Not yet: ${m.label}`
-          }
-        >
-          {m.achieved ? (
-            <FiCheck className="chess-streak-milestone-icon" aria-hidden="true" />
-          ) : (
-            <FiX className="chess-streak-milestone-icon" aria-hidden="true" />
-          )}
-          <span className="chess-streak-milestone-label">{m.length} in a row</span>
-          {m.achieved && m.times > 0 ? (
-            <span className="chess-streak-milestone-times">{m.times}×</span>
-          ) : null}
-        </span>
-      ))}
     </div>
   );
 }
@@ -165,8 +133,7 @@ function ScopeSection({ title, scope, variant }) {
       </div>
 
       <div className="chess-streak-block">
-        <div className="chess-streak-block-label">Streak achievements</div>
-        <MilestoneChips
+        <WinStreakBadges
           milestones={scope?.milestones || []}
           emptyLabel="No streak data yet."
         />

@@ -338,6 +338,9 @@ function mapDbMoveRow(row) {
     moveNumber: row.move_number,
     color: row.color,
     san: row.san,
+    uci: row.uci || (row.from_square && row.to_square
+      ? `${row.from_square}${row.to_square}${row.promotion || ''}`
+      : null),
     from: row.from_square,
     to: row.to_square,
     piece: row.piece,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../AppContext';
+import { isAdmin } from '../utils/roles';
 
 export const useAccessControl = () => {
   const { user } = useAuth();
@@ -34,19 +35,19 @@ export const useAccessControl = () => {
   }, [user]);
 
   const hasModuleAccess = (moduleId) => {
-    if (!user || user.role === 'admin') return true;
+    if (!user || isAdmin(user.role)) return true;
     if (!userAccess) return false;
     return userAccess.mod_access && userAccess.mod_access.includes(moduleId);
   };
 
   const hasChapterAccess = (chapterId) => {
-    if (!user || user.role === 'admin') return true;
+    if (!user || isAdmin(user.role)) return true;
     if (!userAccess) return false;
     return userAccess.chap_access && userAccess.chap_access.includes(chapterId);
   };
 
   const hasStoryAccess = (storyId) => {
-    if (!user || user.role === 'admin') return true;
+    if (!user || isAdmin(user.role)) return true;
     if (!userAccess) return false;
     return userAccess.story_access && userAccess.story_access.includes(storyId);
   };

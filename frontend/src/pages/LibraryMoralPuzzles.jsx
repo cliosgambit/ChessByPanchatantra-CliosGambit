@@ -19,6 +19,7 @@ import {
 import { resolveLichessPuzzlePosition } from '../utils/lichessPuzzleFen';
 import { solutionSansFromChessCom, solutionTextFromChessCom } from '../utils/chessComPgnUtils';
 import { fetchBestMoveSequence, uciSequenceToSans } from '../utils/stockfishClient';
+import { canManageContent } from '../utils/roles';
 import { Chess } from 'chess.js';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import './LibraryMoralPuzzles.css';
@@ -146,7 +147,7 @@ function sameChessComPuzzle(a, b) {
 function LibraryMoralPuzzles() {
   const { storyId, moralId, moduleId, chapterId } = useParams();
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const isAdmin = canManageContent(user?.role);
   const canManage = isAdmin;
   const storyBackPath =
     moduleId && chapterId

@@ -1,11 +1,15 @@
 const express = require('express');
 const db = require('../api/config/database');
-const { authenticate, authorizeRoles } = require('../middleware/authMiddleware');
+const {
+  authenticate,
+  authorizeRoles,
+  canManageContent,
+} = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 function isAdmin(req) {
-  return (req.user?.role || '').toLowerCase() === 'admin';
+  return canManageContent(req.user?.role);
 }
 
 function toBool(value, fallback = false) {
@@ -246,7 +250,7 @@ router.get('/modules', async (req, res) => {
 });
 
 /** POST /api/modules — admin */
-router.post('/modules', authorizeRoles('admin'), async (req, res) => {
+router.post('/modules', authorizeRoles('admin', 'coach'), async (req, res) => {
   const name = String(req.body?.name || '').trim();
   if (!name) {
     return res.status(400).json({ message: 'Module name is required.' });
@@ -331,7 +335,7 @@ router.get('/modules/:id', async (req, res) => {
 });
 
 /** PUT /api/modules/:id — admin */
-router.put('/modules/:id', authorizeRoles('admin'), async (req, res) => {
+router.put('/modules/:id', authorizeRoles('admin', 'coach'), async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
     return res.status(400).json({ message: 'Invalid module id.' });
@@ -391,7 +395,7 @@ router.put('/modules/:id', authorizeRoles('admin'), async (req, res) => {
 });
 
 /** DELETE /api/modules/:id — admin */
-router.delete('/modules/:id', authorizeRoles('admin'), async (req, res) => {
+router.delete('/modules/:id', authorizeRoles('admin', 'coach'), async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
     return res.status(400).json({ message: 'Invalid module id.' });
@@ -410,7 +414,7 @@ router.delete('/modules/:id', authorizeRoles('admin'), async (req, res) => {
 });
 
 /** POST /api/modules/:id/chapters — admin */
-router.post('/modules/:id/chapters', authorizeRoles('admin'), async (req, res) => {
+router.post('/modules/:id/chapters', authorizeRoles('admin', 'coach'), async (req, res) => {
   const moduleId = Number(req.params.id);
   if (!Number.isFinite(moduleId)) {
     return res.status(400).json({ message: 'Invalid module id.' });
@@ -495,7 +499,7 @@ router.get('/modules/:id/chapters/:chapterId', async (req, res) => {
 /** PUT /api/modules/:id/chapters/:chapterId — admin */
 router.put(
   '/modules/:id/chapters/:chapterId',
-  authorizeRoles('admin'),
+  authorizeRoles('admin', 'coach'),
   async (req, res) => {
     const moduleId = Number(req.params.id);
     const chapterId = Number(req.params.chapterId);
@@ -560,7 +564,7 @@ router.put(
 /** DELETE /api/modules/:id/chapters/:chapterId — admin */
 router.delete(
   '/modules/:id/chapters/:chapterId',
-  authorizeRoles('admin'),
+  authorizeRoles('admin', 'coach'),
   async (req, res) => {
     const moduleId = Number(req.params.id);
     const chapterId = Number(req.params.chapterId);
@@ -592,7 +596,7 @@ router.delete(
 /** POST /api/modules/:id/chapters/:chapterId/stories — admin */
 router.post(
   '/modules/:id/chapters/:chapterId/stories',
-  authorizeRoles('admin'),
+  authorizeRoles('admin', 'coach'),
   async (req, res) => {
     const moduleId = Number(req.params.id);
     const chapterId = Number(req.params.chapterId);
@@ -663,7 +667,7 @@ router.post(
 /** PATCH /api/modules/:id/chapters/:chapterId/stories/:storyId — admin */
 router.patch(
   '/modules/:id/chapters/:chapterId/stories/:storyId',
-  authorizeRoles('admin'),
+  authorizeRoles('admin', 'coach'),
   async (req, res) => {
     const moduleId = Number(req.params.id);
     const chapterId = Number(req.params.chapterId);
@@ -725,7 +729,7 @@ router.patch(
 /** DELETE /api/modules/:id/chapters/:chapterId/stories/:storyId — admin */
 router.delete(
   '/modules/:id/chapters/:chapterId/stories/:storyId',
-  authorizeRoles('admin'),
+  authorizeRoles('admin', 'coach'),
   async (req, res) => {
     const moduleId = Number(req.params.id);
     const chapterId = Number(req.params.chapterId);

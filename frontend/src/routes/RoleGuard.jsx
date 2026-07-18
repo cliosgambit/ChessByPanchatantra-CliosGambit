@@ -2,9 +2,10 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getRoleHomePath } from '../services/authService';
+import { normalizeRole } from '../utils/roles';
 
 /**
- * Role-based route guard. Admins always pass. Others must match allowedRoles.
+ * Role-based route guard. Allowed roles must be listed explicitly.
  */
 function RoleGuard({ allowedRoles = [] }) {
   const { user, isAuthenticated } = useAuth();
@@ -13,10 +14,8 @@ function RoleGuard({ allowedRoles = [] }) {
     return <Navigate to="/login" replace />;
   }
 
-  const role = (user?.role || '').toLowerCase();
-  const isAdmin = role === 'admin';
-  const allowed =
-    isAdmin || allowedRoles.map((r) => r.toLowerCase()).includes(role);
+  const role = normalizeRole(user?.role);
+  const allowed = allowedRoles.map((r) => r.toLowerCase()).includes(role);
 
   if (!allowed) {
     return <Navigate to={getRoleHomePath(user?.role)} replace />;

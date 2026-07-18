@@ -46,7 +46,7 @@ function Players() {
   const pageHeight = `calc(100vh - ${NAVBAR_HEIGHT}px)`;
 
   const handleRowClick = (player) => {
-    navigate(`/players/${encodeURIComponent(player.chessComId || player.id)}/new`);
+    navigate(`/players/${encodeURIComponent(player.chessComId || player.id)}`);
   };
 
   const handleEdit = (player) => {

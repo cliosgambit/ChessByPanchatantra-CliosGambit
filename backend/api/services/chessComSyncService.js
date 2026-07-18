@@ -30,6 +30,22 @@ const SYNC_CONCURRENCY = 4;
 const backgroundSyncs = new Map();
 let yesterdaysSyncTask = null;
 
+/** Global auto-sync (all tracked players) — runs on an interval in the background. */
+const AUTO_SYNC_INTERVAL_MS = 60 * 1000;
+const AUTO_SYNC_RECENT_MONTHS = 1;
+let autoSyncTimer = null;
+let autoSyncTask = null;
+const autoSyncState = {
+  enabled: false,
+  intervalMs: AUTO_SYNC_INTERVAL_MS,
+  inProgress: false,
+  lastStartedAt: null,
+  lastCompletedAt: null,
+  lastResult: null,
+  lastError: null,
+  runs: 0,
+};
+
 const GAME_LIST_COLUMNS = `
   chess_com_uuid, chess_com_id, game_url, played_at, time_class, time_control, time_control_label,
   rated, white_username, black_username, white_rating, black_rating,
@@ -46,6 +62,72 @@ function gameListColumns(alias) {
 
 function archiveKey(year, month) {
   return `${year}-${month}`;
+}
+
+/** Rated games total from Chess.com stats_json (rapid+blitz+bullet+daily). */
+function extractStatsTotalGames(statsJson) {
+  if (!statsJson) return null;
+  let stats = statsJson;
+  if (typeof stats === 'string') {
+    try {
+      stats = JSON.parse(stats);
+    } catch {
+      return null;
+    }
+  }
+  const n = Number(stats?.totalGames);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** True until we have at least one completed sync with games/archives on disk. */
+function isNewOrUnsyncedPlayer(player) {
+  if (!player) return true;
+  if (!player.gamesInDb) return true;
+  if (!player.lastSyncedAt) return true;
+  if (!player.syncedArchives?.size) return true;
+  return false;
+}
+
+/**
+ * Skip month fetches when Chess.com rated-game total did not grow since last sync
+ * and we already have the current calendar month archived. Never skips new players.
+ */
+function playerNeedsArchiveFetch(player, { forceFull = false, statsGate = false } = {}) {
+  if (forceFull || !statsGate) return true;
+  if (isNewOrUnsyncedPlayer(player)) return true;
+
+  const prev = player.prevStatsTotalGames;
+  const next = player.liveStatsTotalGames;
+  if (prev == null || next == null) return true;
+  if (next > prev) return true;
+
+  const { year, month } = currentYearMonth();
+  const current = player.syncedArchives.get(archiveKey(year, month));
+  if (!current) return true;
+
+  return false;
+}
+
+/**
+ * Established players: only look at the last N months.
+ * New / incomplete players: keep the full archive list so every month backfills.
+ */
+function selectArchiveUrlsForPlayer(player, archiveUrls, { forceFull = false, maxRecentMonths = null } = {}) {
+  if (forceFull || maxRecentMonths == null) return archiveUrls;
+  if (isNewOrUnsyncedPlayer(player)) return archiveUrls;
+
+  const { year, month } = currentYearMonth();
+  const hasMissingPastMonths = archiveUrls.some((archiveUrl) => {
+    const meta = archiveMetaFromUrl(archiveUrl);
+    if (!meta.year || !meta.monthNum) return false;
+    if (meta.year === year && meta.monthNum === month) return false;
+    return !player.syncedArchives.has(archiveKey(meta.year, meta.monthNum));
+  });
+
+  // Still missing old months → full backfill this pass
+  if (hasMissingPastMonths) return archiveUrls;
+
+  return archiveUrls.slice(-Math.max(1, Number(maxRecentMonths) || 1));
 }
 
 function currentYearMonth() {
@@ -331,13 +413,14 @@ async function insertMovesForGame(chessComUuid, chessComId, pgn) {
 
     for (const move of chunk) {
       valueRows.push(
-        `($1,$2,$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
+        `($1,$2,$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
       );
       params.push(
         move.ply,
         move.move_number,
         move.color,
         move.san,
+        move.uci,
         move.from_square,
         move.to_square,
         move.piece,
@@ -356,7 +439,7 @@ async function insertMovesForGame(chessComUuid, chessComId, pgn) {
 
     const { rowCount } = await db.query(
       `INSERT INTO chess_com_moves (
-        chess_com_uuid, chess_com_id, ply, move_number, color, san,
+        chess_com_uuid, chess_com_id, ply, move_number, color, san, uci,
         from_square, to_square, piece, captured, promotion,
         fen_before, fen_after, is_check, is_mate, is_capture,
         is_castle, is_en_passant, is_promotion
@@ -537,7 +620,7 @@ async function loadBulkSyncContext(filterChessComIds = null) {
   if (!playerIds.length) return [];
 
   const { rows: profileRows } = await db.query(
-    `SELECT chess_com_id, username AS profile_username, last_synced_at
+    `SELECT chess_com_id, username AS profile_username, last_synced_at, stats_json
      FROM chess_com_profiles
      WHERE chess_com_id = ANY($1)`,
     [playerIds]
@@ -570,6 +653,7 @@ async function loadBulkSyncContext(filterChessComIds = null) {
       chessComId,
       apiUsername: profile?.profile_username || chessComId,
       lastSyncedAt: profile?.last_synced_at || null,
+      prevStatsTotalGames: extractStatsTotalGames(profile?.stats_json),
       syncedArchives: new Map(),
       gamesInDb: gamesByPlayer.get(chessComId) || 0,
     });
@@ -597,11 +681,20 @@ async function loadBulkSyncContext(filterChessComIds = null) {
  * - maxRecentMonths: only the last N months (quick / background sync)
  * - default: every missing month + always the current calendar month
  */
-async function buildBulkFetchTasks(players, { forceFull = false, maxRecentMonths = null } = {}) {
+async function buildBulkFetchTasks(
+  players,
+  { forceFull = false, maxRecentMonths = null, statsGate = false } = {}
+) {
   const tasks = [];
   let archivesSkipped = 0;
+  let playersSkippedByStats = 0;
 
   for (const player of players) {
+    if (!playerNeedsArchiveFetch(player, { forceFull, statsGate })) {
+      playersSkippedByStats += 1;
+      continue;
+    }
+
     let archiveUrls = [];
     try {
       archiveUrls = await fetchPlayerArchiveUrls(player.apiUsername);
@@ -615,10 +708,10 @@ async function buildBulkFetchTasks(players, { forceFull = false, maxRecentMonths
 
     if (!archiveUrls.length) continue;
 
-    let urls = archiveUrls;
-    if (maxRecentMonths != null && !forceFull) {
-      urls = archiveUrls.slice(-Math.max(1, Number(maxRecentMonths) || 1));
-    }
+    const urls = selectArchiveUrlsForPlayer(player, archiveUrls, {
+      forceFull,
+      maxRecentMonths,
+    });
 
     for (const archiveUrl of urls) {
       const meta = archiveMetaFromUrl(archiveUrl);
@@ -640,7 +733,7 @@ async function buildBulkFetchTasks(players, { forceFull = false, maxRecentMonths
     }
   }
 
-  return { tasks, archivesSkipped };
+  return { tasks, archivesSkipped, playersSkippedByStats };
 }
 
 async function bulkInsertSyncRaw(batchId, rows) {
@@ -912,7 +1005,11 @@ async function phase3SyncProfilesAndClubs(players) {
       }));
       await upsertClubs(chessComId, clubs);
 
-      return { chessComId, apiUsername };
+      return {
+        chessComId,
+        apiUsername,
+        totalGames: Number(stats.totalGames) || 0,
+      };
     },
     { concurrency: PROFILE_SYNC_CONCURRENCY }
   );
@@ -972,12 +1069,14 @@ async function finalizeBulkSync(chessComIds) {
 /**
  * Sync flow:
  * 1) Live profile + stats from Chess.com API → chess_com_profiles (always)
- * 2) Monthly archives list → fetch missing months (all by default) → chess_com_games
+ * 2) Optional stats gate: if rated totalGames did not grow, skip archive HTTP
+ * 3) Monthly archives list → fetch missing / current months → chess_com_games
  */
 async function runBulkSync({
   chessComIds = null,
   forceFull = false,
   maxRecentMonths = null,
+  statsGate = false,
 } = {}) {
   const batchId = crypto.randomUUID();
   const startedAt = Date.now();
@@ -989,6 +1088,7 @@ async function runBulkSync({
       players: 0,
       archivesFetched: 0,
       archivesSkipped: 0,
+      playersSkippedByStats: 0,
       gamesUpserted: 0,
       durationMs: 0,
     };
@@ -1010,17 +1110,22 @@ async function runBulkSync({
     if (player && synced.apiUsername) {
       player.apiUsername = synced.apiUsername;
       player.chessComId = synced.chessComId;
+      player.liveStatsTotalGames = synced.totalGames;
     }
   }
 
   // 2) ALL archive months from Chess.com (or recent N for quick sync)
-  const { tasks, archivesSkipped } = await buildBulkFetchTasks(players, {
-    forceFull,
-    maxRecentMonths,
-  });
+  const { tasks, archivesSkipped, playersSkippedByStats } = await buildBulkFetchTasks(
+    players,
+    {
+      forceFull,
+      maxRecentMonths,
+      statsGate,
+    }
+  );
 
   console.log(
-    `[chess-com bulk sync] batch ${batchId}: ${players.length} player(s), ${tasks.length} archive fetch(es), ${archivesSkipped} skipped`
+    `[chess-com bulk sync] batch ${batchId}: ${players.length} player(s), ${tasks.length} archive fetch(es), ${archivesSkipped} months skipped, ${playersSkippedByStats} player(s) skipped via stats gate`
   );
 
   const fetchStats = tasks.length
@@ -1045,6 +1150,7 @@ async function runBulkSync({
     archivesFetched: fetchStats.fetched,
     archivesFailed: fetchStats.failed,
     archivesSkipped,
+    playersSkippedByStats,
     gamesUpserted: parseStats.gamesUpserted,
     archivesProcessed: parseStats.archivesProcessed,
     durationMs,
@@ -1350,6 +1456,7 @@ async function getRecentGames(
   if (attachPreviewPgn) {
     games = await attachPreviewPgns(id, games, games.length);
   }
+  games = await attachBrillianceRunStatus(games);
 
   let total = games.length;
   if (includeTotal) {
@@ -1517,6 +1624,26 @@ async function getMonthlyGames(
     }
   }
 
+  {
+    const flatGames = months.flatMap((month) => month.games);
+    if (flatGames.length) {
+      const withRuns = await attachBrillianceRunStatus(flatGames);
+      const runByUuid = new Map(
+        withRuns
+          .filter((game) => game.brillianceRun)
+          .map((game) => [game.uuid, game.brillianceRun])
+      );
+      months = months.map((month) => ({
+        ...month,
+        games: month.games.map((game) =>
+          runByUuid.has(game.uuid)
+            ? { ...game, brillianceRun: runByUuid.get(game.uuid) }
+            : game
+        ),
+      }));
+    }
+  }
+
   return months;
 }
 
@@ -1648,22 +1775,57 @@ async function attachBrillianceRunStatus(games) {
   const uuids = games.map((game) => game.uuid).filter(Boolean);
   if (!uuids.length) return games;
 
-  const { rows } = await db.query(
-    `SELECT chess_com_uuid, stage4_status, stage4_error
-     FROM chess_com_brilliance_runs
-     WHERE chess_com_uuid = ANY($1::text[])`,
-    [uuids]
-  );
+  let rows;
+  try {
+    ({ rows } = await db.query(
+      `SELECT chess_com_uuid,
+              stage0_status, stage1_status, stage2_status, stage3_status, stage4_status,
+              stage4_error, stage4_analyzed_count, stage4_brilliant_count,
+              pipeline_status, current_stage, has_brilliant_moves, brilliant_move_count
+       FROM chess_com_brilliance_runs
+       WHERE chess_com_uuid = ANY($1::text[])`,
+      [uuids]
+    ));
+  } catch (err) {
+    // Older DBs may lack rollup columns — still return stage statuses.
+    if (!/has_brilliant_moves|brilliant_move_count|pipeline_status|current_stage/i.test(err.message || '')) {
+      throw err;
+    }
+    console.warn('[chess-com] brilliance rollup columns missing; using stage fields only:', err.message);
+    ({ rows } = await db.query(
+      `SELECT chess_com_uuid,
+              stage0_status, stage1_status, stage2_status, stage3_status, stage4_status,
+              stage4_error, stage4_analyzed_count, stage4_brilliant_count
+       FROM chess_com_brilliance_runs
+       WHERE chess_com_uuid = ANY($1::text[])`,
+      [uuids]
+    ));
+  }
 
   const byUuid = new Map(rows.map((row) => [row.chess_com_uuid, row]));
   return games.map((game) => {
     const run = byUuid.get(game.uuid);
     if (!run) return game;
+    const pipelineStatus =
+      run.pipeline_status ||
+      (run.stage4_status === 'completed' ? 'passed' : run.stage4_status || 'pending');
     return {
       ...game,
       brillianceRun: {
+        pipelineStatus,
+        currentStage: run.current_stage == null ? null : Number(run.current_stage),
+        passed: pipelineStatus === 'passed',
+        hasBrilliantMoves: Boolean(run.has_brilliant_moves ?? (Number(run.stage4_brilliant_count) > 0)),
+        brilliantMoveCount:
+          Number(run.brilliant_move_count ?? run.stage4_brilliant_count) || 0,
+        stage0Status: run.stage0_status,
+        stage1Status: run.stage1_status,
+        stage2Status: run.stage2_status,
+        stage3Status: run.stage3_status,
         stage4Status: run.stage4_status,
         stage4Error: run.stage4_error,
+        stage4AnalyzedCount: Number(run.stage4_analyzed_count) || 0,
+        stage4BrilliantCount: Number(run.stage4_brilliant_count) || 0,
       },
     };
   });
@@ -1787,10 +1949,10 @@ async function getBrilliancePipelineStats({
             OR r.stage4_status = 'failed')
            AND COALESCE(r.stage4_status, '') <> 'completed'
          THEN g.chess_com_uuid END) AS analysis_failed,
-       COUNT(DISTINCT CASE WHEN s4.is_brilliant = 1 THEN s4.id END) AS brilliant_moves_found
+       COUNT(DISTINCT CASE WHEN bm.is_brilliant = 1 THEN bm.id END) AS brilliant_moves_found
      FROM chess_com_games g
      LEFT JOIN chess_com_brilliance_runs r ON r.chess_com_uuid = g.chess_com_uuid
-     LEFT JOIN chess_com_brilliance_stage4 s4 ON s4.chess_com_uuid = g.chess_com_uuid
+     LEFT JOIN brilliant_moves bm ON bm.chess_com_uuid = g.chess_com_uuid
      WHERE g.chess_com_id = ANY($1)
        AND g.played_at IS NOT NULL
        ${dateClause}`,
@@ -1863,15 +2025,135 @@ async function getBrilliancePipelineStats({
 }
 
 async function syncTrackedPlayersRecent() {
+  // Incremental: all missing months + always the current month (good for backfill / manual sync)
   return runBulkSync({ forceFull: false });
+}
+
+/**
+ * Fast background pass for all tracked players:
+ * - always refresh live profile/stats
+ * - new / incomplete players → fetch ALL archive months (full history)
+ * - established players → stats gate + current month only
+ */
+async function runAutoSyncPass() {
+  return runBulkSync({
+    forceFull: false,
+    maxRecentMonths: AUTO_SYNC_RECENT_MONTHS,
+    statsGate: true,
+  });
 }
 
 function isYesterdaysSyncInProgress() {
   return Boolean(yesterdaysSyncTask);
 }
 
+function isAutoSyncInProgress() {
+  return Boolean(autoSyncTask) || autoSyncState.inProgress;
+}
+
+function getAutoSyncStatus() {
+  return {
+    ...autoSyncState,
+    inProgress: isAutoSyncInProgress(),
+    yesterdaysSyncInProgress: isYesterdaysSyncInProgress(),
+  };
+}
+
+async function tickAutoSync(reason = 'interval') {
+  if (autoSyncTask || yesterdaysSyncTask) {
+    console.log(
+      `[chess-com auto-sync] skip (${reason}): another sync is already running`
+    );
+    return autoSyncTask || yesterdaysSyncTask;
+  }
+
+  autoSyncState.inProgress = true;
+  autoSyncState.lastStartedAt = new Date().toISOString();
+  autoSyncState.lastError = null;
+  autoSyncState.runs += 1;
+
+  console.log(`[chess-com auto-sync] starting (${reason})...`);
+
+  autoSyncTask = runAutoSyncPass()
+    .then((result) => {
+      autoSyncState.lastCompletedAt = new Date().toISOString();
+      autoSyncState.lastResult = result;
+      console.log(
+        `[chess-com auto-sync] complete (${reason}): players=${result.players}, archives=${result.archivesFetched}, games+=${result.gamesUpserted}, statsSkipped=${result.playersSkippedByStats}, ${result.durationMs}ms`
+      );
+      return result;
+    })
+    .catch((err) => {
+      autoSyncState.lastError = err.message;
+      autoSyncState.lastCompletedAt = new Date().toISOString();
+      console.error(`[chess-com auto-sync] failed (${reason}):`, err.message);
+      return { failed: true, error: err.message };
+    })
+    .finally(() => {
+      autoSyncState.inProgress = false;
+      autoSyncTask = null;
+    });
+
+  return autoSyncTask;
+}
+
+/**
+ * Start continuous background Chess.com sync for all tracked players.
+ * Runs immediately on start, then every `intervalMs` (default 1 minute).
+ * Overlapping ticks are skipped; per-player last_synced_at is updated on each pass.
+ */
+function startAutoSyncScheduler({
+  intervalMs = AUTO_SYNC_INTERVAL_MS,
+  runOnStart = true,
+} = {}) {
+  if (autoSyncTimer) {
+    console.log('[chess-com auto-sync] scheduler already running');
+    return getAutoSyncStatus();
+  }
+
+  autoSyncState.enabled = true;
+  autoSyncState.intervalMs = intervalMs;
+
+  if (runOnStart) {
+    // Don't block server listen — fire and forget
+    setImmediate(() => {
+      tickAutoSync('startup').catch(() => {});
+    });
+  }
+
+  autoSyncTimer = setInterval(() => {
+    tickAutoSync('interval').catch(() => {});
+  }, intervalMs);
+
+  // Allow Node to exit even if the timer is still active (e.g. tests / graceful shutdown)
+  if (typeof autoSyncTimer.unref === 'function') {
+    autoSyncTimer.unref();
+  }
+
+  console.log(
+    `[chess-com auto-sync] scheduler enabled — every ${Math.round(intervalMs / 1000)}s` +
+      (runOnStart ? ' (startup sync queued)' : '')
+  );
+
+  return getAutoSyncStatus();
+}
+
+function stopAutoSyncScheduler() {
+  if (autoSyncTimer) {
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
+  }
+  autoSyncState.enabled = false;
+  console.log('[chess-com auto-sync] scheduler stopped');
+  return getAutoSyncStatus();
+}
+
 function startYesterdaysSyncInBackground() {
   if (yesterdaysSyncTask) return yesterdaysSyncTask;
+  if (autoSyncTask) {
+    // Reuse the in-flight auto-sync rather than stacking two bulk jobs
+    return autoSyncTask;
+  }
 
   yesterdaysSyncTask = syncTrackedPlayersRecent()
     .then((result) => {
@@ -2194,19 +2476,19 @@ async function getPlayerAchievements(chessComId, options = {}) {
     const brilliantParams = [id];
     let brilliantWhere = `
       LOWER(g.chess_com_id) = $1
-      AND (s4.is_brilliant IS TRUE OR s4.is_brilliant = 1)
+      AND bm.is_brilliant = 1
       AND (
-        (LOWER(g.self_color) = 'white' AND LOWER(s4.turn) = 'white')
-        OR (LOWER(g.self_color) = 'black' AND LOWER(s4.turn) = 'black')
+        (LOWER(g.self_color) = 'white' AND LOWER(bm.turn) = 'white')
+        OR (LOWER(g.self_color) = 'black' AND LOWER(bm.turn) = 'black')
       )`;
     if (sinceIso) {
       brilliantParams.push(sinceIso);
       brilliantWhere += ` AND g.played_at >= $${brilliantParams.length}`;
     }
     const { rows: brilliantRows } = await db.query(
-      `SELECT COUNT(*)::int AS count
-       FROM chess_com_brilliance_stage4 s4
-       INNER JOIN chess_com_games g ON g.chess_com_uuid = s4.chess_com_uuid
+      `SELECT COUNT(*) AS count
+       FROM brilliant_moves bm
+       INNER JOIN chess_com_games g ON g.chess_com_uuid = bm.chess_com_uuid
        WHERE ${brilliantWhere}`,
       brilliantParams
     );
@@ -2431,8 +2713,18 @@ module.exports = {
   getBrilliancePipelineStats,
   syncTrackedPlayersRecent,
   runBulkSync,
+  runAutoSyncPass,
   startYesterdaysSyncInBackground,
   isYesterdaysSyncInProgress,
+  startAutoSyncScheduler,
+  stopAutoSyncScheduler,
+  tickAutoSync,
+  getAutoSyncStatus,
+  isAutoSyncInProgress,
   needsSync,
   backfillMissingMoves,
+  ensureMovesForGame,
+  insertMovesForGame,
+  localDayBounds,
+  DEFAULT_YESTERDAY_TZ,
 };

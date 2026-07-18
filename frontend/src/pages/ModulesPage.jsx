@@ -17,6 +17,7 @@ import {
   fetchModules,
   updateModule,
 } from '../services/modulesService';
+import { canManageContent } from '../utils/roles';
 import './Modules.css';
 
 const MODULE_THEMES = ['green', 'tan', 'blue', 'purple', 'orange'];
@@ -39,7 +40,7 @@ function clampMenuPosition(x, y, menuWidth = 210, menuHeight = 200) {
 function ModulesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const isAdmin = canManageContent(user?.role);
   const menuRef = useRef(null);
 
   const [modules, setModules] = useState([]);

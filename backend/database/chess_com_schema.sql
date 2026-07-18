@@ -6,7 +6,6 @@ DROP TABLE IF EXISTS chess_com_archives CASCADE;
 DROP TABLE IF EXISTS chess_com_games CASCADE;
 DROP TABLE IF EXISTS chess_com_profiles CASCADE;
 DROP TABLE IF EXISTS player_games CASCADE;
-DROP TABLE IF EXISTS brilliant_moves CASCADE;
 DROP TABLE IF EXISTS players_activity CASCADE;
 
 CREATE TABLE chess_com_profiles (
@@ -103,6 +102,7 @@ CREATE TABLE chess_com_moves (
   move_number     INT NOT NULL,
   color           CHAR(1) NOT NULL CHECK (color IN ('w', 'b')),
   san             TEXT NOT NULL,
+  uci             TEXT,
   from_square     CHAR(2),
   to_square       CHAR(2) NOT NULL,
   piece           CHAR(1),

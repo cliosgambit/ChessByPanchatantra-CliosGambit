@@ -1,37 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Box, Link } from '@chakra-ui/react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Box } from '@chakra-ui/react';
 import {
   FiAward,
-  FiCalendar,
   FiCheck,
-  FiCheckCircle,
-  FiChevronRight,
-  FiClock,
+  FiDownload,
   FiExternalLink,
   FiActivity,
   FiGrid,
-  FiLayers,
-  FiMapPin,
   FiMinus,
   FiRefreshCw,
-  FiStar,
-  FiTarget,
   FiTrendingUp,
-  FiTwitch,
-  FiUsers,
-  FiVideo,
   FiX,
   FiZap,
+  FiFileText,
+  FiCalendar,
 } from 'react-icons/fi';
-import ErrorPanel from '../components/common/ErrorPanel';
 import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { useChessComUserData } from '../hooks/useChessComUserData';
 import { openChessComGame } from '../utils/chessComGameNavigation';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
-import PlayerWinStreakReport from '../components/userProfile/PlayerWinStreakReport';
-import YesterdayGamesChart from '../components/userProfile/YesterdayGamesChart';
-import YesterdayGamesList from '../components/userProfile/YesterdayGamesList';
+import ReportFromDateModal from '../components/userProfile/ReportFromDateModal';
+import WinStreakBadges from '../components/userProfile/WinStreakBadges';
 import RatingProgressChart, {
   RANGE_FILTERS,
   computeSinceDate,
@@ -43,92 +33,32 @@ import {
   fetchChessComRatingImprovementFromDb,
 } from '../services/chessComDbService';
 import { fetchStudents } from '../services/studentService';
+import { downloadElementAsPdf } from '../utils/downloadElementPdf';
 import '../components/userProfile/ChessComProfilePage.css';
 
-const MAIN_TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'games', label: 'Games' },
-  { id: 'stats', label: 'Stats' },
-  { id: 'archives', label: 'Archives' },
-  { id: 'report', label: 'Report' },
-];
+const REPORT_RANGE_KEYS = new Set(['joining', '1m']);
 
-const QUICK_STAT_ITEMS = [
-  {
-    key: 'wins',
-    label: 'Wins',
-    icon: FiCheck,
-    variant: 'wins',
-    getValue: (stats) => stats.totals.wins,
-  },
-  {
-    key: 'losses',
-    label: 'Losses',
-    icon: FiX,
-    variant: 'losses',
-    getValue: (stats) => stats.totals.losses,
-  },
-  {
-    key: 'draws',
-    label: 'Draws',
-    icon: FiMinus,
-    variant: 'draws',
-    getValue: (stats) => stats.totals.draws,
-  },
-  {
-    key: 'winPct',
-    label: 'Win Rate',
-    icon: FiTrendingUp,
-    variant: 'winrate',
-    getValue: (stats) => `${stats.winPercentage}%`,
-  },
-];
+function parseReportRange(value) {
+  const key = String(value || '').trim();
+  return REPORT_RANGE_KEYS.has(key) ? key : null;
+}
 
-const STAT_OVERVIEW_ITEMS = [
-  ...QUICK_STAT_ITEMS,
-  {
-    key: 'totalGames',
-    label: 'Total Games',
-    icon: FiGrid,
-    variant: 'games',
-    getValue: (stats) => stats.totalGames,
-  },
-  {
-    key: 'puzzleRush',
-    label: 'Puzzle Rush',
-    icon: FiZap,
-    variant: 'puzzle',
-    getValue: (stats) => stats.puzzleRush,
-  },
-  {
-    key: 'puzzleScore',
-    label: 'Puzzle Score',
-    icon: FiTarget,
-    variant: 'puzzle-score',
-    getValue: (stats) => stats.puzzleScore,
-  },
-  {
-    key: 'bestRapid',
-    label: 'Best Rapid',
-    icon: FiTrendingUp,
-    variant: 'rapid',
-    getValue: (stats) => stats.achievements.highestRapid,
-  },
-  {
-    key: 'bestBlitz',
-    label: 'Best Blitz',
-    icon: FiClock,
-    variant: 'blitz',
-    getValue: (stats) => stats.achievements.highestBlitz,
-  },
-  {
-    key: 'bestBullet',
-    label: 'Best Bullet',
-    icon: FiZap,
-    variant: 'bullet',
-    getValue: (stats) => stats.achievements.highestBullet,
-  },
-];
+function leagueTone(league) {
+  const key = String(league || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+  if (!key) return 'default';
+  if (key.includes('legend')) return 'legend';
+  if (key.includes('champion')) return 'champion';
+  if (key.includes('elite')) return 'elite';
+  if (key.includes('crystal')) return 'crystal';
+  if (key.includes('silver')) return 'silver';
+  if (key.includes('bronze')) return 'bronze';
+  if (key.includes('stone')) return 'stone';
+  if (key.includes('wood')) return 'wood';
+  return 'default';
+}
 
 const CHESS_COM_TIME_ICONS = {
   bullet: '/chess-icons/bullet.svg',
@@ -143,13 +73,6 @@ const RATING_CARDS = [
   { key: 'rapid', label: 'Rapid', iconUrl: CHESS_COM_TIME_ICONS.rapid, className: 'chess-rating-card-rapid' },
   { key: 'daily', label: 'Daily', iconUrl: CHESS_COM_TIME_ICONS.daily, className: 'chess-rating-card-daily' },
 ];
-
-function resultClassName(resultType) {
-  if (resultType === 'win') return 'chess-result-win';
-  if (resultType === 'loss') return 'chess-result-loss';
-  if (resultType === 'draw') return 'chess-result-draw';
-  return 'chess-result-neutral';
-}
 
 function formatNumber(value) {
   if (value == null) return '—';
@@ -195,246 +118,25 @@ function formatRatingDelta(current, baseline) {
   return { text: String(delta), tone: 'down' };
 }
 
-function DetailItem({ label, value, children }) {
-  return (
-    <div className="chess-basic-detail-item">
-      <span className="chess-basic-detail-label">{label}</span>
-      <span className="chess-basic-detail-value">{children || value || '—'}</span>
-    </div>
-  );
-}
-
-function RatingCard({ label, iconUrl, className, current, best, selected = false, onSelect }) {
-  const hasRating = current != null;
-
-  return (
-    <button
-      type="button"
-      className={`chess-rating-card ${className}${selected ? ' is-selected' : ''}`}
-      onClick={onSelect}
-      aria-pressed={selected}
-      title={`Show ${label} rating graph (last 3 months)`}
-    >
-      <div className="chess-rating-card-body">
-        <div className="chess-rating-card-text">
-          <div className="chess-rating-card-label">{label}</div>
-          <div className={`chess-rating-card-value ${hasRating ? '' : 'is-empty'}`}>
-            {current ?? '—'}
-          </div>
-          {best != null && <div className="chess-rating-card-best">Best {best}</div>}
-        </div>
-        <div className="chess-rating-card-icon-wrap">
-          <img src={iconUrl} alt="" className="chess-rating-card-icon-img" aria-hidden="true" />
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function StatTile({ label, value, icon: Icon, variant = 'default', large = false }) {
-  return (
-    <div className={`chess-stat-tile chess-stat-tile--${variant} ${large ? 'chess-stat-tile--large' : ''}`}>
-      {Icon && (
-        <div className="chess-stat-tile-icon-wrap">
-          <Icon className="chess-stat-tile-icon" aria-hidden="true" />
-        </div>
-      )}
-      <div className="chess-stat-tile-label">{label}</div>
-      <div className="chess-stat-tile-value">{value ?? '—'}</div>
-    </div>
-  );
-}
-
-function GameResultsBar({ stats }) {
-  const wins = stats?.totals?.wins ?? 0;
-  const losses = stats?.totals?.losses ?? 0;
-  const draws = stats?.totals?.draws ?? 0;
-  const total = wins + losses + draws;
-  const winPct = total ? Math.round((wins / total) * 100) : 0;
-  const lossPct = total ? Math.round((losses / total) * 100) : 0;
-  const drawPct = total ? Math.max(0, 100 - winPct - lossPct) : 0;
-
-  return (
-    <div className="chess-results-bar-chart">
-      <div className="chess-results-bar-top">
-        <span className="chess-results-bar-title">Game Results</span>
-      </div>
-
-      <div
-        className="chess-results-bar-track"
-        role="img"
-        aria-label={`Wins ${wins}, Draws ${draws}, Losses ${losses}`}
-      >
-        {total > 0 ? (
-          <>
-            <div
-              className="chess-results-bar-segment chess-results-bar-segment--wins"
-              style={{ width: `${winPct}%` }}
-              title={`Wins: ${wins} (${winPct}%)`}
-            />
-            <div
-              className="chess-results-bar-segment chess-results-bar-segment--draws"
-              style={{ width: `${drawPct}%` }}
-              title={`Draws: ${draws} (${drawPct}%)`}
-            />
-            <div
-              className="chess-results-bar-segment chess-results-bar-segment--losses"
-              style={{ width: `${lossPct}%` }}
-              title={`Losses: ${losses} (${lossPct}%)`}
-            />
-          </>
-        ) : (
-          <div className="chess-results-bar-segment chess-results-bar-segment--empty" />
-        )}
-      </div>
-
-      <div className="chess-results-bar-legend">
-        <div className="chess-results-bar-legend-item chess-results-bar-legend-item--wins">
-          <FiCheck className="chess-icon chess-icon-sm" aria-hidden="true" />
-          <span>Wins</span>
-          <strong>{wins}</strong>
-        </div>
-        <div className="chess-results-bar-legend-item chess-results-bar-legend-item--draws">
-          <FiMinus className="chess-icon chess-icon-sm" aria-hidden="true" />
-          <span>Draws</span>
-          <strong>{draws}</strong>
-        </div>
-        <div className="chess-results-bar-legend-item chess-results-bar-legend-item--losses">
-          <FiX className="chess-icon chess-icon-sm" aria-hidden="true" />
-          <span>Losses</span>
-          <strong>{losses}</strong>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatTileGrid({ items, stats, large = false, className = '' }) {
-  return (
-    <div className={`chess-stats-grid ${className}`.trim()}>
-      {items.map((item) => {
-        const ItemIcon = item.icon;
-        return (
-          <StatTile
-            key={item.key}
-            label={item.label}
-            value={item.getValue(stats)}
-            icon={ItemIcon}
-            variant={item.variant}
-            large={large}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function SidebarWidgets({ profile, stats, clubs, totalGames }) {
-  const awardTotal =
-    (stats?.totals?.wins ?? 0) + (stats?.puzzleRush ?? 0) + (stats?.puzzleScore ?? 0);
-
-  return (
-    <>
-      <div className="chess-sidebar-widget">
-        <h3>
-          <FiTrendingUp className="chess-icon chess-icon-md" aria-hidden="true" />
-          Activity Streak
-        </h3>
-        <p>Keep playing to build your streak on Chess.com.</p>
-      </div>
-
-      {profile?.statusLabel && (
-        <div className="chess-sidebar-widget">
-          <h3>
-            <FiStar className="chess-icon chess-icon-md" aria-hidden="true" />
-            Membership
-          </h3>
-          <p>
-            {profile.statusLabel}
-            {profile.joinedDate ? ` since ${profile.joinedDate}` : ''}
-          </p>
-        </div>
-      )}
-
-      {profile?.league && (
-        <div className="chess-sidebar-widget">
-          <h3>
-            <FiAward className="chess-icon chess-icon-md" aria-hidden="true" />
-            {profile.league} League
-          </h3>
-          <p>
-            {profile.username} competes in the {profile.league} league on Chess.com.
-          </p>
-        </div>
-      )}
-
-      <div className="chess-sidebar-widget">
-        <h3>
-          <FiLayers className="chess-icon chess-icon-md" aria-hidden="true" />
-          Game History
-        </h3>
-        <p>{formatNumber(totalGames)} games tracked across archives.</p>
-      </div>
-
-      {clubs.length > 0 && (
-        <div className="chess-profile-panel">
-          <div className="chess-profile-panel-header">
-            Clubs <span>{clubs.length}</span>
-          </div>
-          <div className="chess-profile-panel-body">
-            {clubs.slice(0, 5).map((club) => (
-              <a
-                key={club.url}
-                href={club.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="chess-club-item"
-                style={{ textDecoration: 'none', color: 'inherit' }}
-              >
-                {club.icon ? (
-                  <img src={club.icon} alt="" className="chess-club-icon" />
-                ) : (
-                  <div className="chess-club-icon chess-club-icon-fallback">
-                    <FiUsers className="chess-icon chess-icon-sm" aria-hidden="true" />
-                  </div>
-                )}
-                <div className="chess-club-name">{club.name}</div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="chess-sidebar-widget">
-        <h3>
-          <FiAward className="chess-icon chess-icon-md" aria-hidden="true" />
-          Awards
-        </h3>
-        <p>{formatNumber(awardTotal)} combined wins and puzzle achievements.</p>
-      </div>
-    </>
-  );
-}
-
 function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const chessUsername = decodeURIComponent(userId || '');
   const backPath = location.state?.from || '/students';
   const fromStudents = backPath === '/students' || String(backPath).startsWith('/students');
-  const initialTab = location.state?.tab || 'report';
-  const profileView = location.pathname.includes('/legacy') ? 'legacy' : 'rebuild';
-  const { profile, stats, archives, monthlyGames, recentGames, totalGames, clubs, profileLoading, gamesLoading, syncing, monthlyLoading, backgroundSync, pending, error, refetch, syncFromChessCom, loadMonthlyGames, lastSyncedAt } =
+  const isReportMode = /\/report\/?$/.test(location.pathname);
+  const reportRangeParam = parseReportRange(searchParams.get('range'));
+  const { profile, stats, profileLoading, syncing, backgroundSync, pending, syncFromChessCom, lastSyncedAt } =
     useChessComUserData(chessUsername);
 
-  const [activeTab, setActiveTab] = useState(initialTab);
   const [activeRatingClass, setActiveRatingClass] = useState('blitz');
   const [studentRecord, setStudentRecord] = useState(null);
   const [studentRecordLoading, setStudentRecordLoading] = useState(true);
   const [ratingImprovement, setRatingImprovement] = useState(null);
   const [ratingImprovementLoading, setRatingImprovementLoading] = useState(false);
-  const [statsRange, setStatsRange] = useState('joining');
+  const [statsRange, setStatsRange] = useState(reportRangeParam || 'joining');
   const [rangeStats, setRangeStats] = useState(null);
   const [rangeStatsLoading, setRangeStatsLoading] = useState(false);
   const [rangeGames, setRangeGames] = useState([]);
@@ -444,12 +146,17 @@ function UserProfilePage() {
   const [rebuildTab, setRebuildTab] = useState('history');
   const [achievements, setAchievements] = useState(null);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
+  const reportPdfRef = React.useRef(null);
   const ratingPickDoneRef = React.useRef(false);
   const HISTORY_PAGE_SIZE = 25;
   const effectiveJoiningDate =
     toIsoDateOnly(studentRecord?.joining_date) ||
     toIsoDateOnly(profile?.joinedAt) ||
     toIsoDateOnly(profile?.joinedDate);
+  const profileBasePath = `/players/${encodeURIComponent(chessUsername)}`;
 
   useEffect(() => {
     ratingPickDoneRef.current = false;
@@ -467,11 +174,6 @@ function UserProfilePage() {
     }
   }, [stats]);
 
-  useEffect(() => {
-    if (activeTab === 'games') {
-      loadMonthlyGames();
-    }
-  }, [activeTab, loadMonthlyGames]);
 
   useEffect(() => {
     let cancelled = false;
@@ -544,10 +246,33 @@ function UserProfilePage() {
   }, [chessUsername, statsRange, effectiveJoiningDate, lastSyncedAt]);
 
   useEffect(() => {
+    if (isReportMode && !reportRangeParam) {
+      setReportModalOpen(true);
+    }
+  }, [isReportMode, reportRangeParam]);
+
+  useEffect(() => {
+    if (isReportMode) {
+      setRebuildTab('achievements');
+      setActiveRatingClass((prev) => (prev === 'daily' ? 'blitz' : prev));
+    }
+  }, [isReportMode]);
+
+  useEffect(() => {
+    if (!isReportMode || !reportRangeParam) return;
+    if (reportRangeParam === 'joining' && !effectiveJoiningDate) {
+      setStatsRange('1m');
+      return;
+    }
+    setStatsRange(reportRangeParam);
+  }, [isReportMode, reportRangeParam, effectiveJoiningDate]);
+
+  useEffect(() => {
+    if (isReportMode) return;
     if (!effectiveJoiningDate) {
       setStatsRange((prev) => (prev === 'joining' ? '1d' : prev));
     }
-  }, [effectiveJoiningDate]);
+  }, [effectiveJoiningDate, isReportMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -593,7 +318,7 @@ function UserProfilePage() {
   useEffect(() => {
     let cancelled = false;
     const safeUsername = String(chessUsername || '').trim();
-    if (!safeUsername) {
+    if (!safeUsername || isReportMode) {
       setRangeGames([]);
       setRangeGamesTotal(0);
       setRangeGamesLoading(false);
@@ -633,7 +358,7 @@ function UserProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [chessUsername, statsRange, effectiveJoiningDate, lastSyncedAt, historyPage]);
+  }, [chessUsername, statsRange, effectiveJoiningDate, lastSyncedAt, historyPage, isReportMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -676,187 +401,303 @@ function UserProfilePage() {
     openChessComGame(navigate, chessUsername, game);
   };
 
-  const flagUrl = profile?.countryCode
-    ? `https://flagcdn.com/w40/${profile.countryCode.toLowerCase()}.png`
-    : null;
-
-  const visibleGames = useMemo(
-    () => (activeTab === 'games' ? recentGames : recentGames.slice(0, 12)),
-    [recentGames, activeTab]
-  );
 
   const displayName = profile?.username || chessUsername;
   const pageTitle = studentRecord?.player_name || displayName || chessUsername || 'Profile';
-  const profileBasePath = `/players/${encodeURIComponent(chessUsername)}`;
   const historyTotalPages = Math.max(1, Math.ceil(rangeGamesTotal / HISTORY_PAGE_SIZE));
   const historyFrom =
     rangeGamesTotal === 0 ? 0 : (historyPage - 1) * HISTORY_PAGE_SIZE + 1;
   const historyTo = Math.min(historyPage * HISTORY_PAGE_SIZE, rangeGamesTotal);
 
-  const openProfileView = (view) => {
-    navigate(`${profileBasePath}/${view === 'legacy' ? 'legacy' : 'new'}`, {
-      replace: true,
+  const handleOpenReportModal = () => {
+    setReportModalOpen(true);
+  };
+
+  const handleReportModalCancel = () => {
+    setReportModalOpen(false);
+    if (isReportMode && !reportRangeParam) {
+      navigate(profileBasePath, { state: location.state, replace: true });
+    }
+  };
+
+  const handleReportModalConfirm = (rangeKey) => {
+    const nextRange = parseReportRange(rangeKey) || '1m';
+    setReportModalOpen(false);
+    navigate(`${profileBasePath}/report?range=${encodeURIComponent(nextRange)}`, {
       state: location.state,
     });
   };
 
+  const handleDownloadReportPdf = async () => {
+    if (!reportPdfRef.current || pdfDownloading) return;
+    setPdfDownloading(true);
+    setPdfError(null);
+    try {
+      const rangeLabel =
+        RANGE_FILTERS.find((rf) => rf.key === statsRange)?.label || statsRange || 'report';
+      const baseName = studentRecord?.player_name || chessUsername || 'player';
+      await downloadElementAsPdf(reportPdfRef.current, {
+        filename: `${baseName}_${rangeLabel}_report`,
+      });
+    } catch (err) {
+      setPdfError(err?.message || 'Failed to generate PDF.');
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
+
+  const reportBusy =
+    profileLoading ||
+    studentRecordLoading ||
+    rangeStatsLoading ||
+    ratingImprovementLoading ||
+    achievementsLoading;
+
   return (
-    <Box
-      className={`chess-profile-page${
-        profileView === 'rebuild' ? ' chess-profile-page--blank' : ''
-      }`}
-    >
-      <div className="chess-profile-view-switch">
+    <Box className="chess-profile-page chess-profile-page--blank">
+      <div className="chess-profile-view-switch" data-pdf-ignore>
         <PageBreadcrumb
           items={[
             { label: 'Dashboard', to: '/dashboard' },
             ...(fromStudents ? [{ label: 'Students', to: '/students' }] : []),
-            { label: pageTitle },
+            isReportMode
+              ? { label: pageTitle, to: profileBasePath, state: location.state }
+              : { label: pageTitle },
+            ...(isReportMode ? [{ label: 'Report' }] : []),
           ]}
         />
-        <div className="chess-profile-view-tabs" role="tablist" aria-label="Profile layout">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={profileView === 'rebuild'}
-            className={`chess-profile-view-tab${profileView === 'rebuild' ? ' is-active' : ''}`}
-            onClick={() => openProfileView('new')}
-          >
-            New profile
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={profileView === 'legacy'}
-            className={`chess-profile-view-tab${profileView === 'legacy' ? ' is-active' : ''}`}
-            onClick={() => openProfileView('legacy')}
-          >
-            Old version
-          </button>
-        </div>
       </div>
 
-      {profileView === 'rebuild' ? (
-      <div className="chess-basic-profile">
+      <div className="chess-basic-profile" ref={isReportMode ? reportPdfRef : undefined}>
         <section className="chess-basic-card">
-          <div className="chess-basic-card-header">
+          <div
+            className={`chess-basic-card-header${
+              isReportMode ? ' chess-basic-card-header--report' : ''
+            }`}
+          >
             <div className="chess-basic-identity">
               <div className="chess-basic-avatar">
                 {profile?.avatar ? (
-                  <img src={profile.avatar} alt="" />
+                  <img src={profile.avatar} alt="" referrerPolicy="no-referrer" />
                 ) : (
                   <span>{(studentRecord?.player_name || displayName || '?').slice(0, 1).toUpperCase()}</span>
                 )}
               </div>
               <div className="chess-basic-identity-text">
-                <div className="chess-basic-identity-row">
-                  <h1>{studentRecord?.player_name || profile?.name || displayName}</h1>
-                  <span className="chess-basic-meta-sep" aria-hidden="true">
-                    ·
-                  </span>
-                  <span className="chess-basic-meta chess-basic-meta--username">
-                    {profile?.title ? `${profile.title} ` : ''}
-                    {chessUsername}
-                  </span>
-                  {studentRecord?.joining_date ? (
-                    <>
-                      <span className="chess-basic-meta-sep" aria-hidden="true">
-                        ·
-                      </span>
-                      <span className="chess-basic-meta">
-                        Joined {formatBasicDate(studentRecord.joining_date)}
-                      </span>
-                    </>
-                  ) : null}
-                  <span className="chess-basic-meta-sep" aria-hidden="true">
-                    ·
-                  </span>
-                  <span className="chess-basic-meta chess-basic-meta--batches">
-                    {(studentRecord?.batches || []).length ? (
-                      <span className="chess-basic-chips chess-basic-chips--inline">
-                        {studentRecord.batches.map((batch) => (
+                {isReportMode ? (
+                  <>
+                    <h1 className="chess-basic-report-name">
+                      {studentRecord?.player_name || profile?.name || displayName}
+                    </h1>
+                    <span className="chess-basic-report-username">
+                      {profile?.title ? `${profile.title} ` : ''}
+                      {chessUsername}
+                    </span>
+                    <div className="chess-basic-report-tags">
+                      {studentRecord?.joining_date ? (
+                        <span className="chess-basic-report-tag">
+                          <FiCalendar aria-hidden />
+                          Student since {formatBasicDate(studentRecord.joining_date)}
+                        </span>
+                      ) : null}
+                      {(studentRecord?.batches || []).length ? (
+                        studentRecord.batches.map((batch) => (
                           <button
                             key={batch.id}
                             type="button"
-                            className="chess-basic-chip"
+                            className="chess-basic-report-tag chess-basic-report-tag--batch"
                             onClick={() => navigate(`/students/batches/${batch.id}`)}
                           >
                             {batch.name}
                           </button>
-                        ))}
+                        ))
+                      ) : (
+                        <span className="chess-basic-report-tag chess-basic-report-tag--muted">
+                          No batch
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="chess-basic-identity-row">
+                      <h1>{studentRecord?.player_name || profile?.name || displayName}</h1>
+                      <span className="chess-basic-meta-sep" aria-hidden="true">
+                        ·
                       </span>
-                    ) : (
-                      <span className="chess-basic-meta-muted">No batch</span>
-                    )}
-                  </span>
-                </div>
+                      <span className="chess-basic-meta chess-basic-meta--username">
+                        {profile?.title ? `${profile.title} ` : ''}
+                        {chessUsername}
+                      </span>
+                      {studentRecord?.joining_date ? (
+                        <>
+                          <span className="chess-basic-meta-sep" aria-hidden="true">
+                            ·
+                          </span>
+                          <span className="chess-basic-meta">
+                            Joined {formatBasicDate(studentRecord.joining_date)}
+                          </span>
+                        </>
+                      ) : null}
+                      <span className="chess-basic-meta-sep" aria-hidden="true">
+                        ·
+                      </span>
+                      <span className="chess-basic-meta chess-basic-meta--batches">
+                        {(studentRecord?.batches || []).length ? (
+                          <span className="chess-basic-chips chess-basic-chips--inline">
+                            {studentRecord.batches.map((batch) => (
+                              <button
+                                key={batch.id}
+                                type="button"
+                                className="chess-basic-chip"
+                                onClick={() => navigate(`/students/batches/${batch.id}`)}
+                              >
+                                {batch.name}
+                              </button>
+                            ))}
+                          </span>
+                        ) : (
+                          <span className="chess-basic-meta-muted">No batch</span>
+                        )}
+                      </span>
+                    </div>
 
-                {(profile?.statusLabel ||
-                  profile?.joinedDate ||
-                  profile?.followers != null ||
-                  profile?.lastOnline ||
-                  profile?.isOnline ||
-                  profile?.league) && (
-                  <div className="chess-basic-profile-meta">
-                    {profile?.statusLabel ? (
-                      <span className="chess-basic-profile-meta-item">{profile.statusLabel}</span>
-                    ) : null}
-                    {profile?.joinedDate ? (
-                      <span className="chess-basic-profile-meta-item">
-                        Joined {profile.joinedDate}
-                      </span>
-                    ) : null}
-                    {profile?.followers != null ? (
-                      <span className="chess-basic-profile-meta-item">
-                        <strong>{formatNumber(profile.followers)}</strong> followers
-                      </span>
-                    ) : null}
-                    {profile?.isOnline ? (
-                      <span className="chess-basic-profile-meta-item chess-basic-profile-meta-item--online">
-                        Online now
-                      </span>
-                    ) : profile?.lastOnline ? (
-                      <span className="chess-basic-profile-meta-item">
-                        Last online {profile.lastOnline}
-                      </span>
-                    ) : null}
-                    {profile?.league ? (
-                      <span className="chess-basic-profile-meta-item">
-                        <strong>{profile.league}</strong> League
-                      </span>
-                    ) : null}
-                  </div>
+                    {(profile?.statusLabel ||
+                      profile?.joinedDate ||
+                      profile?.followers != null ||
+                      profile?.lastOnline ||
+                      profile?.isOnline ||
+                      profile?.league) && (
+                      <div className="chess-basic-profile-meta">
+                        {profile?.statusLabel ? (
+                          <span className="chess-basic-profile-meta-item">{profile.statusLabel}</span>
+                        ) : null}
+                        {profile?.joinedDate ? (
+                          <span className="chess-basic-profile-meta-item">
+                            Joined {profile.joinedDate}
+                          </span>
+                        ) : null}
+                        {profile?.followers != null ? (
+                          <span className="chess-basic-profile-meta-item">
+                            <strong>{formatNumber(profile.followers)}</strong> followers
+                          </span>
+                        ) : null}
+                        {profile?.isOnline ? (
+                          <span className="chess-basic-profile-meta-item chess-basic-profile-meta-item--online">
+                            Online now
+                          </span>
+                        ) : profile?.lastOnline ? (
+                          <span className="chess-basic-profile-meta-item">
+                            Last online {profile.lastOnline}
+                          </span>
+                        ) : null}
+                        {profile?.league ? (
+                          <span className="chess-basic-profile-meta-item">
+                            <strong>{profile.league}</strong> League
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
-            <div className="chess-basic-actions">
-              <button
-                type="button"
-                className="chess-basic-btn"
-                onClick={syncFromChessCom}
-                disabled={syncing}
-              >
-                <FiRefreshCw className={syncing ? 'chess-icon-spin' : ''} aria-hidden />
-                {syncing ? 'Syncing' : 'Sync'}
-              </button>
-              {profile?.profileUrl ? (
-                <a
-                  href={profile.profileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="chess-basic-btn chess-basic-btn--primary"
+            {isReportMode ? (
+              <div className="chess-basic-report-aside">
+                <div className="chess-basic-report-facts">
+                  {profile?.joinedDate ? (
+                    <div className="chess-basic-report-fact">
+                      <span className="chess-basic-report-fact-icon" aria-hidden>
+                        <FiCalendar />
+                      </span>
+                      <div className="chess-basic-report-fact-copy">
+                        <span className="chess-basic-report-fact-label">Chess.com joined</span>
+                        <span className="chess-basic-report-fact-value">{profile.joinedDate}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                  {profile?.league ? (
+                    <div
+                      className={`chess-basic-report-fact chess-basic-report-fact--league chess-basic-report-fact--league-${leagueTone(profile.league)}`}
+                    >
+                      <span className="chess-basic-report-fact-icon" aria-hidden>
+                        <FiAward />
+                      </span>
+                      <div className="chess-basic-report-fact-copy">
+                        <span className="chess-basic-report-fact-label">League</span>
+                        <span className="chess-basic-report-fact-value">{profile.league}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="chess-basic-actions chess-basic-actions--report" data-pdf-ignore>
+                  <button
+                    type="button"
+                    className="chess-basic-btn chess-basic-btn--primary"
+                    onClick={handleDownloadReportPdf}
+                    disabled={pdfDownloading || reportBusy}
+                    title={
+                      reportBusy
+                        ? 'Wait for the report to finish loading'
+                        : 'Download this report as PDF'
+                    }
+                  >
+                    <FiDownload
+                      className={pdfDownloading ? 'chess-icon-spin' : ''}
+                      aria-hidden
+                    />
+                    {pdfDownloading ? 'Preparing PDF…' : 'Download PDF'}
+                  </button>
+                  {pdfError ? (
+                    <span className="chess-basic-pdf-error" role="alert">
+                      {pdfError}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="chess-basic-actions">
+                <button
+                  type="button"
+                  className="chess-basic-btn"
+                  onClick={handleOpenReportModal}
                 >
-                  Chess.com
-                  <FiExternalLink aria-hidden />
-                </a>
-              ) : null}
-            </div>
+                  <FiFileText aria-hidden />
+                  Report
+                </button>
+                <button
+                  type="button"
+                  className="chess-basic-btn"
+                  onClick={syncFromChessCom}
+                  disabled={syncing}
+                >
+                  <FiRefreshCw className={syncing ? 'chess-icon-spin' : ''} aria-hidden />
+                  {syncing ? 'Syncing' : 'Sync'}
+                </button>
+                {profile?.profileUrl ? (
+                  <a
+                    href={profile.profileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="chess-basic-btn chess-basic-btn--primary"
+                  >
+                    Chess.com
+                    <FiExternalLink aria-hidden />
+                  </a>
+                ) : null}
+              </div>
+            )}
           </div>
 
           <div className="chess-basic-sticky-filters">
-            <div className="chess-basic-section-title">Live Stats</div>
+            <div className="chess-basic-section-title">
+              {isReportMode ? 'Report' : 'Live Stats'}
+            </div>
             <div className="chess-live-range-filters" role="tablist" aria-label="Stats time range">
-              {RANGE_FILTERS.map((rf) => {
+              {(isReportMode
+                ? RANGE_FILTERS.filter((rf) => REPORT_RANGE_KEYS.has(rf.key))
+                : RANGE_FILTERS
+              ).map((rf) => {
                 const isActive = statsRange === rf.key;
                 return (
                   <button
@@ -865,7 +706,15 @@ function UserProfilePage() {
                     role="tab"
                     aria-selected={isActive}
                     className={`chess-live-range-filter${isActive ? ' is-active' : ''}`}
-                    onClick={() => setStatsRange(rf.key)}
+                    onClick={() => {
+                      setStatsRange(rf.key);
+                      if (isReportMode) {
+                        navigate(
+                          `${profileBasePath}/report?range=${encodeURIComponent(rf.key)}`,
+                          { state: location.state, replace: true }
+                        );
+                      }
+                    }}
                     disabled={rf.key === 'joining' && !effectiveJoiningDate}
                     title={
                       rf.key === 'joining' && !effectiveJoiningDate
@@ -887,13 +736,18 @@ function UserProfilePage() {
           <div className="chess-basic-section">
             {stats ? (
               <>
-                <div className="chess-live-ratings">
-                  {RATING_CARDS.map((card) => {
+                <div
+                  className={`chess-live-ratings${isReportMode ? ' chess-live-ratings--report' : ''}`}
+                >
+                  {(isReportMode
+                    ? RATING_CARDS.filter((card) => card.key !== 'daily')
+                    : RATING_CARDS
+                  ).map((card) => {
                     const block = stats[card.key];
                     const current = block?.current;
                     const baseline = ratingImprovement?.[card.key]?.baseline ?? null;
                     const delta = formatRatingDelta(current, baseline);
-                    const isSelected = activeRatingClass === card.key;
+                    const isSelected = !isReportMode && activeRatingClass === card.key;
                     const rangeTitle =
                       statsRange === 'joining'
                         ? 'Since joining'
@@ -910,10 +764,16 @@ function UserProfilePage() {
                         type="button"
                         className={`chess-live-rating-card chess-live-rating-card--${card.key}${
                           isSelected ? ' is-selected' : ''
-                        }`}
-                        onClick={() => setActiveRatingClass(card.key)}
-                        aria-pressed={isSelected}
-                        title={`Show ${card.label} rating graph · ${rangeTitle}`}
+                        }${isReportMode ? ' chess-live-rating-card--static' : ''}`}
+                        onClick={() => {
+                          if (!isReportMode) setActiveRatingClass(card.key);
+                        }}
+                        aria-pressed={isReportMode ? undefined : isSelected}
+                        title={
+                          isReportMode
+                            ? `${card.label} · ${rangeTitle}`
+                            : `Show ${card.label} rating graph · ${rangeTitle}`
+                        }
                       >
                         <img
                           src={card.iconUrl}
@@ -946,9 +806,9 @@ function UserProfilePage() {
                           <span className={`chess-live-rating-value${current == null ? ' is-empty' : ''}`}>
                             {current ?? '—'}
                           </span>
-                          {block?.best != null ? (
-                            <span className="chess-live-rating-best">Best {block.best}</span>
-                          ) : null}
+                          <span className="chess-live-rating-best">
+                            {block?.best != null ? `Best ${block.best}` : 'Best —'}
+                          </span>
                         </div>
                       </button>
                     );
@@ -1022,20 +882,53 @@ function UserProfilePage() {
                         </div>
                 </div>
 
-                <div className="chess-live-rating-chart">
-                  <RatingProgressChart
-                    key={`${chessUsername}-${effectiveJoiningDate || 'none'}-${lastSyncedAt || '0'}`}
-                    username={chessUsername}
-                    activeTimeClass={activeRatingClass}
-                    onActiveTimeClassChange={setActiveRatingClass}
-                    joiningDate={effectiveJoiningDate}
-                    activeRange={statsRange}
-                    onActiveRangeChange={setStatsRange}
-                    hideTabs
-                    theme="light"
-                    compact
-                  />
-                </div>
+                {isReportMode ? (
+                  <div className="chess-live-rating-chart-split">
+                    <div className="chess-live-rating-chart">
+                      <RatingProgressChart
+                        key={`${chessUsername}-blitz-${effectiveJoiningDate || 'none'}-${lastSyncedAt || '0'}-${statsRange}`}
+                        username={chessUsername}
+                        activeTimeClass="blitz"
+                        joiningDate={effectiveJoiningDate}
+                        activeRange={statsRange}
+                        onActiveRangeChange={setStatsRange}
+                        hideTabs
+                        subtitle="Rated games only"
+                        theme="light"
+                        compact
+                      />
+                    </div>
+                    <div className="chess-live-rating-chart">
+                      <RatingProgressChart
+                        key={`${chessUsername}-rapid-${effectiveJoiningDate || 'none'}-${lastSyncedAt || '0'}-${statsRange}`}
+                        username={chessUsername}
+                        activeTimeClass="rapid"
+                        joiningDate={effectiveJoiningDate}
+                        activeRange={statsRange}
+                        onActiveRangeChange={setStatsRange}
+                        hideTabs
+                        subtitle="Rated games only"
+                        theme="light"
+                        compact
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="chess-live-rating-chart">
+                    <RatingProgressChart
+                      key={`${chessUsername}-${effectiveJoiningDate || 'none'}-${lastSyncedAt || '0'}`}
+                      username={chessUsername}
+                      activeTimeClass={activeRatingClass}
+                      onActiveTimeClassChange={setActiveRatingClass}
+                      joiningDate={effectiveJoiningDate}
+                      activeRange={statsRange}
+                      onActiveRangeChange={setStatsRange}
+                      hideTabs
+                      theme="light"
+                      compact
+                    />
+                  </div>
+                )}
 
                 <div className="chess-live-tiles">
                   <div className="chess-live-tile">
@@ -1117,18 +1010,20 @@ function UserProfilePage() {
 
           <div className="chess-basic-section chess-basic-section--history">
             <div className="chess-rebuild-tabs" role="tablist" aria-label="Profile content">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={rebuildTab === 'history'}
-                className={`chess-rebuild-tab${rebuildTab === 'history' ? ' is-active' : ''}`}
-                onClick={() => setRebuildTab('history')}
-              >
-                Game History
-                {!rangeGamesLoading && rangeGamesTotal > 0 ? (
-                  <span className="chess-rebuild-tab-count">{formatNumber(rangeGamesTotal)}</span>
-                ) : null}
-              </button>
+              {!isReportMode ? (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={rebuildTab === 'history'}
+                  className={`chess-rebuild-tab${rebuildTab === 'history' ? ' is-active' : ''}`}
+                  onClick={() => setRebuildTab('history')}
+                >
+                  Game History
+                  {!rangeGamesLoading && rangeGamesTotal > 0 ? (
+                    <span className="chess-rebuild-tab-count">{formatNumber(rangeGamesTotal)}</span>
+                  ) : null}
+                </button>
+              ) : null}
               <button
                 type="button"
                 role="tab"
@@ -1140,7 +1035,7 @@ function UserProfilePage() {
               </button>
             </div>
 
-            {rebuildTab === 'history' ? (
+            {!isReportMode && rebuildTab === 'history' ? (
               <div className="chess-rebuild-tab-panel">
                 <div className="chess-rebuild-history-meta">
                   {rangeGamesLoading
@@ -1254,7 +1149,10 @@ function UserProfilePage() {
                             <span>best ELO gain</span>
                           </div>
                           <div className="chess-ach-elo-chips">
-                            {['bullet', 'blitz', 'rapid', 'daily'].map((key) => {
+                            {(isReportMode
+                              ? ['bullet', 'blitz', 'rapid']
+                              : ['bullet', 'blitz', 'rapid', 'daily']
+                            ).map((key) => {
                               const block = achievements.eloGain?.byTimeClass?.[key];
                               if (block?.delta == null) return null;
                               const tone =
@@ -1320,39 +1218,7 @@ function UserProfilePage() {
                       </div>
                     </div>
 
-                    <div className="chess-ach-milestones">
-                      <div className="chess-ach-milestones-head">
-                        <FiAward aria-hidden />
-                        <div>
-                          <h3>Win Streak Badges</h3>
-                          <p>
-                            Each badge unlocks when you complete that exact streak length.
-                            Streaks are computed from game results (not stored separately).
-                          </p>
-                        </div>
-                      </div>
-                      <div className="chess-ach-milestone-grid">
-                        {(achievements.winStreak?.milestones || []).map((m) => (
-                          <div
-                            key={m.length}
-                            className={`chess-ach-milestone${m.achieved ? ' is-unlocked' : ' is-locked'}`}
-                            title={
-                              m.achieved
-                                ? `Unlocked · earned ${m.times}×`
-                                : `Locked · win ${m.length} games in a row`
-                            }
-                          >
-                            <div className="chess-ach-milestone-ring">
-                              {m.achieved ? <FiCheckCircle aria-hidden /> : <FiStar aria-hidden />}
-                            </div>
-                            <div className="chess-ach-milestone-label">{m.label}</div>
-                            <div className="chess-ach-milestone-times">
-                              {m.achieved ? `×${m.times}` : 'Locked'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <WinStreakBadges milestones={achievements.winStreak?.milestones || []} />
                   </div>
                 ) : (
                   <div className="chess-basic-loading">
@@ -1364,409 +1230,13 @@ function UserProfilePage() {
           </div>
         </section>
       </div>
-      ) : null}
 
-      {/* Old version — reference while we migrate sections into New profile one by one */}
-      {profileView === 'legacy' ? (
-      <>
-      <div className="chess-profile-topbar">
-        <div className="chess-profile-top-actions">
-          <button
-            type="button"
-            className="chess-btn chess-btn-secondary"
-            onClick={syncFromChessCom}
-            disabled={syncing}
-          >
-            <FiRefreshCw className={`chess-icon chess-icon-md${syncing ? ' chess-icon-spin' : ''}`} aria-hidden="true" />
-            {syncing ? 'Syncing…' : 'Sync Games'}
-          </button>
-          {lastSyncedAt && (
-            <span className="chess-profile-sync-meta">
-              Synced {new Date(lastSyncedAt).toLocaleString()}
-            </span>
-          )}
-          {pending && !profile && (
-            <span className="chess-profile-sync-meta chess-profile-sync-meta--live">
-              Loading profile from Chess.com…
-            </span>
-          )}
-          {backgroundSync && !syncing && !pending && (
-            <span className="chess-profile-sync-meta chess-profile-sync-meta--live">
-              Updating games in background…
-            </span>
-          )}
-          {profile?.profileUrl && (
-            <a
-              href={profile.profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chess-btn chess-btn-primary"
-            >
-              View on Chess.com
-              <FiExternalLink className="chess-icon chess-icon-md" aria-hidden="true" />
-            </a>
-          )}
-          {profile?.twitchUrl && (
-            <a
-              href={profile.twitchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chess-btn chess-btn-secondary"
-            >
-              <FiTwitch className="chess-icon chess-icon-md" aria-hidden="true" />
-              Twitch
-            </a>
-          )}
-        </div>
-      </div>
-
-      <div className="chess-profile-header-wrap">
-        <div className={`chess-profile-header-card${profileLoading && !profile ? ' chess-profile-header-card--loading' : ''}`}>
-          <div className="chess-profile-header-main">
-            <div className="chess-profile-avatar-wrap">
-              {profile?.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt={displayName}
-                  className="chess-profile-avatar"
-                />
-              ) : (
-                <div className="chess-profile-avatar-fallback">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div className="chess-profile-identity">
-              <div className="chess-profile-name-row">
-                {profile?.title && <span className="chess-profile-title">{profile.title}</span>}
-                <h1 className="chess-profile-username">{displayName}</h1>
-              </div>
-
-              {profileLoading && !profile ? (
-                <div className="chess-profile-section-skeleton">
-                  <div className="chess-profile-skeleton-line chess-profile-skeleton-line--wide" />
-                  <div className="chess-profile-skeleton-line chess-profile-skeleton-line--medium" />
-                </div>
-              ) : (
-                <>
-              {profile?.name && profile.name !== profile?.username && (
-                <div className="chess-profile-display-name">{profile.name}</div>
-              )}
-
-              <div className="chess-profile-status-row">
-                <span className={`chess-profile-pill ${profile?.isOnline ? 'chess-profile-pill-online' : ''}`}>
-                  <span className={`chess-status-dot ${profile?.isOnline ? 'online' : ''}`} />
-                  {profile?.isOnline ? 'Online now' : 'Offline'}
-                </span>
-                {profile?.verified && (
-                  <span className="chess-profile-pill">
-                    <FiCheckCircle className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    Verified
-                  </span>
-                )}
-                {profile?.isStreamer && (
-                  <span className="chess-profile-pill">
-                    <FiVideo className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    Streamer
-                  </span>
-                )}
-                {profile?.statusLabel && (
-                  <span className="chess-profile-pill">{profile.statusLabel}</span>
-                )}
-              </div>
-
-              <div className="chess-profile-meta-grid">
-                {profile?.location && (
-                  <div className="chess-profile-meta-item">
-                    <FiMapPin className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    <span className="chess-profile-meta-value">{profile.location}</span>
-                  </div>
-                )}
-                {flagUrl && (
-                  <div className="chess-profile-meta-item">
-                    <img src={flagUrl} alt={profile.countryCode} className="chess-profile-flag" />
-                    <span className="chess-profile-meta-value">{profile.countryCode}</span>
-                  </div>
-                )}
-                {profile?.joinedDate && (
-                  <div className="chess-profile-meta-item">
-                    <FiCalendar className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    <span>
-                      Joined <span className="chess-profile-meta-value">{profile.joinedDate}</span>
-                    </span>
-                  </div>
-                )}
-                {profile?.followers != null && (
-                  <div className="chess-profile-meta-item">
-                    <FiUsers className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    <span className="chess-profile-meta-value">{formatNumber(profile.followers)}</span>
-                    <span>followers</span>
-                  </div>
-                )}
-                {profile?.lastOnline && !profile.isOnline && (
-                  <div className="chess-profile-meta-item">
-                    <FiClock className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    <span>Last online {profile.lastOnline}</span>
-                  </div>
-                )}
-                {profile?.league && (
-                  <div className="chess-profile-meta-item">
-                    <FiAward className="chess-icon chess-icon-sm" aria-hidden="true" />
-                    <span className="chess-profile-meta-value">{profile.league}</span>
-                    <span>League</span>
-                  </div>
-                )}
-              </div>
-
-              {stats && (
-                <div className="chess-profile-ratings-block">
-                  <div className="chess-profile-ratings-row" role="tablist" aria-label="Time control ratings">
-                    {RATING_CARDS.map((card) => (
-                      <RatingCard
-                        key={card.key}
-                        label={card.label}
-                        iconUrl={card.iconUrl}
-                        className={card.className}
-                        current={stats[card.key]?.current}
-                        best={stats[card.key]?.best}
-                        selected={activeRatingClass === card.key}
-                        onSelect={() => setActiveRatingClass(card.key)}
-                      />
-                    ))}
-                  </div>
-                  <div className="chess-profile-ratings-chart">
-                    <RatingProgressChart
-                      username={chessUsername}
-                      activeTimeClass={activeRatingClass}
-                      onActiveTimeClassChange={setActiveRatingClass}
-                      hideTabs
-                      compact
-                    />
-                  </div>
-                </div>
-              )}
-
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <nav className="chess-profile-nav" aria-label="Profile sections">
-        {MAIN_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`chess-profile-nav-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="chess-profile-layout">
-        <div className="chess-profile-main">
-          {error && (
-            <Box mb={4}>
-              <ErrorPanel title="Database sync issue" message={error} onRetry={refetch} />
-            </Box>
-          )}
-
-          {activeTab === 'overview' && (
-            <div className="chess-profile-panel chess-games-panel">
-              <div className="chess-profile-panel-header">
-                Game History <span>{formatNumber(totalGames)}</span>
-              </div>
-              <div className="chess-profile-panel-body chess-games-panel-body">
-                {gamesLoading ? (
-                  <div className="chess-profile-section-skeleton chess-profile-section-skeleton--games">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="chess-profile-skeleton-line chess-profile-skeleton-line--game" />
-                    ))}
-                  </div>
-                ) : visibleGames.length ? (
-                  <>
-                    <GameHistoryList games={visibleGames} onSelect={handleGameSelect} profileUsername={chessUsername} />
-                    {totalGames > visibleGames.length && (
-                      <button type="button" className="chess-see-more" onClick={() => setActiveTab('games')}>
-                        See all {formatNumber(totalGames)} games
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="chess-profile-empty">
-                    {pending || backgroundSync ? 'Games will appear after sync completes.' : 'No recent games found.'}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'games' && (
-            <div className="chess-profile-panel chess-games-panel">
-              <div className="chess-profile-panel-header">
-                Game History <span>{formatNumber(totalGames)}</span>
-              </div>
-              <div className="chess-profile-panel-body">
-                {monthlyLoading ? (
-                  <div className="chess-profile-empty">Loading all games…</div>
-                ) : monthlyGames.length > 0 ? (
-                  monthlyGames.map((month) => (
-                    <div key={month.month} className="chess-month-block">
-                      <div className="chess-month-title">
-                        <h4>{month.label}</h4>
-                        <span>
-                          {month.games.length}
-                          {month.gameCount > month.games.length ? ` / ${month.gameCount}` : ''} game
-                          {month.games.length === 1 ? '' : 's'}
-                        </span>
-                      </div>
-                      {month.games.length ? (
-                        <GameHistoryList
-                          games={month.games}
-                          onSelect={handleGameSelect}
-                          profileUsername={chessUsername}
-                        />
-                      ) : (
-                        <div className="chess-profile-empty">No games this month.</div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="chess-profile-empty">
-                    {pending || backgroundSync
-                      ? 'Games will appear after sync completes.'
-                      : 'No games found.'}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'stats' && (
-            <div className="chess-profile-panel">
-              <div className="chess-profile-panel-header">Stats Overview</div>
-              <div className="chess-profile-panel-body">
-                {stats ? (
-                  <>
-                    <StatTileGrid items={STAT_OVERVIEW_ITEMS} stats={stats} />
-
-                    <div style={{ marginTop: '1rem' }}>
-                      <div className="chess-record-row">
-                        <span className="chess-record-row-label">Rapid Record</span>
-                        <span className="chess-record-row-value">
-                          {stats.records.rapid.wins}W / {stats.records.rapid.losses}L /{' '}
-                          {stats.records.rapid.draws}D
-                        </span>
-                      </div>
-                      <div className="chess-record-row">
-                        <span className="chess-record-row-label">Blitz Record</span>
-                        <span className="chess-record-row-value">
-                          {stats.records.blitz.wins}W / {stats.records.blitz.losses}L /{' '}
-                          {stats.records.blitz.draws}D
-                        </span>
-                      </div>
-                      <div className="chess-record-row">
-                        <span className="chess-record-row-label">Bullet Record</span>
-                        <span className="chess-record-row-value">
-                          {stats.records.bullet.wins}W / {stats.records.bullet.losses}L /{' '}
-                          {stats.records.bullet.draws}D
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="chess-profile-empty">No stats available.</div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'archives' && (
-            <div className="chess-profile-panel">
-              <div className="chess-profile-panel-header">Monthly Archives</div>
-              <div className="chess-profile-panel-body">
-                {archives.length ? (
-                  <div className="chess-archive-list">
-                    {[...archives].reverse().map((archive) => (
-                      <Link
-                        key={archive.url}
-                        href={archive.url}
-                        isExternal
-                        className="chess-archive-item"
-                      >
-                        <span>{archive.label}</span>
-                        <FiChevronRight className="chess-icon chess-icon-sm" aria-hidden="true" />
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="chess-profile-empty">
-                    {pending || backgroundSync
-                      ? 'Archives will appear after sync completes.'
-                      : profile && lastSyncedAt && totalGames === 0
-                        ? `Chess.com has no game archives for ${profile.username}. Sync completed successfully — this account has no live games on Chess.com yet.`
-                        : 'No archives found. Try Sync Games if this player has recent games on Chess.com.'}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'report' && (
-            <div className="chess-profile-report">
-              <div className="chess-profile-panel">
-                <div className="chess-profile-panel-header">Last 3 months — rating</div>
-                <div className="chess-profile-panel-body chess-profile-report-body">
-                  <RatingProgressChart username={chessUsername} />
-                </div>
-              </div>
-
-              <div className="chess-profile-panel">
-                <div className="chess-profile-panel-header">
-                  Streak report — yesterday & all-time
-                </div>
-                <div className="chess-profile-panel-body chess-profile-report-body">
-                  <PlayerWinStreakReport username={chessUsername} />
-                </div>
-              </div>
-
-              <div className="chess-profile-panel chess-profile-report-chart-panel">
-                <div className="chess-profile-panel-body">
-                  <YesterdayGamesChart username={chessUsername} />
-                </div>
-              </div>
-
-              <div className="chess-profile-panel">
-                <div className="chess-profile-panel-header">Yesterday’s games</div>
-                <div className="chess-profile-panel-body">
-                  <YesterdayGamesList username={chessUsername} onSelect={handleGameSelect} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'overview' && stats && (
-            <div className="chess-profile-panel chess-quick-stats-panel" style={{ marginTop: '1rem' }}>
-              <div className="chess-profile-panel-header chess-quick-stats-header">
-                Quick Stats
-              </div>
-              <div className="chess-profile-panel-body">
-                <GameResultsBar stats={stats} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <aside className="chess-profile-sidebar">
-          <SidebarWidgets profile={profile} stats={stats} clubs={clubs} totalGames={totalGames} />
-        </aside>
-      </div>
-      </>
-      ) : null}
+      <ReportFromDateModal
+        open={reportModalOpen}
+        joiningDate={effectiveJoiningDate}
+        onCancel={handleReportModalCancel}
+        onConfirm={handleReportModalConfirm}
+      />
     </Box>
   );
 }

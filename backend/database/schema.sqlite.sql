@@ -347,6 +347,7 @@ CREATE TABLE IF NOT EXISTS chess_com_moves (
   move_number      INTEGER NOT NULL,
   color            TEXT NOT NULL CHECK (color IN ('w', 'b')),
   san              TEXT NOT NULL,
+  uci              TEXT,
   from_square      TEXT,
   to_square        TEXT NOT NULL,
   piece            TEXT,
@@ -444,137 +445,8 @@ CREATE TABLE IF NOT EXISTS chess_com_brilliance_runs (
 CREATE INDEX IF NOT EXISTS idx_chess_com_brilliance_runs_stage4
   ON chess_com_brilliance_runs (stage4_status, stage4_run_at DESC);
 
-CREATE TABLE IF NOT EXISTS chess_com_brilliance_stage0 (
-  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-  chess_com_uuid          TEXT NOT NULL
-    REFERENCES chess_com_games(chess_com_uuid) ON DELETE CASCADE,
-  ply_index               INTEGER NOT NULL,
-  san_move                TEXT,
-  turn                    TEXT,
-  game_phase              TEXT,
-  see_value               INTEGER,
-  is_capture              INTEGER NOT NULL DEFAULT 0,
-  is_sacrifice_candidate  INTEGER NOT NULL DEFAULT 0,
-  was_piece_hanging       INTEGER NOT NULL DEFAULT 0,
-  proceed_to_stage1       INTEGER NOT NULL DEFAULT 0,
-  king_safety_delta       INTEGER,
-  multiplexing_score      INTEGER,
-  ev_score                INTEGER,
-  harmony_score           REAL,
-  control_delta           INTEGER,
-  activity_delta          REAL,
-  is_check                INTEGER NOT NULL DEFAULT 0,
-  moving_piece_type       TEXT,
-  dest_attackers          INTEGER,
-  dest_defenders          INTEGER,
-  novelty_score           REAL,
-  early_game_blocked      INTEGER NOT NULL DEFAULT 0,
-  features_json           TEXT NOT NULL DEFAULT '{}',
-  created_at              TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (chess_com_uuid, ply_index)
-);
-
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s0_game
-  ON chess_com_brilliance_stage0 (chess_com_uuid);
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s0_sac
-  ON chess_com_brilliance_stage0 (chess_com_uuid, is_sacrifice_candidate);
-
-CREATE TABLE IF NOT EXISTS chess_com_brilliance_stage1 (
-  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-  chess_com_uuid          TEXT NOT NULL
-    REFERENCES chess_com_games(chess_com_uuid) ON DELETE CASCADE,
-  ply_index               INTEGER NOT NULL,
-  san_move                TEXT,
-  turn                    TEXT,
-  sac_type                TEXT,
-  is_valid_sacrifice      INTEGER NOT NULL DEFAULT 0,
-  is_pseudo               INTEGER NOT NULL DEFAULT 0,
-  is_forced               INTEGER NOT NULL DEFAULT 0,
-  proceed_to_stage2       INTEGER NOT NULL DEFAULT 0,
-  gate_fail_reason        TEXT,
-  material_loss_cp        INTEGER,
-  sacrifice_uncertainty   REAL,
-  recapture_options       INTEGER,
-  forced_reason           TEXT,
-  n_legal                 INTEGER,
-  disqualifiers_json      TEXT,
-  features_json           TEXT NOT NULL DEFAULT '{}',
-  created_at              TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (chess_com_uuid, ply_index)
-);
-
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s1_game
-  ON chess_com_brilliance_stage1 (chess_com_uuid);
-
-CREATE TABLE IF NOT EXISTS chess_com_brilliance_stage2 (
-  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-  chess_com_uuid          TEXT NOT NULL
-    REFERENCES chess_com_games(chess_com_uuid) ON DELETE CASCADE,
-  ply_index               INTEGER NOT NULL,
-  san_move                TEXT,
-  turn                    TEXT,
-  sac_type                TEXT,
-  best_move               TEXT,
-  best_score_cp           INTEGER,
-  our_score_cp            INTEGER,
-  cpl_shallow             INTEGER,
-  ep_delta_shallow        REAL,
-  our_rank_in_top5        INTEGER,
-  is_forced_engine        INTEGER NOT NULL DEFAULT 0,
-  n_reasonable_moves      INTEGER,
-  response_width          INTEGER,
-  is_best_or_near_best    INTEGER NOT NULL DEFAULT 0,
-  proceed_to_stage3       INTEGER NOT NULL DEFAULT 0,
-  gate_fail_reason        TEXT,
-  classification_if_fail  TEXT,
-  engine_depth            INTEGER NOT NULL DEFAULT 12,
-  features_json           TEXT NOT NULL DEFAULT '{}',
-  created_at              TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (chess_com_uuid, ply_index)
-);
-
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s2_game
-  ON chess_com_brilliance_stage2 (chess_com_uuid);
-
-CREATE TABLE IF NOT EXISTS chess_com_brilliance_stage3 (
-  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-  chess_com_uuid          TEXT NOT NULL
-    REFERENCES chess_com_games(chess_com_uuid) ON DELETE CASCADE,
-  ply_index               INTEGER NOT NULL,
-  san_move                TEXT,
-  turn                    TEXT,
-  sac_type                TEXT,
-  deep_eval_cp            INTEGER,
-  depth_slope             REAL,
-  depth_gain              REAL,
-  depth_variance          REAL,
-  early_eval_avg          REAL,
-  late_eval_avg           REAL,
-  is_rising_curve         INTEGER NOT NULL DEFAULT 0,
-  is_sound                INTEGER NOT NULL DEFAULT 0,
-  is_non_obvious          INTEGER NOT NULL DEFAULT 0,
-  non_obvious_score       REAL,
-  rank_at_depth8          INTEGER,
-  rank_at_depth22         INTEGER,
-  rank_jump               INTEGER,
-  good_defenses           INTEGER,
-  defense_difficulty      REAL,
-  counterfactual_delta    REAL,
-  classification_if_unsound TEXT,
-  proceed_to_stage4       INTEGER NOT NULL DEFAULT 0,
-  gate_fail_reason        TEXT,
-  engine_depth            INTEGER NOT NULL DEFAULT 25,
-  depth_evals_json        TEXT,
-  eval_perspective        TEXT NOT NULL DEFAULT 'white',
-  features_json           TEXT NOT NULL DEFAULT '{}',
-  created_at              TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (chess_com_uuid, ply_index)
-);
-
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s3_game
-  ON chess_com_brilliance_stage3 (chess_com_uuid);
-
-CREATE TABLE IF NOT EXISTS chess_com_brilliance_stage4 (
+-- Final product (stages 0–3 live only in compute SQLite: lichess_pgn_stage0–3)
+CREATE TABLE IF NOT EXISTS brilliant_moves (
   id                      INTEGER PRIMARY KEY AUTOINCREMENT,
   chess_com_uuid          TEXT NOT NULL
     REFERENCES chess_com_games(chess_com_uuid) ON DELETE CASCADE,
@@ -584,31 +456,22 @@ CREATE TABLE IF NOT EXISTS chess_com_brilliance_stage4 (
   sac_type                TEXT,
   player_rating           INTEGER,
   surprise_score          REAL,
-  info_surprise_bits      REAL,
-  brilliant_for_rating    INTEGER NOT NULL DEFAULT 0,
   pb_score                REAL,
   pb_category             TEXT,
-  obj_quality             REAL,
-  practical_value         REAL,
-  is_tal_zone             INTEGER NOT NULL DEFAULT 0,
   archetype               TEXT,
   brilliance_score        REAL,
   brilliance_score_raw    REAL,
   novelty_score           REAL,
   classification          TEXT,
   is_brilliant            INTEGER NOT NULL DEFAULT 0,
-  features_json           TEXT NOT NULL DEFAULT '{}',
-  sqlite_stage4_id        INTEGER,
   created_at              TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (chess_com_uuid, ply_index)
 );
 
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s4_game
-  ON chess_com_brilliance_stage4 (chess_com_uuid);
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s4_brilliant
-  ON chess_com_brilliance_stage4 (is_brilliant, brilliance_score DESC);
-CREATE INDEX IF NOT EXISTS idx_cc_brilliance_s4_sqlite
-  ON chess_com_brilliance_stage4 (sqlite_stage4_id);
+CREATE INDEX IF NOT EXISTS idx_brilliant_moves_game
+  ON brilliant_moves (chess_com_uuid);
+CREATE INDEX IF NOT EXISTS idx_brilliant_moves_brilliant
+  ON brilliant_moves (is_brilliant, brilliance_score DESC);
 
 CREATE TABLE IF NOT EXISTS brilliant_move_puzzles (
   id                      INTEGER PRIMARY KEY AUTOINCREMENT,

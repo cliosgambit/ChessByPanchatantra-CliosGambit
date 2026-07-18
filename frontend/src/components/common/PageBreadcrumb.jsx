@@ -14,7 +14,7 @@ function truncateLabel(label, maxChars = DEFAULT_MAX_CHARS) {
 /**
  * Folder-style breadcrumb trail. Parents are clickable links; the last item is the current page.
  * Long labels are truncated with an ellipsis; full text is available via title tooltip.
- * @param {{ items: Array<{ label: string, to?: string }> , className?: string, maxChars?: number }} props
+ * @param {{ items: Array<{ label: string, to?: string, state?: object }> , className?: string, maxChars?: number }} props
  */
 function PageBreadcrumb({ items = [], className = '', maxChars = DEFAULT_MAX_CHARS }) {
   const crumbs = (items || []).filter((item) => item?.label);
@@ -43,7 +43,12 @@ function PageBreadcrumb({ items = [], className = '', maxChars = DEFAULT_MAX_CHA
                   {displayLabel}
                 </span>
               ) : (
-                <Link to={item.to} className="page-breadcrumb-link" title={title}>
+                <Link
+                  to={item.to}
+                  state={item.state}
+                  className="page-breadcrumb-link"
+                  title={title}
+                >
                   {displayLabel}
                 </Link>
               )}

@@ -4,6 +4,8 @@ import { Box } from '@chakra-ui/react';
 import { AnimatePresence } from 'framer-motion';
 import SideNav, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from './SideNav';
 import PageTransition from '../dashboard/PageTransition';
+import CameraToggleButton from '../CameraToggleButton';
+import CelebrationOverlay from '../CelebrationOverlay';
 import './AdminLayout.css';
 
 function isDashboardPath(pathname) {
@@ -69,6 +71,9 @@ function AdminLayout() {
           </PageTransition>
         </AnimatePresence>
       </Box>
+
+      <CameraToggleButton />
+      <CelebrationOverlay />
     </Box>
   );
 }

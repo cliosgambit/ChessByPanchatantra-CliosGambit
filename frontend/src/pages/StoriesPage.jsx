@@ -13,6 +13,7 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useRoleStoryAccess } from '../hooks/useRoleStoryAccess';
+import { canManageContent } from '../utils/roles';
 import StoryPage from './StoryPage';
 
 function StudentStoriesPage() {
@@ -126,7 +127,7 @@ function StudentStoriesPage() {
 
 function StoriesPage() {
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const isAdmin = canManageContent(user?.role);
 
   if (isAdmin) {
     return <StoryPage />;

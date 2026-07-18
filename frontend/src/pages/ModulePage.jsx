@@ -21,6 +21,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useRoleModuleAccess } from '../hooks/useRoleModuleAccess';
+import { canManageContent } from '../utils/roles';
 
 const ADMIN_EDITABLE_ROLES = ['student', 'guest'];
 
@@ -52,7 +53,7 @@ function ModulePage({ embedded = false, title = 'Modules' }) {
   const { user } = useAuth();
   const [adminEditRole, setAdminEditRole] = useState('student');
   // Use the selected role for admin, or 'student' for students
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = canManageContent(user?.role);
   const isStudent = user?.role === 'student';
   const isGuest = !user;
   const isCoach = user?.role === 'coach';

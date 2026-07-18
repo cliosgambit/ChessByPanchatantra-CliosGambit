@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiGrid, FiShuffle, FiTarget } from 'react-icons/fi';
+import { FiGrid, FiShuffle, FiTarget, FiZap } from 'react-icons/fi';
 import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Puzzles.css';
 
@@ -25,9 +25,16 @@ function Puzzles() {
     {
       key: 'chesscom',
       title: 'Chess.com random puzzles',
-      description: 'Saved brilliant-move puzzles from Chess.com games',
+      description: 'Daily-style random puzzles from Chess.com',
       path: '/puzzles/chesscom',
       icon: <FiShuffle aria-hidden />,
+    },
+    {
+      key: 'brilliant',
+      title: 'Brilliant Move Puzzles',
+      description: 'Saved puzzles from verified brilliant moves',
+      path: '/puzzles/brilliant',
+      icon: <FiZap aria-hidden />,
     },
   ];
 

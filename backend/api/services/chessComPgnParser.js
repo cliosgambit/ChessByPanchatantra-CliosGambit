@@ -49,6 +49,7 @@ function parsePgnToMoves(pgn) {
       move_number: Math.ceil(ply / 2),
       color: move.color,
       san,
+      uci: `${move.from}${move.to}${move.promotion || ''}`,
       from_square: move.from,
       to_square: move.to,
       piece: move.piece,

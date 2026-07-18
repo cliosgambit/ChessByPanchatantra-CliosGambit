@@ -182,11 +182,29 @@ async function ensureDefaultAdminInLogin() {
   console.log('⚠️  Seeded default admin in Login: admin@gmail.com / 1234');
 }
 
+async function ensureDefaultCoachInLogin() {
+  const coachEmail = 'coach@gmail.com';
+  const { rows } = await db.query(
+    `SELECT 1 FROM "Login" WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+    [coachEmail]
+  );
+  if (rows[0]) return;
+
+  const passwordHash = await hashPassword('1234');
+  await db.query(
+    `INSERT INTO "Login" ("Player_Name", email, password, "Role", created_at)
+     VALUES ($1, $2, $3, 'coach', datetime('now'))`,
+    ['Coach', coachEmail, passwordHash]
+  );
+  console.log('⚠️  Seeded default coach in Login: coach@gmail.com / 1234');
+}
+
 async function migrateUsersToLogin() {
   if (isPostgres) {
     const { rows: loginCount } = await db.query(`SELECT COUNT(*) AS count FROM "Login"`);
     const n = Number(loginCount[0]?.count) || 0;
     if (n === 0) await ensureDefaultAdminInLogin();
+    await ensureDefaultCoachInLogin();
     console.log(`✅ Login table ready (Supabase, ${n} user(s))`);
     return;
   }
@@ -204,6 +222,7 @@ async function migrateUsersToLogin() {
   if ((loginCount[0]?.count || 0) === 0) {
     await ensureDefaultAdminInLogin();
   }
+  await ensureDefaultCoachInLogin();
 }
 
 module.exports = { migrateUsersToLogin, ensureLoginColumns, migrateLoginDropChessComId };

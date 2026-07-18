@@ -7,7 +7,7 @@ const router = express.Router();
 const SALT_ROUNDS = 10;
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$/;
 
-router.use('/students', authenticate, authorizeRoles('admin'));
+router.use('/students', authenticate, authorizeRoles('admin', 'coach'));
 
 async function hashPassword(password) {
   if (!password) return null;
@@ -48,6 +48,7 @@ function mapStudent(row) {
     email: row.email || null,
     role: row.Role || row.role || 'student',
     batches: Array.isArray(row.batches) ? row.batches : [],
+    chess_last_synced_at: row.chess_last_synced_at || row.last_synced_at || null,
     created_at: row.created_at || null,
     updated_at: row.updated_at || null,
   };
@@ -96,9 +97,12 @@ router.get('/students', async (req, res) => {
     const q = String(req.query.q || '').trim();
     const params = [];
     let sql = `
-      SELECT s.*, l.email, l."Role"
+      SELECT s.*, l.email, l."Role",
+             c.last_synced_at AS chess_last_synced_at
       FROM Students s
       INNER JOIN "Login" l ON l.id = s.login_id
+      LEFT JOIN chess_com_profiles c
+        ON c.chess_com_id = LOWER(TRIM(s.chess_com_id))
       WHERE 1=1`;
     if (q) {
       const like = `%${q}%`;
@@ -146,6 +150,14 @@ router.post('/students/sync-all', async (_req, res) => {
       forceFull: false,
     });
 
+    try {
+      require('../api/services/chessComMovesBackfillService').wakeMovesBackfill(
+        'after-sync-all'
+      );
+    } catch {
+      /* non-fatal */
+    }
+
     return res.json({
       ok: true,
       count: ids.length,
@@ -166,9 +178,12 @@ router.post('/students/sync-all', async (_req, res) => {
 router.get('/students/:id', async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT s.*, l.email, l."Role"
+      `SELECT s.*, l.email, l."Role",
+              c.last_synced_at AS chess_last_synced_at
        FROM Students s
        INNER JOIN "Login" l ON l.id = s.login_id
+       LEFT JOIN chess_com_profiles c
+         ON c.chess_com_id = LOWER(TRIM(s.chess_com_id))
        WHERE s.id = $1`,
       [Number(req.params.id)]
     );

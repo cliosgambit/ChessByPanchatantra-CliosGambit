@@ -20,6 +20,7 @@ function GameHistoryList({
   extraColumnLabel = null,
   extraColumn = null,
   portalPreview = false,
+  prefetchPgn = true,
 }) {
   const listRef = useRef(null);
   const hideTimer = useRef(null);
@@ -178,6 +179,8 @@ function GameHistoryList({
   }, [games]);
 
   useEffect(() => {
+    if (!prefetchPgn) return undefined;
+
     let cancelled = false;
 
     async function prefetchVisiblePgns() {
@@ -198,7 +201,7 @@ function GameHistoryList({
     return () => {
       cancelled = true;
     };
-  }, [games, loadPgnForGame, profileUsername]);
+  }, [games, loadPgnForGame, profileUsername, prefetchPgn]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 

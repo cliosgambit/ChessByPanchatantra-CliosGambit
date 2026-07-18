@@ -95,14 +95,10 @@ function TablesBrowser() {
     'chess_com_moves',
     'chess_com_clubs',
     'chess_com_sync_raw',
-    // Brilliance pipeline
+    // Brilliance pipeline (stages 0–3 are SQLite-only)
     'brilliant_move_puzzles',
     'chess_com_brilliance_runs',
-    'chess_com_brilliance_stage0',
-    'chess_com_brilliance_stage1',
-    'chess_com_brilliance_stage2',
-    'chess_com_brilliance_stage3',
-    'chess_com_brilliance_stage4',
+    'brilliant_moves',
   ];
 
   const sortedTables = useMemo(() => {

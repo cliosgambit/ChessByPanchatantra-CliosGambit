@@ -15,6 +15,7 @@ import GmPuzzleView from '../pages/GmPuzzleView';
 import LichessPuzzles from '../pages/LichessPuzzles';
 import LichessPuzzleView from '../pages/LichessPuzzleView';
 import ChessComPuzzles from '../pages/ChessComPuzzles';
+import BrilliantMovePuzzles from '../pages/BrilliantMovePuzzles';
 import ViewPuzzle from '../pages/ViewPuzzle';
 import Students from '../pages/Students';
 import BatchDetailPage from '../pages/BatchDetailPage';
@@ -53,6 +54,11 @@ function LibraryEditRedirect() {
   return <Navigate to={`/library/${storyId}`} replace state={{ edit: true }} />;
 }
 
+function PlayerProfileCanonicalRedirect() {
+  const { userId } = useParams();
+  return <Navigate to={`/players/${encodeURIComponent(userId)}`} replace />;
+}
+
 function AppRoutesContent() {
   return (
     <Box p={0} m={0} w="100%" h="100%">
@@ -65,7 +71,11 @@ function AppRoutesContent() {
           <Route element={<ProtectedRoute requireAuth />}>
             <Route element={<AdminLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/tables" element={<TablesBrowser />} />
+                <Route path="/tables/:tableName" element={<TablesBrowser />} />
+              </Route>
               <Route path="/modules" element={<ModulesPage />} />
               <Route path="/modules/:moduleId" element={<ModuleDetailPage />} />
               <Route
@@ -87,21 +97,19 @@ function AppRoutesContent() {
               <Route path="/puzzles/lichess/:puzzleId" element={<LichessPuzzleView />} />
               <Route path="/puzzles/chesscom" element={<ChessComPuzzles />} />
               <Route path="/puzzles/chesscom/:puzzleId" element={<ViewPuzzle />} />
+              <Route path="/puzzles/brilliant" element={<BrilliantMovePuzzles />} />
+              <Route path="/puzzles/brilliant/:puzzleId" element={<ViewPuzzle />} />
               <Route path="/players/:userId/game/:gameId" element={<ChessComGamePage />} />
-              <Route path="/players/:userId/new" element={<UserProfilePage />} />
-              <Route path="/players/:userId/legacy" element={<UserProfilePage />} />
-              <Route
-                path="/players/:userId"
-                element={<Navigate to="new" replace />}
-              />
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/players/:userId/report" element={<UserProfilePage />} />
+              <Route path="/players/:userId/new" element={<PlayerProfileCanonicalRedirect />} />
+              <Route path="/players/:userId/legacy" element={<PlayerProfileCanonicalRedirect />} />
+              <Route path="/players/:userId" element={<UserProfilePage />} />
+              <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
                 <Route path="/students" element={<Students />} />
                 <Route path="/students/batches/:batchId" element={<BatchDetailPage />} />
                 <Route path="/brilliant-moves" element={<BrilliantMoves />} />
                 <Route path="/brilliant-moves/:moveId" element={<ViewBrilliantMove />} />
                 <Route path="/all-games" element={<AllGames />} />
-                <Route path="/tables" element={<TablesBrowser />} />
-                <Route path="/tables/:tableName" element={<TablesBrowser />} />
                 <Route path="/library" element={<Library />} />
                 <Route path="/library/new" element={<LibraryStoryForm />} />
                 <Route path="/library/:storyId/edit" element={<LibraryEditRedirect />} />

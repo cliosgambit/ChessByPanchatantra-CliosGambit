@@ -1,6 +1,7 @@
 .chess-brilliant-moves-table {
   --bm-columns: minmax(148px, 1.25fr) 88px minmax(108px, 0.95fr) 76px 76px 96px 84px minmax(104px, 0.85fr);
   width: 100%;
+  background: #ffffff;
 }
 
 .chess-brilliant-moves-head,
@@ -17,10 +18,10 @@
   top: 0;
   z-index: 5;
   margin: 0;
-  border-bottom: 1px solid var(--chess-border, #3a3835);
-  background: linear-gradient(180deg, #353230 0%, #2f2d2b 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
-  color: #c9c7c4;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+  color: #64748b;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -53,11 +54,16 @@
 
 .chess-brilliant-moves-list {
   position: relative;
+  background: #ffffff;
 }
 
 .chess-brilliant-moves-row-wrap {
   position: relative;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.chess-brilliant-moves-row-wrap:nth-child(even) .chess-brilliant-moves-row {
+  background: #fafbfc;
 }
 
 .chess-brilliant-moves-row-wrap:last-child {
@@ -69,18 +75,32 @@
 }
 
 .chess-brilliant-moves-row-wrap--hovered .chess-brilliant-moves-row {
-  background: rgba(255, 255, 255, 0.06);
+  background: #fff7ed !important;
+}
+
+.chess-brilliant-moves-row-wrap--clickable .chess-brilliant-moves-row {
+  cursor: pointer;
+}
+
+.chess-brilliant-moves-row-wrap--clickable .chess-brilliant-moves-row:hover {
+  background: #fff7ed;
+}
+
+.chess-brilliant-moves-row-wrap--clickable .chess-brilliant-moves-row:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: -2px;
 }
 
 .chess-brilliant-moves-row {
   min-height: 2.75rem;
+  background: #ffffff;
   transition: background 0.15s ease;
 }
 
 .chess-brilliant-moves-col {
   min-width: 0;
   font-size: 0.88rem;
-  color: var(--chess-text, #f3f2f1);
+  color: #0f172a;
 }
 
 .chess-brilliant-moves-col--player {
@@ -88,7 +108,8 @@
 }
 
 .chess-brilliant-moves-col--player .chess-game-player-name {
-  font-weight: 600;
+  font-weight: 650;
+  color: #0f172a;
 }
 
 .chess-brilliant-moves-col--move {
@@ -97,7 +118,7 @@
 
 .chess-brilliant-moves-col--class {
   text-align: left;
-  color: var(--chess-text-muted, #a8a6a3);
+  color: #64748b;
   font-size: 0.82rem;
   letter-spacing: 0.03em;
 }
@@ -109,9 +130,20 @@
   text-align: center;
 }
 
+.chess-brilliant-moves-col--score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #c2410c;
+}
+
+.chess-brilliant-moves-col--rating {
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+}
+
 .chess-brilliant-moves-col--date {
   text-align: right;
-  color: var(--chess-text-muted, #a8a6a3);
+  color: #64748b;
   font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
 }
@@ -119,6 +151,30 @@
 .chess-brilliant-moves-table .chess-brilliant-move-cell {
   justify-self: start;
   width: 100%;
+  cursor: pointer;
+}
+
+.chess-brilliant-moves-table .chess-brilliant-move-link {
+  color: #c2410c;
+  font-weight: 750;
+}
+
+.chess-brilliant-moves-table .chess-stage4-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.chess-brilliant-moves-table .chess-stage4-chip--pass {
+  color: #15803d;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
 }
 
 .chess-review-chip {
@@ -135,9 +191,9 @@
 }
 
 .chess-review-chip--no {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--chess-text-muted, #a8a6a3);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: #f8fafc;
+  color: #64748b;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
 }
 
 .chess-review-chip--yes {
@@ -145,15 +201,21 @@
 }
 
 .chess-review-chip--yes.chess-review-chip--approved {
-  background: rgba(107, 155, 77, 0.22);
-  color: #9fd06f;
-  box-shadow: inset 0 0 0 1px rgba(107, 155, 77, 0.45);
+  background: #ecfdf5;
+  color: #15803d;
+  box-shadow: inset 0 0 0 1px #86efac;
 }
 
 .chess-review-chip--yes.chess-review-chip--rejected {
-  background: rgba(224, 88, 88, 0.18);
-  color: #f08a8a;
-  box-shadow: inset 0 0 0 1px rgba(224, 88, 88, 0.42);
+  background: #fef2f2;
+  color: #b91c1c;
+  box-shadow: inset 0 0 0 1px #fecaca;
+}
+
+.chess-review-chip--yes.chess-review-chip--pending {
+  background: #fffbeb;
+  color: #b45309;
+  box-shadow: inset 0 0 0 1px #fcd34d;
 }
 
 @media (max-width: 980px) {

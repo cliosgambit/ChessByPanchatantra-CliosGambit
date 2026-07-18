@@ -21,7 +21,7 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-router.use('/admin', authenticate, authorizeRoles('admin'));
+router.use('/admin', authenticate, authorizeRoles('admin', 'coach'));
 
 router.post('/admin/login-users', async (req, res) => {
   const { Player_Name, email, password, Role } = req.body;

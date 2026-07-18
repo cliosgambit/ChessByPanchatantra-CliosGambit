@@ -160,8 +160,19 @@ def deep_engine_features(board_before, move, color, engine):
     elif len(deep_multi) > 1 and deep_multi[1].get("pv"):
         best_alt_move = deep_multi[1]["pv"][0]
 
+    # CPL deep must compare like-for-like multipv scores from board_before.
+    # Using depth-curve post-move eval vs multipv best mixes two searches and
+    # can invent a large gap even when the played move is rank #1 at d18.
+    our_deep_white = None
+    for info in deep_multi:
+        if info.get("pv") and info["pv"][0] == move:
+            our_deep_white = cp_from_info_white(info)
+            break
+    if our_deep_white is None:
+        our_deep_white = deep_eval_white
+
     best_deep_white = cp_from_info_white(deep_multi[0])
-    cpl_deep = cpl_from_white_scores(best_deep_white, deep_eval_white, color)
+    cpl_deep = cpl_from_white_scores(best_deep_white, our_deep_white, color)
     is_near_best_deep = cpl_deep <= 50
 
     counterfactual_delta = 0.0
@@ -237,7 +248,42 @@ def apply_stage3_gate(engine_features):
     Hard gate: only CPL deep blocks Stage 4.
     Soundness and depth span are scored in Stage 4 (deep_eval_sound_score,
     depth_eval_span_score).
+
+    Overrides avoid false negatives when deep search already endorses the move
+    (rank #1), depth vindicates it (rising curve), or near-best CPL has strong
+    compensation signal (depth gain / rank jump / non-obviousness).
     """
+    if engine_features.get("rank_at_depth22") == 1:
+        return {
+            "proceed_to_stage4": True,
+            "classification_if_unsound": None,
+            "gate_fail_reason": None,
+            "gate_override": "rank1_at_d18",
+        }
+
+    if engine_features.get("is_rising_curve"):
+        return {
+            "proceed_to_stage4": True,
+            "classification_if_unsound": None,
+            "gate_fail_reason": None,
+            "gate_override": "rising_curve",
+        }
+
+    cpl_deep = engine_features.get("cpl_deep", 9999)
+    non_obvious_score = engine_features.get("non_obvious_score", 0) or 0
+    depth_gain = engine_features.get("depth_gain", 0) or 0
+    rank_jump = engine_features.get("rank_jump", 0) or 0
+
+    if cpl_deep <= 150 and (
+        non_obvious_score >= 3.0 or depth_gain >= 100 or rank_jump >= 2
+    ):
+        return {
+            "proceed_to_stage4": True,
+            "classification_if_unsound": None,
+            "gate_fail_reason": None,
+            "gate_override": "relaxed_cpl_with_compensation",
+        }
+
     unsound_reasons = []
     if not engine_features.get("is_near_best_deep"):
         unsound_reasons.append("cpl_deep_too_high")
@@ -283,6 +329,7 @@ def analyze_stage3_move(board, move, ply_index, engine, skip_stage2_gate=False):
         "proceed_to_stage4": gate["proceed_to_stage4"],
         "classification_if_unsound": gate["classification_if_unsound"],
         "gate_fail_reason": gate.get("gate_fail_reason"),
+        "gate_override": gate.get("gate_override"),
         "engine_used": True,
     }
 

@@ -18,6 +18,7 @@ import {
   updateChapter,
   updateModule,
 } from '../services/modulesService';
+import { canManageContent } from '../utils/roles';
 import './Modules.css';
 
 const CHAPTER_THEMES = ['green', 'tan', 'blue', 'purple', 'orange'];
@@ -41,7 +42,7 @@ function ModuleDetailPage() {
   const { moduleId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const isAdmin = canManageContent(user?.role);
   const menuRef = useRef(null);
 
   const [module, setModule] = useState(null);

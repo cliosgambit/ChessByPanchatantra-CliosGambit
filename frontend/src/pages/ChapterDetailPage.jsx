@@ -6,7 +6,6 @@ import {
   FiEyeOff,
   FiGrid,
   FiList,
-  FiMoreVertical,
   FiPlus,
   FiSearch,
   FiTrash2,
@@ -24,6 +23,7 @@ import {
   updateChapter,
   updateChapterStoryVisibility,
 } from '../services/modulesService';
+import { canManageContent } from '../utils/roles';
 import './Modules.css';
 import './Library.css';
 
@@ -33,6 +33,16 @@ const PREVIEW_HIDE_DELAY_MS = 120;
 
 function viewModeKey(moduleId, chapterId) {
   return `chapterDetailViewMode_${moduleId}_${chapterId}`;
+}
+
+function clampMenuPosition(x, y, menuWidth = 210, menuHeight = 200) {
+  const pad = 8;
+  const maxX = window.innerWidth - menuWidth - pad;
+  const maxY = window.innerHeight - menuHeight - pad;
+  return {
+    x: Math.max(pad, Math.min(x, maxX)),
+    y: Math.max(pad, Math.min(y, maxY)),
+  };
 }
 
 function formatAdded(dateStr) {
@@ -51,109 +61,14 @@ function formatAdded(dateStr) {
   return d.toLocaleString();
 }
 
-function StoryActionsMenu({
-  story,
-  isOpen,
-  onToggle,
-  onClose,
-  busy,
-  onHide,
-  onEdit,
-  onRemove,
-  variant = 'card',
-}) {
-  const menuRef = useRef(null);
-  const btnRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    const handleClick = (e) => {
-      if (menuRef.current?.contains(e.target) || btnRef.current?.contains(e.target)) return;
-      onClose();
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [isOpen, onClose]);
-
-  return (
-    <div
-      className={`library-actions-menu-wrap${
-        variant === 'card' ? ' library-actions-menu-wrap--card' : ' library-actions-menu-wrap--table'
-      }`}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        ref={btnRef}
-        type="button"
-        className="library-actions-menu-btn"
-        aria-label={`Actions for ${story.title}`}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-      >
-        <FiMoreVertical aria-hidden />
-      </button>
-      {isOpen ? (
-        <div ref={menuRef} className="library-actions-menu" role="menu">
-          <button
-            type="button"
-            className="library-actions-menu-item"
-            role="menuitem"
-            disabled={busy}
-            onClick={() => {
-              onHide();
-              onClose();
-            }}
-          >
-            {story.visible_to_students ? (
-              <>
-                <FiEyeOff aria-hidden /> Hide from students
-              </>
-            ) : (
-              <>
-                <FiEye aria-hidden /> Show to students
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            className="library-actions-menu-item"
-            role="menuitem"
-            onClick={() => {
-              onEdit();
-              onClose();
-            }}
-          >
-            <FiEdit2 aria-hidden /> Edit
-          </button>
-          <button
-            type="button"
-            className="library-actions-menu-item library-actions-menu-item--danger"
-            role="menuitem"
-            disabled={busy}
-            onClick={() => {
-              onRemove();
-              onClose();
-            }}
-          >
-            <FiTrash2 aria-hidden /> Remove
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function ChapterDetailPage() {
   const { moduleId, chapterId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin';
+  const isAdmin = canManageContent(user?.role);
 
   const tableWrapRef = useRef(null);
+  const menuRef = useRef(null);
   const hideTimer = useRef(null);
 
   const [module, setModule] = useState(null);
@@ -169,7 +84,7 @@ function ChapterDetailPage() {
   const [addVisible, setAddVisible] = useState(true);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [openMenuStoryId, setOpenMenuStoryId] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
   const [viewMode, setViewMode] = useState(() => {
     try {
       const saved = localStorage.getItem(viewModeKey(moduleId, chapterId));
@@ -220,8 +135,29 @@ function ChapterDetailPage() {
   }, [moduleId, chapterId, viewMode]);
 
   useEffect(() => {
-    setOpenMenuStoryId(null);
+    setContextMenu(null);
   }, [viewMode, currentPage, search]);
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const close = (e) => {
+      if (menuRef.current?.contains(e.target)) return;
+      setContextMenu(null);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('mousedown', close);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [contextMenu]);
 
   const attachedIds = useMemo(() => moduleStoryIds, [moduleStoryIds]);
 
@@ -244,7 +180,7 @@ function ChapterDetailPage() {
 
   const handleRowHover = useCallback(
     (story, rowEl) => {
-      if (!story?.cover_image) {
+      if (contextMenu || !story?.cover_image) {
         clearTimers();
         setPreviewVisible(false);
         setPreviewMounted(false);
@@ -258,7 +194,7 @@ function ChapterDetailPage() {
       setPreviewMounted(true);
       revealPreview();
     },
-    [clearTimers, updatePreviewPosition, revealPreview]
+    [clearTimers, updatePreviewPosition, revealPreview, contextMenu]
   );
 
   const scheduleHide = useCallback(() => {
@@ -415,7 +351,20 @@ function ChapterDetailPage() {
     navigate(`/modules/${moduleId}/chapters/${chapterId}/stories/${story.story_id}`);
   };
 
+  const openContextMenu = (e, story) => {
+    if (!isAdmin) return;
+    e.preventDefault();
+    e.stopPropagation();
+    clearTimers();
+    setPreviewVisible(false);
+    setPreviewMounted(false);
+    setHoveredStory(null);
+    const { x, y } = clampMenuPosition(e.clientX, e.clientY);
+    setContextMenu({ x, y, story });
+  };
+
   const editInLibrary = (story) => {
+    setContextMenu(null);
     navigate(`/library/${story.story_id}`, {
       state: {
         edit: true,
@@ -425,21 +374,15 @@ function ChapterDetailPage() {
     });
   };
 
-  const renderStoryMenu = (story, variant = 'card') => (
-    <StoryActionsMenu
-      story={story}
-      variant={variant}
-      isOpen={openMenuStoryId === story.story_id}
-      onToggle={() =>
-        setOpenMenuStoryId((id) => (id === story.story_id ? null : story.story_id))
-      }
-      onClose={() => setOpenMenuStoryId(null)}
-      busy={busy}
-      onHide={() => toggleStoryVisibility(story)}
-      onEdit={() => editInLibrary(story)}
-      onRemove={() => handleRemove(story)}
-    />
-  );
+  const handleContextHide = (story) => {
+    setContextMenu(null);
+    toggleStoryVisibility(story);
+  };
+
+  const handleContextRemove = (story) => {
+    setContextMenu(null);
+    handleRemove(story);
+  };
 
   if (loading) {
     return (
@@ -578,10 +521,13 @@ function ChapterDetailPage() {
             {paginatedStories.map((story) => (
               <article
                 key={story.story_id}
-                className="library-card library-card--clickable"
+                className={`library-card library-card--clickable${
+                  contextMenu?.story?.story_id === story.story_id ? ' library-card--menu-open' : ''
+                }`}
                 role="link"
                 tabIndex={0}
                 onClick={() => openStory(story)}
+                onContextMenu={(e) => openContextMenu(e, story)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -589,7 +535,6 @@ function ChapterDetailPage() {
                   }
                 }}
               >
-                {isAdmin ? renderStoryMenu(story, 'card') : null}
                 <div
                   className="library-card-cover"
                   style={
@@ -640,7 +585,6 @@ function ChapterDetailPage() {
                   <th scope="col">Status</th>
                   <th scope="col">Morals</th>
                   <th scope="col">Images</th>
-                  {isAdmin ? <th scope="col">Actions</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -653,9 +597,12 @@ function ChapterDetailPage() {
                         hoveredStory?.story_id === story.story_id && previewMounted
                           ? ' is-previewing'
                           : ''
+                      }${
+                        contextMenu?.story?.story_id === story.story_id ? ' is-menu-open' : ''
                       }`}
                       onMouseEnter={(e) => handleRowHover(story, e.currentTarget)}
                       onClick={() => openStory(story)}
+                      onContextMenu={(e) => openContextMenu(e, story)}
                     >
                       <td>{serialNumber}</td>
                       <td>
@@ -682,7 +629,6 @@ function ChapterDetailPage() {
                       </td>
                       <td>{story.moral_count || 0}</td>
                       <td>{story.image_count || 0}</td>
-                      {isAdmin ? <td>{renderStoryMenu(story, 'table')}</td> : null}
                     </tr>
                   );
                 })}
@@ -712,6 +658,52 @@ function ChapterDetailPage() {
             onPageChange={setCurrentPage}
           />
         </>
+      ) : null}
+
+      {contextMenu ? (
+        <div
+          ref={menuRef}
+          className="library-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          role="menu"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <p className="library-context-menu-title">{contextMenu.story.title}</p>
+          <button
+            type="button"
+            className="library-context-menu-item"
+            role="menuitem"
+            disabled={busy}
+            onClick={() => handleContextHide(contextMenu.story)}
+          >
+            {contextMenu.story.visible_to_students ? (
+              <>
+                <FiEyeOff aria-hidden /> Hide from students
+              </>
+            ) : (
+              <>
+                <FiEye aria-hidden /> Show to students
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            className="library-context-menu-item"
+            role="menuitem"
+            onClick={() => editInLibrary(contextMenu.story)}
+          >
+            <FiEdit2 aria-hidden /> Edit
+          </button>
+          <button
+            type="button"
+            className="library-context-menu-item library-context-menu-item--danger"
+            role="menuitem"
+            disabled={busy}
+            onClick={() => handleContextRemove(contextMenu.story)}
+          >
+            <FiTrash2 aria-hidden /> Remove
+          </button>
+        </div>
       ) : null}
 
       {pickerOpen ? (

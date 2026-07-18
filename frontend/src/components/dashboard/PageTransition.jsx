@@ -10,6 +10,7 @@ const pageVariants = {
 function PageTransition({ children }) {
   return (
     <motion.div
+      className="page-transition"
       variants={pageVariants}
       initial="initial"
       animate="animate"

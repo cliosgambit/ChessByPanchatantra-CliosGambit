@@ -65,18 +65,18 @@ async function fetchHostedStockfish(fen, depth = 12) {
 }
 
 /**
- * Prefer online → hosted → local. Online often 429s under load.
+ * Prefer local binary; only fall back to hosted/online if local fails.
  */
 async function resolveBestMove(fen, depth = 15) {
   try {
-    return await fetchOnlineStockfish(fen, depth);
-  } catch (onlineErr) {
-    console.warn(`[STOCKFISH] online failed (${onlineErr.status || onlineErr.message}); trying hosted…`);
+    return await getBestMove(fen, depth);
+  } catch (localErr) {
+    console.warn(`[STOCKFISH] local failed (${localErr.message}); trying hosted…`);
     try {
       return await fetchHostedStockfish(fen, depth);
     } catch (hostedErr) {
-      console.warn(`[STOCKFISH] hosted failed (${hostedErr.message}); falling back to local…`);
-      return await getBestMove(fen, depth);
+      console.warn(`[STOCKFISH] hosted failed (${hostedErr.message}); trying online…`);
+      return await fetchOnlineStockfish(fen, depth);
     }
   }
 }
@@ -107,7 +107,7 @@ router.post('/analyze', async (req, res) => {
   }
 });
 
-/** Best move for a FEN — online with hosted/local fallback (avoids CORS + 429). */
+/** Best move for a FEN — local first, hosted/online fallback. */
 router.get('/stockfish/online', async (req, res) => {
   const fen = String(req.query.fen || '').trim();
   const depth = req.query.depth;

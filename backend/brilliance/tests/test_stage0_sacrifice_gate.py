@@ -205,10 +205,11 @@ class Stage0SacrificeGateTests(unittest.TestCase):
 
     def test_hanging_pawn_with_rook_queen_attack_not_sacrifice(self):
         """
-        Rf8 attacks queen while pawn@b5 is already en prise (SEE 100) and becomes lost.
-        Mover compensation must suppress the hanging-exposure sacrifice path.
+        Rf8 attacks an undefended queen while pawn@b5 is already en prise.
+        Winable queen threat must suppress the hanging-exposure sacrifice path.
+        (Ba6 attacks b5 without defending Qf3 — unlike Bc6 which guarded the queen.)
         """
-        fen = "r6k/8/2B5/1p6/8/5Q2/8/7K b - - 0 40"
+        fen = "r6k/8/B7/1p6/8/5Q2/8/7K b - - 0 40"
         board = chess.Board(fen)
         move = chess.Move.from_uci("a8f8")
         result = is_sacrifice_candidate(board, move, chess.BLACK, ply_index=78)
@@ -218,6 +219,7 @@ class Stage0SacrificeGateTests(unittest.TestCase):
         self.assertFalse(result["hanging_sacrifice"])
         self.assertFalse(result["positional_risk"])
         self.assertTrue(result["favorable_trade"])
+        self.assertEqual(result.get("compensation_piece_type"), "queen")
         self.assertEqual(result.get("verified_sacrifice_pieces"), [])
 
         audit = result.get("sacrifice_piece_audit") or []
@@ -225,6 +227,33 @@ class Stage0SacrificeGateTests(unittest.TestCase):
         self.assertIsNotNone(pawn_b5)
         self.assertEqual(pawn_b5["verdict"], "not_sacrifice")
         self.assertEqual(pawn_b5["reason"], "favorable_trade_compensation")
+
+    def test_defended_queen_threat_does_not_suppress_hanging_knight(self):
+        """
+        Rbe8 newly attacks Qe4, but the queen is defended (Re1). Attacking a
+        guarded queen must NOT count as favorable-trade compensation for Nf5.
+        """
+        fen = "1r5k/8/8/5n2/4Q1P1/8/8/4R2K b - - 0 1"
+        board = chess.Board(fen)
+        move = chess.Move.from_uci("b8e8")
+        result = is_sacrifice_candidate(board, move, chess.BLACK, ply_index=51)
+
+        self.assertFalse(result.get("favorable_trade"))
+        self.assertNotEqual(result.get("compensation_piece_square"), "e4")
+
+        audit = result.get("sacrifice_piece_audit") or []
+        knight_f5 = next((a for a in audit if a.get("square") == "f5"), None)
+        self.assertIsNotNone(knight_f5)
+        self.assertNotEqual(knight_f5.get("reason"), "favorable_trade_compensation")
+
+        verified = result.get("verified_sacrifice_pieces") or []
+        self.assertTrue(
+            any(p.get("square") == "f5" for p in verified),
+            msg="hanging Nf5 should verify once defended-queen compensation is ignored",
+        )
+        self.assertTrue(result["hanging_sacrifice"])
+        self.assertTrue(result["is_sacrifice_candidate"])
+        self.assertTrue(result["proceed_to_stage1"])
 
 
 if __name__ == "__main__":
