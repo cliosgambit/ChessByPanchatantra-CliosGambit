@@ -540,7 +540,7 @@ function LibraryMoralPuzzles() {
     const moralLabel = moral?.moral_name || moral?.moral_code || 'Moral puzzles';
     if (moduleId && chapterId) {
       return [
-        { label: 'Dashboard', to: '/dashboard' },
+        { label: 'Modules', to: '/modules' },
         { label: 'Modules', to: '/modules' },
         { label: moduleMeta?.name || 'Module', to: `/modules/${moduleId}` },
         {
@@ -555,7 +555,7 @@ function LibraryMoralPuzzles() {
       ];
     }
     return [
-      { label: 'Dashboard', to: '/dashboard' },
+      { label: 'Modules', to: '/modules' },
       { label: 'Library', to: '/library' },
       { label: story?.title || 'Story', to: storyBackPath },
       { label: moralLabel },

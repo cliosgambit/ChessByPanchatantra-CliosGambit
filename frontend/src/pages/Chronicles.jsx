@@ -48,7 +48,7 @@ function Chronicles() {
       <header className="chronicles-header">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Chronicles' },
           ]}
         />

@@ -225,7 +225,7 @@ function ModuleDetailPage() {
       <div className="modules-page modules-page--gallery">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Modules', to: '/modules' },
             { label: 'Module' },
           ]}
@@ -240,7 +240,7 @@ function ModuleDetailPage() {
       <div className="modules-page-toolbar">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Modules', to: '/modules' },
             { label: module.name || 'Module' },
           ]}

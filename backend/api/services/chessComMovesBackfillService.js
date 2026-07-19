@@ -1,9 +1,16 @@
 const db = require('../config/database');
 const { ensureMovesForGame } = require('./chessComSyncService');
 
-const BATCH_SIZE = 12;
-const IDLE_POLL_MS = 30 * 1000;
-const BUSY_PAUSE_MS = 50;
+const BATCH_SIZE = Math.max(
+  1,
+  Number(process.env.CHESS_COM_MOVES_BACKFILL_BATCH_SIZE) || 24
+);
+const CONCURRENCY = Math.max(
+  1,
+  Math.min(8, Number(process.env.CHESS_COM_MOVES_BACKFILL_CONCURRENCY) || 4)
+);
+const IDLE_POLL_MS = 15 * 1000;
+const BUSY_PAUSE_MS = 25;
 
 let workerTimer = null;
 let workerTask = null;
@@ -107,6 +114,26 @@ async function processOneGame(row) {
   return inserted;
 }
 
+async function mapPool(items, concurrency, mapper) {
+  if (!items.length) return [];
+  const results = new Array(items.length);
+  let next = 0;
+
+  async function worker() {
+    while (next < items.length) {
+      const idx = next;
+      next += 1;
+      results[idx] = await mapper(items[idx], idx);
+    }
+  }
+
+  const pool = Array.from({ length: Math.min(concurrency, items.length) }, () =>
+    worker()
+  );
+  await Promise.all(pool);
+  return results;
+}
+
 async function runMovesBackfillBatch() {
   const startedAt = Date.now();
   const batch = await fetchPendingGamesBatch(BATCH_SIZE);
@@ -115,7 +142,7 @@ async function runMovesBackfillBatch() {
   let movesInserted = 0;
   let gamesFailed = 0;
 
-  for (const row of batch) {
+  await mapPool(batch, CONCURRENCY, async (row) => {
     try {
       const inserted = await processOneGame(row);
       gamesProcessed += 1;
@@ -131,7 +158,7 @@ async function runMovesBackfillBatch() {
         err.message
       );
     }
-  }
+  });
 
   state.currentChessComId = null;
   state.currentGameUuid = null;
@@ -216,18 +243,36 @@ function scheduleNextTick(delayMs, reason) {
   }
 }
 
-function wakeMovesBackfill(_reason = 'wake') {
-  // Moves-backfill worker disabled — game review parses PGN on open.
-  return null;
-}
-
-function startMovesBackfillWorker(_opts = {}) {
-  state.enabled = false;
+function wakeMovesBackfill(reason = 'wake') {
+  if (!state.enabled) return null;
+  if (workerTask) {
+    wakeRequested = true;
+    return workerTask;
+  }
   if (workerTimer) {
     clearTimeout(workerTimer);
     workerTimer = null;
   }
-  console.log('[chess-com moves-backfill] disabled — no background workers');
+  return tickMovesBackfill(reason);
+}
+
+function startMovesBackfillWorker({ runOnStart = true } = {}) {
+  if (state.enabled) {
+    console.log('[chess-com moves-backfill] worker already running');
+    return getMovesBackfillStatus();
+  }
+
+  state.enabled = true;
+  console.log(
+    `[chess-com moves-backfill] worker enabled — batch=${BATCH_SIZE}, concurrency=${CONCURRENCY}`
+  );
+
+  if (runOnStart) {
+    scheduleNextTick(250, 'startup');
+  } else {
+    scheduleNextTick(IDLE_POLL_MS, 'idle-poll');
+  }
+
   return getMovesBackfillStatus();
 }
 
@@ -260,6 +305,7 @@ function getMovesBackfillStatus() {
     lifetime: { ...state.lifetime },
     lastBatch: { ...state.lastBatch },
     batchSize: BATCH_SIZE,
+    concurrency: CONCURRENCY,
     idlePollMs: IDLE_POLL_MS,
   };
 }
@@ -299,6 +345,8 @@ function jobPayload(status) {
     lastGame: status.lastGame,
     lastBatch: status.lastBatch,
     queue: status.queue,
+    batchSize: status.batchSize,
+    concurrency: status.concurrency,
     intervalMs: status.intervalMs,
     lastResult: status.lastResult,
     timeZone: status.timeZone,
@@ -354,6 +402,7 @@ async function getBackgroundJobsStatus() {
         runs: autoSync.runs,
         lastResult: autoSync.lastResult,
       },
+      jobPayload(movesBackfill),
     ],
     quickStats: {
       autoSync: {
@@ -368,16 +417,16 @@ async function getBackgroundJobsStatus() {
         lastError: autoSync.lastError,
       },
       movesBackfill: {
-        enabled: false,
-        inProgress: false,
+        enabled: movesBackfill.enabled,
+        inProgress: movesBackfill.inProgress,
         lastCompletedAt: movesBackfill.lastCompletedAt,
-        runs: 0,
+        runs: movesBackfill.runs,
         pending: movesBackfill.queue?.movesPending ?? 0,
         ready: movesBackfill.queue?.movesReady ?? 0,
         totalSinceJoin: movesBackfill.queue?.totalSinceJoin ?? 0,
-        lifetimeMovesInserted: 0,
-        lifetimeGamesProcessed: 0,
-        lastError: null,
+        lifetimeMovesInserted: movesBackfill.lifetime?.movesInserted ?? 0,
+        lifetimeGamesProcessed: movesBackfill.lifetime?.gamesProcessed ?? 0,
+        lastError: movesBackfill.lastError,
       },
       stage0: disabledStage,
       stage1: disabledStage,

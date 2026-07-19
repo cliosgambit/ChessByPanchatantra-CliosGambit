@@ -8,7 +8,7 @@ import { fetchBestMoveSequence, uciSequenceToSans } from '../utils/stockfishClie
 import './LibraryMoralPuzzles.css';
 
 const GM_BREADCRUMB = [
-  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Modules', to: '/modules' },
   { label: 'Puzzles', to: '/puzzles' },
   { label: 'GM Puzzles', to: '/puzzles/gm' },
 ];

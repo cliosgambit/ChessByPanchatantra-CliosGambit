@@ -24,7 +24,7 @@ function ViewPuzzle() {
 
   const breadcrumbBase = useMemo(
     () => [
-      { label: 'Dashboard', to: '/dashboard' },
+      { label: 'Modules', to: '/modules' },
       { label: 'Puzzles', to: '/puzzles' },
       { label: listLabel, to: listPath },
     ],

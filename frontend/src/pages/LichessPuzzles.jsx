@@ -226,7 +226,7 @@ function LichessPuzzles() {
       <header className="puzzles-header gm-puzzles-header">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Puzzles', to: '/puzzles' },
             { label: 'Lichess Puzzles' },
           ]}

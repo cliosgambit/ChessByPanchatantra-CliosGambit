@@ -111,6 +111,49 @@ let sqlite = null;
 let dbPath = null;
 let pgReady = null;
 
+const PG_POOL_MAX = Math.max(2, Number(process.env.PG_POOL_MAX) || 5);
+const PG_CONNECT_TIMEOUT_MS = Math.max(5_000, Number(process.env.PG_CONNECT_TIMEOUT_MS) || 20_000);
+const PG_IDLE_TIMEOUT_MS = Math.max(5_000, Number(process.env.PG_IDLE_TIMEOUT_MS) || 30_000);
+const PG_QUERY_RETRIES = Math.max(0, Number(process.env.PG_QUERY_RETRIES) || 2);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Supabase pooler / network blips — safe to retry outside a transaction. */
+function isTransientPgError(err) {
+  const code = err?.code;
+  const msg = String(err?.message || err || '');
+  return (
+    code === '08006' ||
+    code === '08001' ||
+    code === '08003' ||
+    code === '08004' ||
+    code === '57P01' ||
+    code === '57P03' ||
+    code === 'ECONNRESET' ||
+    code === 'ETIMEDOUT' ||
+    code === 'EPIPE' ||
+    code === 'ECONNREFUSED' ||
+    /EAUTHTIMEOUT|timeout while waiting for message|Connection terminated|server closed the connection|sorry, too many clients|remaining connection slots/i.test(
+      msg
+    )
+  );
+}
+
+function withKeepaliveParams(connectionString) {
+  try {
+    const u = new URL(connectionString);
+    if (!u.searchParams.has('keepalives')) u.searchParams.set('keepalives', '1');
+    if (!u.searchParams.has('keepalives_idle')) u.searchParams.set('keepalives_idle', '30');
+    if (!u.searchParams.has('keepalives_interval')) u.searchParams.set('keepalives_interval', '10');
+    if (!u.searchParams.has('keepalives_count')) u.searchParams.set('keepalives_count', '5');
+    return u.toString();
+  } catch {
+    return connectionString;
+  }
+}
+
 function getPool() {
   if (pool) return pool;
   const { Pool } = require('pg');
@@ -128,26 +171,54 @@ function getPool() {
     // keep original
   }
 
+  connectionString = withKeepaliveParams(connectionString);
+
   pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30_000,
+    // Keep pool small vs Supabase pooler limits; retries handle transient auth blips.
+    max: PG_POOL_MAX,
+    idleTimeoutMillis: PG_IDLE_TIMEOUT_MS,
+    connectionTimeoutMillis: PG_CONNECT_TIMEOUT_MS,
+    allowExitOnIdle: true,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   });
   pool.on('error', (err) => {
     console.error('[db] Postgres pool error:', err.message);
+    // Force next ensurePgReady() to re-probe after fatal pooler drops.
+    if (isTransientPgError(err)) pgReady = null;
   });
   return pool;
 }
 
 async function ensurePgReady() {
   if (pgReady) return pgReady;
-  pgReady = (async () => {
-    const p = getPool();
-    await p.query('SELECT 1');
-    return true;
-  })();
+  pgReady = getPool()
+    .query('SELECT 1')
+    .then(() => true)
+    .catch((err) => {
+      pgReady = null;
+      throw err;
+    });
   return pgReady;
+}
+
+async function connectPgClient(retries = PG_QUERY_RETRIES) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await getPool().connect();
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientPgError(err) || attempt === retries) throw err;
+      console.warn(
+        `[db] connect failed (attempt ${attempt + 1}/${retries + 1}): ${err.message}`
+      );
+      await sleep(250 * (attempt + 1));
+    }
+  }
+  throw lastErr;
 }
 
 /**
@@ -161,7 +232,7 @@ function getPgTxStore() {
   return pgTxAls.getStore() || null;
 }
 
-async function runOnPg(clientOrPool, sql, params = []) {
+async function runOnPgOnce(clientOrPool, sql, params = []) {
   const values = (params || []).map(serializePgParam);
   try {
     const result = await clientOrPool.query(sql, values);
@@ -195,6 +266,30 @@ async function runOnPg(clientOrPool, sql, params = []) {
   }
 }
 
+async function runOnPg(clientOrPool, sql, params = []) {
+  const inTx = Boolean(getPgTxStore());
+  // Never retry inside a TX — aborted txn state (25P02) / non-idempotent writes.
+  if (inTx || PG_QUERY_RETRIES <= 0) {
+    return runOnPgOnce(clientOrPool, sql, params);
+  }
+
+  let lastErr;
+  for (let attempt = 0; attempt <= PG_QUERY_RETRIES; attempt += 1) {
+    try {
+      return await runOnPgOnce(clientOrPool, sql, params);
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientPgError(err) || attempt === PG_QUERY_RETRIES) throw err;
+      pgReady = null;
+      console.warn(
+        `[db] transient query error (attempt ${attempt + 1}/${PG_QUERY_RETRIES + 1}): ${err.message}`
+      );
+      await sleep(300 * (attempt + 1));
+    }
+  }
+  throw lastErr;
+}
+
 async function releasePgTxClient(store) {
   if (!store?.client) return;
   const client = store.client;
@@ -223,14 +318,19 @@ async function queryPostgres(text, params = []) {
       store.depth += 1;
       return { rows: [], rowCount: 0 };
     }
-    const client = await getPool().connect();
+    const client = await connectPgClient();
     try {
       await client.query('BEGIN');
     } catch (err) {
       try {
-        client.release();
+        // Must pass an Error (not `true`) — pg may read err.message when destroying.
+        client.release(err instanceof Error ? err : new Error(String(err)));
       } catch {
-        /* ignore */
+        try {
+          client.release();
+        } catch {
+          /* ignore */
+        }
       }
       throw err;
     }
@@ -304,14 +404,16 @@ async function withTransactionPostgres(fn) {
     }
   }
 
-  const client = await getPool().connect();
+  const client = await connectPgClient();
   const store = { client, depth: 1 };
+  let destroyClient = false;
   try {
     await client.query('BEGIN');
     const result = await pgTxAls.run(store, fn);
     await client.query('COMMIT');
     return result;
   } catch (err) {
+    destroyClient = isTransientPgError(err) ? err : null;
     try {
       await client.query('ROLLBACK');
     } catch {
@@ -322,9 +424,21 @@ async function withTransactionPostgres(fn) {
     store.client = null;
     store.depth = 0;
     try {
-      client.release();
+      if (destroyClient) {
+        client.release(
+          destroyClient instanceof Error
+            ? destroyClient
+            : new Error(String(destroyClient))
+        );
+      } else {
+        client.release();
+      }
     } catch {
-      /* ignore */
+      try {
+        client.release();
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

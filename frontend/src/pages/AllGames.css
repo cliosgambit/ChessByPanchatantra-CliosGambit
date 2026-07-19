@@ -80,6 +80,19 @@
   color: #0f172a;
 }
 
+.all-games-panel-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.65rem;
+}
+
+.all-games-panel-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
 .all-games-page .chess-profile-panel-header span {
   font-size: 0.78rem;
   font-weight: 600;
@@ -268,6 +281,215 @@
   color: #64748b;
   background: #f8fafc;
   border-color: #e2e8f0;
+}
+
+.all-games-page .chess-stage4-chip--queued {
+  color: #0369a1;
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+}
+
+.all-games-live-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.1rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid #fed7aa;
+  background: linear-gradient(90deg, #fff7ed 0%, #ffffff 55%);
+}
+
+.all-games-live-bar-pulse {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #ea580c;
+  box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.45);
+  animation: all-games-pulse 1.4s ease-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes all-games-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(234, 88, 12, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(234, 88, 12, 0);
+  }
+}
+
+.all-games-live-bar-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  min-width: 0;
+  flex: 1 1 12rem;
+  font-size: 0.86rem;
+  color: #9a3412;
+}
+
+.all-games-live-bar-main strong {
+  font-weight: 800;
+  color: #c2410c;
+}
+
+.all-games-live-bar-game {
+  color: #0f172a;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.all-games-live-bar-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #64748b;
+}
+
+.all-games-live-bar-stats span {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.all-games-page .chess-games-table--with-extra .chess-games-table-head,
+.all-games-page .chess-games-table--with-extra .chess-game-row {
+  grid-template-columns: 54px minmax(0, 1fr) 76px 64px 52px 96px 108px;
+}
+
+.all-games-page .chess-game-col-extra {
+  text-align: center;
+}
+
+.all-games-page .chess-game-col-accuracy {
+  text-align: center;
+}
+
+/* Accuracy: Stage 4 move count */
+.all-games-s4-count {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.all-games-s4-count-num {
+  font-size: 0.9rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.all-games-s4-count--done .all-games-s4-count-num {
+  color: #0284c7;
+}
+
+.all-games-s4-count-brilliant {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.all-games-s4-count--empty {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+/* Review: compact 5-stage ticks */
+.all-games-stages {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.all-games-stage {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e2e8f0;
+}
+
+.all-games-stage--s0.all-games-stage--done,
+.all-games-stage--s0.all-games-stage--active {
+  background: #94a3b8;
+}
+
+.all-games-stage--s1.all-games-stage--done,
+.all-games-stage--s1.all-games-stage--active {
+  background: #fde68a;
+}
+
+.all-games-stage--s2.all-games-stage--done,
+.all-games-stage--s2.all-games-stage--active {
+  background: #fdba74;
+}
+
+.all-games-stage--s3.all-games-stage--done,
+.all-games-stage--s3.all-games-stage--active {
+  background: #86efac;
+}
+
+.all-games-stage--s4.all-games-stage--done,
+.all-games-stage--s4.all-games-stage--pass,
+.all-games-stage--s4.all-games-stage--active {
+  background: #38bdf8;
+}
+
+.all-games-stage--fail {
+  background: #f87171;
+}
+
+.all-games-stage--queued {
+  background: #cbd5e1;
+}
+
+.all-games-stages--passed .all-games-stage {
+  background: #38bdf8;
+}
+
+.all-games-stage--active {
+  transform: scale(1.2);
+}
+
+.all-games-stages--live .all-games-stage--active {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+}
+
+.all-games-page .chess-game-row-wrap--brilliance-active {
+  outline: 2px solid #fb923c;
+  outline-offset: -2px;
+  background: #fff7ed;
+  border-radius: 10px;
+  box-shadow: inset 3px 0 0 #ea580c;
+}
+
+.all-games-page .chess-game-row-wrap--brilliance-active .chess-game-row {
+  background: transparent;
+}
+
+.all-games-page .chess-game-row-wrap--brilliance-queued {
+  background: #f8fafc;
+}
+
+.all-games-page .chess-game-row-wrap--brilliance-done {
+  background: #f0fdf4;
+}
+
+.all-games-page .chess-game-row-wrap--brilliance-failed {
+  background: #fef2f2;
 }
 
 .all-games-pagination {

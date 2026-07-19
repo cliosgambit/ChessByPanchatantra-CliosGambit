@@ -96,7 +96,7 @@ function ModuleStoryViewPage() {
   }
 
   const breadcrumbItems = [
-    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Modules', to: '/modules' },
     { label: 'Modules', to: '/modules' },
     { label: module?.name || 'Module', to: `/modules/${moduleId}` },
     { label: chapter?.name || 'Chapter', to: chapterPath },

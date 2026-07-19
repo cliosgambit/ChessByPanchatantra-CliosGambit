@@ -48,6 +48,7 @@ function statusLabel(tone) {
 
 function jobAccent(jobId) {
   if (jobId === 'chess-com-auto-sync') return 'sync';
+  if (jobId === 'chess-com-moves-backfill') return 'moves';
   if (jobId === 'chess-com-stage0') return 'stage0';
   if (jobId === 'chess-com-stage1') return 'stage1';
   if (jobId === 'chess-com-stage2') return 'stage2';
@@ -112,8 +113,8 @@ function Settings() {
         <div className="settings-toolbar">
           <PageBreadcrumb
             items={[
-              { label: 'Dashboard', to: '/dashboard' },
-              { label: 'Settings' },
+              { label: 'Modules', to: '/modules' },
+              { label: 'Workers' },
             ]}
           />
           <button
@@ -135,7 +136,7 @@ function Settings() {
             <span className="settings-kicker">
               <FiServer aria-hidden /> Operations
             </span>
-            <h1>Settings</h1>
+            <h1>Workers</h1>
             <p>
               Chess.com auto-sync status. Open a game to review it — brilliance
               Stages 0→4 run on demand when you open the game.
@@ -214,7 +215,11 @@ function Settings() {
             <span className="settings-stat-label">Moves ready</span>
             <strong className="settings-stat-value">{ready || '—'}</strong>
             <span className="settings-stat-meta">
-              Open a game to run review analysis
+              {quick?.movesBackfill?.inProgress
+                ? 'Parsing in background…'
+                : quick?.movesBackfill?.enabled
+                  ? 'Backfill worker on'
+                  : 'Worker off'}
             </span>
           </article>
         </div>
@@ -379,6 +384,27 @@ function Settings() {
                         <div>
                           <dt>Total since join</dt>
                           <dd>{job.queue?.totalSinceJoin ?? '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>Batch / concurrency</dt>
+                          <dd>
+                            {job.batchSize ?? '—'} / {job.concurrency ?? '—'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Lifetime games</dt>
+                          <dd>{job.lifetime?.gamesProcessed ?? 0}</dd>
+                        </div>
+                        <div>
+                          <dt>Lifetime moves +</dt>
+                          <dd>{job.lifetime?.movesInserted ?? 0}</dd>
+                        </div>
+                        <div>
+                          <dt>Last batch</dt>
+                          <dd>
+                            {job.lastBatch?.gamesProcessed ?? 0} games ·{' '}
+                            {formatDuration(job.lastBatch?.durationMs)}
+                          </dd>
                         </div>
                         <div>
                           <dt>Current player</dt>

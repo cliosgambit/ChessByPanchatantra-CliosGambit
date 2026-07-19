@@ -458,7 +458,7 @@ function UserProfilePage() {
       <div className="chess-profile-view-switch" data-pdf-ignore>
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             ...(fromStudents ? [{ label: 'Students', to: '/students' }] : []),
             isReportMode
               ? { label: pageTitle, to: profileBasePath, state: location.state }

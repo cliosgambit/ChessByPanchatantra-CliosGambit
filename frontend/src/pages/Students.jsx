@@ -441,7 +441,7 @@ function Students() {
         <div className="students-toolbar">
           <PageBreadcrumb
             items={[
-              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Modules', to: '/modules' },
               { label: 'Students' },
             ]}
           />

@@ -2,7 +2,9 @@ import React from 'react';
 import { FaChessKnight, FaChessRook, FaCrown, FaDragon, FaLock, FaShieldAlt, FaStar } from 'react-icons/fa';
 import { GiBroadsword, GiDeerHead, GiFlamer, GiLaurelCrown, GiQueenCrown } from 'react-icons/gi';
 
-const STREAK_BADGE_THEMES = [
+export const STREAK_MILESTONE_LENGTHS = [3, 4, 5, 6, 7, 8, 10, 12, 15, 20];
+
+export const STREAK_BADGE_THEMES = [
   { theme: 'purple', Icon: FaChessKnight, name: 'Opening Fire', seal: 'Hidden' },
   { theme: 'teal', Icon: GiBroadsword, name: 'Sharp Edge', seal: 'Sealed' },
   { theme: 'blue', Icon: FaCrown, name: 'Hot Hand', seal: 'Veiled' },
@@ -14,6 +16,21 @@ const STREAK_BADGE_THEMES = [
   { theme: 'forest', Icon: GiDeerHead, name: 'Wild Hunt', seal: 'Veiled' },
   { theme: 'obsidian', Icon: FaDragon, name: 'Dragon Spree', seal: 'Mythic' },
 ];
+
+/** Resolve the named streak badge for a milestone length (3, 4, 5, …). */
+export function getStreakBadgeForLength(length) {
+  const idx = STREAK_MILESTONE_LENGTHS.indexOf(Number(length));
+  if (idx < 0) {
+    return {
+      ...STREAK_BADGE_THEMES[0],
+      length: Number(length) || 0,
+    };
+  }
+  return {
+    ...STREAK_BADGE_THEMES[idx],
+    length: STREAK_MILESTONE_LENGTHS[idx],
+  };
+}
 
 function formatStreakEarnedLabel(times) {
   const n = Number(times) || 0;

@@ -186,6 +186,14 @@ export async function fetchBrilliantMovesFromDb({ limit = 500 } = {}) {
   return apiFetch(`${API_BASE}/brilliant-moves?limit=${limit}`);
 }
 
+export async function fetchAchievementsFeedFromDb({
+  day = 'today',
+  timeZone = 'Asia/Kolkata',
+} = {}) {
+  const params = new URLSearchParams({ day, tz: timeZone });
+  return apiFetch(`${API_BASE}/achievements-feed?${params.toString()}`);
+}
+
 export async function fetchBrilliancePipelineStatsFromDb({ day = 'all', timeZone = 'Asia/Kolkata' } = {}) {
   const params = new URLSearchParams({ day, tz: timeZone });
   return apiFetch(`${API_BASE}/brilliance-pipeline-stats?${params.toString()}`);

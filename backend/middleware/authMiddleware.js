@@ -27,7 +27,7 @@ function isAdmin(role) {
   return normalizeRole(role) === 'admin';
 }
 
-/** Admin + coach content management (not tables/settings). */
+/** Admin + coach content management (not workers/settings). */
 function canManageContent(role) {
   const r = normalizeRole(role);
   return r === 'admin' || r === 'coach';

@@ -399,7 +399,7 @@ function ChapterDetailPage() {
       <div className="library-page">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Modules', to: '/modules' },
             { label: module?.name || 'Module', to: `/modules/${moduleId}` },
             { label: 'Chapter' },
@@ -417,7 +417,7 @@ function ChapterDetailPage() {
           <div>
             <PageBreadcrumb
               items={[
-                { label: 'Dashboard', to: '/dashboard' },
+                { label: 'Modules', to: '/modules' },
                 { label: 'Modules', to: '/modules' },
                 { label: module?.name || 'Module', to: `/modules/${moduleId}` },
                 { label: chapter.name || 'Chapter' },

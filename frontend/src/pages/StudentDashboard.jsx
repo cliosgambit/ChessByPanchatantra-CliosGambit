@@ -17,7 +17,7 @@ function StudentDashboard() {
       onClick: () => {
         if (!chessComId) return;
         navigate(`/players/${encodeURIComponent(chessComId)}`, {
-          state: { from: '/dashboard', fromLabel: 'Back to Dashboard', tab: 'report' },
+          state: { from: '/modules', fromLabel: 'Back to Modules', tab: 'report' },
         });
       },
     },

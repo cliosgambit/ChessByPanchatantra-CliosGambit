@@ -72,7 +72,7 @@ function ChroniclesRatedPuzzlePage() {
       <header className="chronicles-puzzle-page-header">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Chronicles', to: '/chronicles?tab=puzzles&source=rated3000' },
             { label: '3000 rated puzzle' },
           ]}

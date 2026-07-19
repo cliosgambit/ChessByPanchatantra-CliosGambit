@@ -14,9 +14,11 @@ const killProcessOnPort = (port) => {
       return resolve();
     }
 
+    // Never kill our own process (nodemon restart races can otherwise SIGKILL us).
+    const selfPid = process.pid;
     // Single %a — required when invoking via exec (%% is only for .bat files)
-    const command = `cmd /c "for /f "tokens=5" %a in ('netstat -aon ^| findstr :${port}') do taskkill /PID %a /F 2>nul"`;
-    
+    const command = `cmd /c "for /f "tokens=5" %a in ('netstat -aon ^| findstr :${port}') do @if not "%a"=="${selfPid}" taskkill /PID %a /F 2>nul"`;
+
     exec(command, (err, stdout, stderr) => {
       // Don't treat "not found" or "no tasks" as a fatal error.
       // These just mean the port was already free.

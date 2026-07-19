@@ -188,7 +188,7 @@ function BrilliantMoves() {
         <div className="chess-profile-header-card">
           <PageBreadcrumb
             items={[
-              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Modules', to: '/modules' },
               { label: 'Brilliant Moves' },
             ]}
           />
@@ -196,8 +196,8 @@ function BrilliantMoves() {
             <h1 className="chess-profile-username">Brilliant Moves</h1>
           </div>
           <p className="chess-profile-display-name">
-            Brilliant moves in list: {loading ? '…' : filteredRows.length} • Games fetched ({dateLabel}):{' '}
-            {statsLoading ? '…' : pipelineStats.gamesFetched} • Pipeline brilliant moves:{' '}
+            Stage 4 moves in list: {loading ? '…' : filteredRows.length} • Games fetched ({dateLabel}):{' '}
+            {statsLoading ? '…' : pipelineStats.gamesFetched} • Marked brilliant:{' '}
             {statsLoading ? '…' : pipelineStats.brilliantMovesFound}
           </p>
 
@@ -289,12 +289,12 @@ function BrilliantMoves() {
             </header>
             <div className="chess-profile-panel-body chess-games-panel-body">
               {loading ? (
-                <LoadingPanel message="Loading brilliant moves..." />
+                <LoadingPanel message="Loading Stage 4 moves…" />
               ) : error ? (
-                <ErrorPanel title="Unable to load brilliant moves" message={error} />
+                <ErrorPanel title="Unable to load Stage 4 moves" message={error} />
               ) : filteredRows.length === 0 ? (
                 <EmptyState
-                  title="No brilliant moves found for this filter."
+                  title="No Stage 4 moves found for this filter."
                   subtitle={
                     statsLoading
                       ? 'Checking pipeline status…'

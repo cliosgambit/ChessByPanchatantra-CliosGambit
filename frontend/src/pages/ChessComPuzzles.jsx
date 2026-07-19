@@ -7,7 +7,7 @@ import { solutionTextFromChessCom } from '../utils/chessComPgnUtils';
 import './LibraryMoralPuzzles.css';
 
 const CHESSCOM_BREADCRUMB = [
-  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Modules', to: '/modules' },
   { label: 'Puzzles', to: '/puzzles' },
   { label: 'Chess.com Puzzles' },
 ];

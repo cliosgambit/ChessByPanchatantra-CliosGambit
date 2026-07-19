@@ -90,7 +90,7 @@ function ChessComGamePage() {
   }, [game?.pgn]);
 
   const breadcrumbItems = [
-    { label: 'Dashboard', to: '/dashboard' },
+    { label: 'Modules', to: '/modules' },
     { label: 'Students', to: '/students' },
     {
       label: profileUsername || 'Profile',
@@ -169,7 +169,7 @@ function ChessComGamePage() {
         <header className="chess-game-page-topbar">
           <PageBreadcrumb
             items={[
-              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Modules', to: '/modules' },
               { label: 'Students', to: '/students' },
               {
                 label: profileUsername || 'Profile',

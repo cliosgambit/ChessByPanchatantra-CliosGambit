@@ -64,6 +64,10 @@ function mapPuzzleRow(row) {
     verificationStatus: row.verification_status,
     verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
     verifiedBy: row.verified_by,
+    isUsed: Boolean(Number(row.is_used)),
+    moralId: row.moral_id != null ? Number(row.moral_id) : null,
+    moralCode: row.moral_code || null,
+    moralName: row.moral_name || null,
   };
 }
 
@@ -116,16 +120,67 @@ async function getPuzzleById(puzzleId) {
 
 async function listSavedPuzzles({ limit = 2000 } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 2000, 1), 5000);
-  const { rows } = await pgDb.query(
-    `SELECT p.*, g.white_rating, g.black_rating
+  const baseSql = `
      FROM brilliant_move_puzzles p
      LEFT JOIN chess_com_games g ON g.chess_com_uuid = p.chess_com_uuid
      WHERE p.saved_at IS NOT NULL
      ORDER BY p.saved_at DESC
-     LIMIT $1`,
-    [safeLimit]
-  );
-  return { rows: rows.map(mapPuzzleRow), total: rows.length };
+     LIMIT $1`;
+
+  try {
+    const { rows } = await pgDb.query(
+      `SELECT
+         p.*,
+         g.white_rating,
+         g.black_rating,
+         CASE
+           WHEN EXISTS (
+             SELECT 1
+             FROM moral_puzzle_assignments a
+             WHERE a.source = 'brilliant'
+               AND a.puzzle_id = p.id
+           ) THEN 1
+           ELSE COALESCE(p.is_used, 0)
+         END AS is_used,
+         (
+           SELECT a.moral_id
+           FROM moral_puzzle_assignments a
+           WHERE a.source = 'brilliant'
+             AND a.puzzle_id = p.id
+           ORDER BY a.display_order ASC, a.id ASC
+           LIMIT 1
+         ) AS moral_id,
+         (
+           SELECT m.moral_code
+           FROM moral_puzzle_assignments a
+           INNER JOIN Morals m ON m.id = a.moral_id
+           WHERE a.source = 'brilliant'
+             AND a.puzzle_id = p.id
+           ORDER BY a.display_order ASC, a.id ASC
+           LIMIT 1
+         ) AS moral_code,
+         (
+           SELECT m.moral_name
+           FROM moral_puzzle_assignments a
+           INNER JOIN Morals m ON m.id = a.moral_id
+           WHERE a.source = 'brilliant'
+             AND a.puzzle_id = p.id
+           ORDER BY a.display_order ASC, a.id ASC
+           LIMIT 1
+         ) AS moral_name
+       ${baseSql}`,
+      [safeLimit]
+    );
+    return { rows: rows.map(mapPuzzleRow), total: rows.length };
+  } catch (err) {
+    console.warn('[brilliant puzzles] enriched list failed, falling back:', err.message);
+    const { rows } = await pgDb.query(
+      `SELECT p.*, g.white_rating, g.black_rating
+       ${baseSql}`,
+      [safeLimit]
+    );
+    return { rows: rows.map(mapPuzzleRow), total: rows.length };
+  }
 }
 
 async function verifyBrilliantMove(moveId, { status, verifiedBy = null } = {}) {

@@ -209,7 +209,7 @@ function BatchDetailPage() {
       <header className="students-header">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Students', to: '/students' },
             { label: batch.name },
           ]}

@@ -19,6 +19,8 @@ function GameHistoryList({
   dateColumnLabel = 'Date',
   extraColumnLabel = null,
   extraColumn = null,
+  renderAccuracy = null,
+  getRowClassName = null,
   portalPreview = false,
   prefetchPgn = true,
 }) {
@@ -259,6 +261,8 @@ function GameHistoryList({
             isHovered={hoveredId === getChessComGameId(game) && previewMounted}
             onRowHover={handleRowHover}
             extraColumn={extraColumn}
+            renderAccuracy={renderAccuracy}
+            rowClassName={getRowClassName?.(game) || ''}
           />
         ))}
 

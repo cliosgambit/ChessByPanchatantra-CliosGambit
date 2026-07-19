@@ -7,8 +7,6 @@ import AdminLayout from '../components/layout/AdminLayout';
 import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/Login';
 import ForgotPassword from '../pages/ForgotPassword';
-import Dashboard from '../pages/Dashboard';
-import TablesBrowser from '../pages/TablesBrowser';
 import Puzzles from '../pages/Puzzles';
 import GmPuzzles from '../pages/GmPuzzles';
 import GmPuzzleView from '../pages/GmPuzzleView';
@@ -23,6 +21,7 @@ import UserProfilePage from '../pages/UserProfilePage';
 import ChessComGamePage from '../pages/ChessComGamePage';
 import BrilliantMoves from '../pages/BrilliantMoves';
 import ViewBrilliantMove from '../pages/ViewBrilliantMove';
+import Achievements from '../pages/Achievements';
 import AllGames from '../pages/AllGames';
 import Settings from '../pages/Settings';
 import CatchAllRedirect from './CatchAllRedirect';
@@ -70,11 +69,11 @@ function AppRoutesContent() {
 
           <Route element={<ProtectedRoute requireAuth />}>
             <Route element={<AdminLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Dashboard hidden for now — Modules is the post-login home */}
+              <Route path="/dashboard" element={<Navigate to="/modules" replace />} />
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/tables" element={<TablesBrowser />} />
-                <Route path="/tables/:tableName" element={<TablesBrowser />} />
+                <Route path="/workers" element={<Settings />} />
+                <Route path="/settings" element={<Navigate to="/workers" replace />} />
               </Route>
               <Route path="/modules" element={<ModulesPage />} />
               <Route path="/modules/:moduleId" element={<ModuleDetailPage />} />
@@ -109,6 +108,7 @@ function AppRoutesContent() {
                 <Route path="/students/batches/:batchId" element={<BatchDetailPage />} />
                 <Route path="/brilliant-moves" element={<BrilliantMoves />} />
                 <Route path="/brilliant-moves/:moveId" element={<ViewBrilliantMove />} />
+                <Route path="/achievements" element={<Achievements />} />
                 <Route path="/all-games" element={<AllGames />} />
                 <Route path="/library" element={<Library />} />
                 <Route path="/library/new" element={<LibraryStoryForm />} />
@@ -119,9 +119,9 @@ function AppRoutesContent() {
                   element={<LibraryMoralPuzzles />}
                 />
               </Route>
-              <Route path="/student-dashboard" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/coach-dashboard" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/student-dashboard" element={<Navigate to="/modules" replace />} />
+              <Route path="/coach-dashboard" element={<Navigate to="/modules" replace />} />
+              <Route path="*" element={<Navigate to="/modules" replace />} />
             </Route>
           </Route>
 

@@ -15,7 +15,6 @@ const courseRoutes = require('./api/routes/courseRoutes');
 const authRoutes = require('./routes/authRoutes');
 const loginAdminRoutes = require('./routes/loginAdminRoutes');
 const dataRoutes = require('./routes/dataRoutes');
-const tableBrowserRoutes = require('./routes/tableBrowserRoutes');
 const libraryRoutes = require('./routes/libraryRoutes');
 const puzzleRoutes = require('./routes/puzzleRoutes');
 const studentRoutes = require('./routes/studentRoutes');
@@ -102,7 +101,6 @@ app.get('/api/health', async (req, res) => {
 app.use('/api', authRoutes);
 app.use('/api', loginAdminRoutes);
 app.use('/api', dataRoutes);
-app.use('/api', tableBrowserRoutes);
 app.use('/api', libraryRoutes);
 app.use('/api', puzzleRoutes);
 app.use('/api', studentRoutes);
@@ -228,18 +226,27 @@ const startServerAndServices = async () => {
 
   // Brilliance results sync into app SQLite during normal analysis (no cloud backfill).
 
-  // Continuous Chess.com sync for all tracked students (startup + every 5 minutes).
+  // Continuous Chess.com sync for all tracked students (startup + interval).
   try {
     const chessComSyncService = require('./api/services/chessComSyncService');
+    // Default 2 minutes (override with CHESS_COM_AUTO_SYNC_INTERVAL_MS). Avoid 60s
+    // ticks stacking on long syncs and starving the Supabase pool.
     chessComSyncService.startAutoSyncScheduler({
-      intervalMs: 60 * 1000,
       runOnStart: true,
     });
   } catch (syncErr) {
     console.warn('⚠️ Chess.com auto-sync scheduler failed to start:', syncErr.message);
   }
 
-  // No brilliance / moves-backfill workers — opening a game runs review analysis on demand.
+  // Parse PGNs → chess_com_moves for games since each student's joining date.
+  try {
+    const movesBackfill = require('./api/services/chessComMovesBackfillService');
+    movesBackfill.startMovesBackfillWorker({ runOnStart: true });
+  } catch (movesErr) {
+    console.warn('⚠️ Chess.com moves-backfill worker failed to start:', movesErr.message);
+  }
+
+  // Brilliance stages stay on-demand when opening a game (no background S0–S4 workers).
 
   // Never auto-open browser tabs — nodemon restarts were spawning a new tab on every reload.
   // Use frontend dev server (npm start in /frontend → :3000) for daily development.
@@ -249,26 +256,42 @@ const startServerAndServices = async () => {
     exec(`${openCommand} http://localhost:${PORT}`);
   }
 
-  // Call automation controller immediately on startup
+  // Call automation controller immediately on startup (never crash the process).
   console.log('⏰ Running autoCompleteActivityTracker (startup)...');
-  autoCompleteActivityTracker(
-    { body: {} },
-    {
-      json: (data) => console.log('Automation result:', data),
-      status: (code) => ({ json: (data) => console.log('Automation error:', code, data) })
-    }
-  );
+  Promise.resolve()
+    .then(() =>
+      autoCompleteActivityTracker(
+        { body: {} },
+        {
+          json: (data) => console.log('Automation result:', data),
+          status: (code) => ({
+            json: (data) => console.log('Automation error:', code, data),
+          }),
+        }
+      )
+    )
+    .catch((err) => {
+      console.error('⚠️ autoCompleteActivityTracker (startup) failed:', err?.message || err);
+    });
 
   // Then schedule every 10 minutes
   setInterval(() => {
     console.log('⏰ Running autoCompleteActivityTracker...');
-    autoCompleteActivityTracker(
-      { body: {} },
-      {
-        json: (data) => console.log('Automation result:', data),
-        status: (code) => ({ json: (data) => console.log('Automation error:', code, data) })
-      }
-    );
+    Promise.resolve()
+      .then(() =>
+        autoCompleteActivityTracker(
+          { body: {} },
+          {
+            json: (data) => console.log('Automation result:', data),
+            status: (code) => ({
+              json: (data) => console.log('Automation error:', code, data),
+            }),
+          }
+        )
+      )
+      .catch((err) => {
+        console.error('⚠️ autoCompleteActivityTracker failed:', err?.message || err);
+      });
   }, 10 * 60 * 1000);
 };
 

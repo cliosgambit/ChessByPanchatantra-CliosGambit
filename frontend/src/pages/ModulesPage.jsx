@@ -191,12 +191,7 @@ function ModulesPage() {
   return (
     <div className="modules-page modules-page--gallery">
       <div className="modules-page-toolbar">
-        <PageBreadcrumb
-          items={[
-            { label: 'Dashboard', to: '/dashboard' },
-            { label: 'Modules' },
-          ]}
-        />
+        <PageBreadcrumb items={[{ label: 'Modules' }]} />
         {isAdmin ? (
           <button type="button" className="modules-btn modules-btn--primary" onClick={openCreate}>
             <FiPlus aria-hidden /> New module

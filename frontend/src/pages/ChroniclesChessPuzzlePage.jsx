@@ -186,7 +186,7 @@ function ChroniclesChessPuzzlePage() {
       <header className="chronicles-puzzle-page-header">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Chronicles', to: '/chronicles?tab=puzzles' },
             { label: puzzle.chess_puzzle_id || 'Puzzle' },
           ]}

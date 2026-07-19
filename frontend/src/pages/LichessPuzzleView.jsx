@@ -8,7 +8,7 @@ import { resolveLichessPuzzlePosition } from '../utils/lichessPuzzleFen';
 import './LibraryMoralPuzzles.css';
 
 const LICHESS_BREADCRUMB = [
-  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Modules', to: '/modules' },
   { label: 'Puzzles', to: '/puzzles' },
   { label: 'Lichess Puzzles', to: '/puzzles/lichess' },
 ];

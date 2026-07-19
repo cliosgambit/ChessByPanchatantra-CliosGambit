@@ -337,7 +337,7 @@ function PrincipleDetails() {
       <Box px={{ base: 4, md: 8 }} py={8} bg={pageBg} minH="100%">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Principles', to: '/principles' },
             { label: 'Principle' },
           ]}
@@ -354,7 +354,7 @@ function PrincipleDetails() {
       <Box px={{ base: 4, md: 8 }} py={8} bg={pageBg} minH="100%">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Principles', to: '/principles' },
             { label: 'Principle' },
           ]}
@@ -370,7 +370,7 @@ function PrincipleDetails() {
     <Box>
       <PageBreadcrumb
         items={[
-          { label: 'Dashboard', to: '/dashboard' },
+          { label: 'Modules', to: '/modules' },
           { label: 'Principles', to: '/principles' },
           { label: principleText || 'Principle' },
         ]}

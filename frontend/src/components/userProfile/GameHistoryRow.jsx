@@ -26,7 +26,15 @@ function PlayerLine({ username, rating, color, isSelf, countryCode }) {
   );
 }
 
-function GameHistoryRow({ game, onSelect, isHovered, onRowHover, extraColumn }) {
+function GameHistoryRow({
+  game,
+  onSelect,
+  isHovered,
+  onRowHover,
+  extraColumn,
+  renderAccuracy = null,
+  rowClassName = '',
+}) {
   const rowRef = useRef(null);
   const timeIcon = game.timeClass ? TIME_CLASS_ICONS[game.timeClass] : null;
   const showAccuracy = game.hasAccuracy;
@@ -99,7 +107,9 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover, extraColumn }) 
       </div>
 
       <div className="chess-game-col chess-game-col-accuracy">
-        {showAccuracy ? (
+        {renderAccuracy ? (
+          renderAccuracy(game)
+        ) : showAccuracy ? (
           <div className="chess-game-accuracy-stack">
             <span>{game.whiteAccuracy}</span>
             <span>{game.blackAccuracy}</span>
@@ -144,7 +154,9 @@ function GameHistoryRow({ game, onSelect, isHovered, onRowHover, extraColumn }) 
   return (
     <div
       ref={rowRef}
-      className={`chess-game-row-wrap${isHovered ? ' chess-game-row-wrap--hovered' : ''}`}
+      className={`chess-game-row-wrap${isHovered ? ' chess-game-row-wrap--hovered' : ''}${
+        rowClassName ? ` ${rowClassName}` : ''
+      }`}
       onMouseEnter={handleMouseEnter}
     >
       {rowInner}

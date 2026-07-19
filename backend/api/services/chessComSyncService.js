@@ -20,7 +20,7 @@ const BULK_FETCH_CONCURRENCY = 10;
 const RAW_INSERT_CHUNK = 50;
 const PROFILE_SYNC_CONCURRENCY = 6;
 const GAME_UPSERT_CHUNK = 100;
-const MOVE_UPSERT_CHUNK = 40;
+const MOVE_UPSERT_CHUNK = 80;
 const QUICK_SYNC_RECENT_ARCHIVES = 3;
 const PREVIEW_PGN_LIMIT = 12;
 const DEFAULT_YESTERDAY_TZ = 'Asia/Kolkata';
@@ -31,7 +31,8 @@ const backgroundSyncs = new Map();
 let yesterdaysSyncTask = null;
 
 /** Global auto-sync (all tracked players) — runs on an interval in the background. */
-const AUTO_SYNC_INTERVAL_MS = 60 * 1000;
+// 2 minutes: 60s ticks overlapped long passes and starved the Supabase pool (EAUTHTIMEOUT).
+const AUTO_SYNC_INTERVAL_MS = Number(process.env.CHESS_COM_AUTO_SYNC_INTERVAL_MS) || 2 * 60 * 1000;
 const AUTO_SYNC_RECENT_MONTHS = 1;
 let autoSyncTimer = null;
 let autoSyncTask = null;
@@ -2081,6 +2082,15 @@ async function tickAutoSync(reason = 'interval') {
       console.log(
         `[chess-com auto-sync] complete (${reason}): players=${result.players}, archives=${result.archivesFetched}, games+=${result.gamesUpserted}, statsSkipped=${result.playersSkippedByStats}, ${result.durationMs}ms`
       );
+      if (Number(result.gamesUpserted) > 0) {
+        try {
+          require('./chessComMovesBackfillService').wakeMovesBackfill(
+            `after-auto-sync:${reason}`
+          );
+        } catch {
+          /* non-fatal */
+        }
+      }
       return result;
     })
     .catch((err) => {
@@ -2644,6 +2654,267 @@ async function getPlayerWinStreaks(chessComId, timeZone = DEFAULT_YESTERDAY_TZ) 
   };
 }
 
+const STREAK_BADGE_NAMES = {
+  3: 'Opening Fire',
+  4: 'Sharp Edge',
+  5: 'Hot Hand',
+  6: 'On a Tear',
+  7: 'Unbroken',
+  8: 'Fortress',
+  10: 'Iron Form',
+  12: 'Royal Run',
+  15: 'Wild Hunt',
+  20: 'Dragon Spree',
+};
+
+function getDateKeyInTz(iso, timeZone) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone });
+}
+
+function achievementPlayedDate(iso, timeZone = DEFAULT_YESTERDAY_TZ) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', {
+    timeZone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function collectWinStreakMilestoneEvents(games) {
+  const list = Array.isArray(games) ? games : [];
+  let current = 0;
+  let lastWinGame = null;
+  const events = [];
+  const milestoneSet = new Set(STREAK_MILESTONES);
+
+  // Match profile badges: count each completed streak once at its exact length only.
+  // A 6-win run → "On a Tear" only (not also 3/4/5).
+  const markStreak = () => {
+    if (current <= 0 || !lastWinGame || !milestoneSet.has(current)) return;
+    events.push({
+      streakLength: current,
+      playedAt: lastWinGame.played_at || null,
+      opponentUsername: lastWinGame.opponent_username || null,
+      timeClass: lastWinGame.time_class || null,
+      uuid: lastWinGame.chess_com_uuid || null,
+    });
+  };
+
+  for (const game of list) {
+    if (game.self_result_type === 'win') {
+      current += 1;
+      lastWinGame = game;
+    } else {
+      markStreak();
+      current = 0;
+      lastWinGame = null;
+    }
+  }
+  markStreak();
+
+  return events;
+}
+
+async function loadStudentAchievementProfiles() {
+  const profileById = new Map();
+
+  try {
+    const { rows: studentRows } = await db.query(
+      `SELECT
+         LOWER(TRIM(s.chess_com_id)) AS chess_com_id,
+         s.player_name,
+         c.avatar_url,
+         c.name AS profile_name
+       FROM Students s
+       LEFT JOIN chess_com_profiles c
+         ON c.chess_com_id = LOWER(TRIM(s.chess_com_id))
+       WHERE s.chess_com_id IS NOT NULL AND TRIM(s.chess_com_id) <> ''`
+    );
+    for (const row of studentRows) {
+      if (!row.chess_com_id) continue;
+      profileById.set(row.chess_com_id, {
+        chessComId: row.chess_com_id,
+        playerName: row.player_name || row.profile_name || row.chess_com_id,
+        avatarUrl: row.avatar_url || null,
+      });
+    }
+  } catch (err) {
+    console.warn('[achievements-feed] Students lookup failed:', err.message);
+  }
+
+  const { rows: playerRows } = await db.query(
+    `SELECT
+       LOWER(TRIM(p."Chess_com_ID")) AS chess_com_id,
+       p."Player_Name" AS player_name,
+       c.avatar_url,
+       c.name AS profile_name
+     FROM players p
+     LEFT JOIN chess_com_profiles c
+       ON c.chess_com_id = LOWER(TRIM(p."Chess_com_ID"))
+     WHERE p."Chess_com_ID" IS NOT NULL AND TRIM(p."Chess_com_ID") <> ''`
+  );
+
+  for (const row of playerRows) {
+    if (!row.chess_com_id) continue;
+    const existing = profileById.get(row.chess_com_id);
+    if (existing) {
+      if (!existing.avatarUrl && row.avatar_url) existing.avatarUrl = row.avatar_url;
+      if (
+        (!existing.playerName || existing.playerName === existing.chessComId) &&
+        row.player_name
+      ) {
+        existing.playerName = row.player_name;
+      }
+      continue;
+    }
+    profileById.set(row.chess_com_id, {
+      chessComId: row.chess_com_id,
+      playerName: row.player_name || row.profile_name || row.chess_com_id,
+      avatarUrl: row.avatar_url || null,
+    });
+  }
+
+  return profileById;
+}
+
+function isAchievementInDayFilter(playedAt, dayFilter, timeZone) {
+  if (!playedAt) return false;
+  if (dayFilter === 'all') return true;
+  const daysAgo = dayFilterToDaysAgo(dayFilter);
+  if (daysAgo == null) return true;
+  const targetKey = localDateString(timeZone, daysAgo);
+  return getDateKeyInTz(playedAt, timeZone) === targetKey;
+}
+
+async function getAchievementsFeed({
+  dayFilter = 'today',
+  timeZone = DEFAULT_YESTERDAY_TZ,
+} = {}) {
+  const filter = normalizeDayFilter(dayFilter);
+  const filterLabels = buildDayFilterLabels(timeZone);
+  const profileById = await loadStudentAchievementProfiles();
+  const playerIds = [...profileById.keys()];
+  const rows = [];
+
+  if (playerIds.length) {
+    const { rows: gameRows } = await db.query(
+      `SELECT
+         LOWER(TRIM(chess_com_id)) AS chess_com_id,
+         chess_com_uuid,
+         played_at,
+         self_result_type,
+         opponent_username,
+         time_class
+       FROM chess_com_games
+       WHERE LOWER(TRIM(chess_com_id)) = ANY($1)
+         AND played_at IS NOT NULL
+       ORDER BY chess_com_id ASC, played_at ASC NULLS LAST`,
+      [playerIds]
+    );
+
+    const gamesByPlayer = new Map();
+    for (const game of gameRows) {
+      const id = game.chess_com_id;
+      if (!gamesByPlayer.has(id)) gamesByPlayer.set(id, []);
+      gamesByPlayer.get(id).push(game);
+    }
+
+    for (const [chessComId, games] of gamesByPlayer) {
+      const profile = profileById.get(chessComId) || {
+        chessComId,
+        playerName: chessComId,
+        avatarUrl: null,
+      };
+      const streakEvents = collectWinStreakMilestoneEvents(games);
+      for (const event of streakEvents) {
+        if (!isAchievementInDayFilter(event.playedAt, filter, timeZone)) continue;
+        const playedAtIso = event.playedAt
+          ? new Date(event.playedAt).toISOString()
+          : null;
+        rows.push({
+          id: `streak-${chessComId}-${event.streakLength}-${playedAtIso || 'unknown'}`,
+          type: 'win_streak',
+          playedAt: playedAtIso,
+          playedDate: achievementPlayedDate(event.playedAt, timeZone),
+          chessComId,
+          playerName: profile.playerName,
+          playerUsername: chessComId,
+          avatarUrl: profile.avatarUrl,
+          streakLength: event.streakLength,
+          streakLabel: `${event.streakLength} wins in a row`,
+          badgeName: STREAK_BADGE_NAMES[event.streakLength] || 'Win Streak',
+          opponentUsername: event.opponentUsername,
+          timeClass: event.timeClass,
+          uuid: event.uuid,
+          title: STREAK_BADGE_NAMES[event.streakLength] || 'Win Streak',
+          detail: `Reached a ${event.streakLength}-win streak`,
+        });
+      }
+    }
+  }
+
+  try {
+    const brillianceService = require('./chessComBrillianceService');
+    const brilliant = await brillianceService.listBrilliantMoves({ limit: 2000 });
+    for (const move of brilliant.rows || []) {
+      if (!move?.isBrilliant) continue;
+      if (!isAchievementInDayFilter(move.playedAt, filter, timeZone)) continue;
+      const chessComId = (move.chessComId || move.playerUsername || '').toLowerCase();
+      const profile = chessComId ? profileById.get(chessComId) : null;
+      rows.push({
+        id: `brilliant-${move.id}`,
+        type: 'brilliant',
+        playedAt: move.playedAt || null,
+        playedDate: move.playedDate || achievementPlayedDate(move.playedAt, timeZone),
+        chessComId: chessComId || null,
+        playerName: profile?.playerName || move.playerName || move.moverName || chessComId,
+        playerUsername: chessComId || move.playerUsername || null,
+        avatarUrl: profile?.avatarUrl || move.avatarUrl || null,
+        moveId: move.id,
+        sanMove: move.sanMove,
+        brillianceScore: move.brillianceScore,
+        timeControl: move.timeControl,
+        whiteUsername: move.whiteUsername,
+        blackUsername: move.blackUsername,
+        whiteName: move.whiteName,
+        blackName: move.blackName,
+        players: move.players,
+        uuid: move.uuid,
+        title: 'Brilliant Move',
+        detail: move.sanMove ? `Played ${move.sanMove}` : 'Played a brilliant move',
+      });
+    }
+  } catch (err) {
+    console.warn('[achievements-feed] brilliant moves failed:', err.message);
+  }
+
+  rows.sort((a, b) => {
+    const aTime = a.playedAt ? new Date(a.playedAt).getTime() : 0;
+    const bTime = b.playedAt ? new Date(b.playedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  const brilliantCount = rows.filter((r) => r.type === 'brilliant').length;
+  const streakCount = rows.filter((r) => r.type === 'win_streak').length;
+  const studentKeys = new Set(
+    rows.map((r) => (r.playerUsername || r.chessComId || '').toLowerCase()).filter(Boolean)
+  );
+
+  return {
+    rows,
+    total: rows.length,
+    brilliantCount,
+    streakCount,
+    studentsCount: studentKeys.size,
+    dayFilter: filter,
+    dateLabel: filter === 'all' ? filterLabels.all : filterLabels[filter],
+    filterLabels,
+    timeZone,
+  };
+}
+
 async function getPlayerGamesByDay(
   chessComId,
   { dayFilter = 'yesterday', timeZone = DEFAULT_YESTERDAY_TZ } = {}
@@ -2704,6 +2975,7 @@ module.exports = {
   getRatingHistory,
   getRatingImprovementSince,
   getPlayerAchievements,
+  getAchievementsFeed,
   getGameStatsForRange,
   getClubs,
   getPlayerWinStreaks,

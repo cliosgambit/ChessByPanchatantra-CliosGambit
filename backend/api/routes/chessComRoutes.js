@@ -12,6 +12,7 @@ router.get('/chess-com/puzzle/random', controller.getRandomDailyPuzzle);
 router.post('/chess-com/puzzle/ingest', controller.ingestRandomPuzzle);
 router.get('/chess-com/puzzle/saved', controller.listChesscomRandomPuzzles);
 router.get('/chess-com/brilliant-moves', controller.getBrilliantMoves);
+router.get('/chess-com/achievements-feed', controller.getAchievementsFeed);
 router.get('/chess-com/brilliance-pipeline-stats', controller.getBrilliancePipelineStats);
 router.get('/chess-com/brilliant-moves/:moveId', controller.getBrilliantMove);
 router.get('/chess-com/brilliant-puzzles', controller.getBrilliantPuzzles);

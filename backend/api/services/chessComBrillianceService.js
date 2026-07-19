@@ -501,6 +501,13 @@ function mapStage4Row(row, gameMap) {
         ? game?.black_name || null
         : null;
 
+  const moverAvatarUrl =
+    row.turn === 'white'
+      ? game?.white_avatar_url || null
+      : row.turn === 'black'
+        ? game?.black_avatar_url || null
+        : null;
+
   return {
     id: row.id,
     gameId: row.sqlite_game_id ?? null,
@@ -508,6 +515,7 @@ function mapStage4Row(row, gameMap) {
     chessComId: game?.chess_com_id || null,
     playerName: game?.owner_name || moverName || null,
     playerUsername: game?.chess_com_id || moverUsername || null,
+    avatarUrl: game?.owner_avatar_url || moverAvatarUrl || null,
     moverName: moverName || moverUsername || null,
     moverUsername: moverUsername && moverUsername !== '—' ? moverUsername : null,
     whiteUsername: game?.white_username || null,
@@ -562,6 +570,9 @@ async function loadGameMapForUuids(uuids) {
        g.black_accuracy,
        g.white_rating,
        g.black_rating,
+       owner_profile.avatar_url AS owner_avatar_url,
+       white_profile.avatar_url AS white_avatar_url,
+       black_profile.avatar_url AS black_avatar_url,
        COALESCE(
          NULLIF(TRIM(owner_profile.name), ''),
          (

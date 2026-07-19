@@ -409,6 +409,11 @@
   box-shadow: 0 4px 16px rgba(23, 32, 51, 0.04);
 }
 
+.gm-puzzles-summary--days {
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+  min-width: min(100%, 380px);
+}
+
 .gm-puzzles-summary > div {
   display: flex;
   flex-direction: column;

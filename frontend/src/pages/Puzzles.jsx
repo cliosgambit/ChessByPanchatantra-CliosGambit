@@ -43,7 +43,7 @@ function Puzzles() {
       <header className="puzzles-header">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Puzzles' },
           ]}
         />

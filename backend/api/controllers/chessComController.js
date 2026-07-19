@@ -282,6 +282,18 @@ exports.getPlayerAchievements = async (req, res) => {
   }
 };
 
+exports.getAchievementsFeed = async (req, res) => {
+  try {
+    const timeZone = req.query.tz || 'Asia/Kolkata';
+    const dayFilter = req.query.day || 'today';
+    const data = await syncService.getAchievementsFeed({ dayFilter, timeZone });
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com achievements feed error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load achievements feed.' });
+  }
+};
+
 exports.getWinStreaks = async (req, res) => {
   try {
     const timeZone = req.query.tz || 'Asia/Kolkata';

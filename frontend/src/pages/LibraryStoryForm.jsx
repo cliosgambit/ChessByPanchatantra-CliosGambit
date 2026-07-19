@@ -269,7 +269,7 @@ function LibraryStoryForm() {
         <div>
           <PageBreadcrumb
             items={[
-              { label: 'Dashboard', to: '/dashboard' },
+              { label: 'Modules', to: '/modules' },
               { label: 'Library', to: '/library' },
               { label: isEdit ? 'Edit Story' : 'Add Story' },
             ]}

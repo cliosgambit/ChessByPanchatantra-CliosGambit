@@ -97,7 +97,7 @@ export async function fetchCurrentUser() {
 }
 
 export function getRoleHomePath(_role) {
-  return '/dashboard';
+  return '/modules';
 }
 
 export default api;

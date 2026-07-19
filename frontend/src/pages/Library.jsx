@@ -260,7 +260,7 @@ function Library() {
           <div>
             <PageBreadcrumb
               items={[
-                { label: 'Dashboard', to: '/dashboard' },
+                { label: 'Modules', to: '/modules' },
                 { label: 'Library' },
               ]}
             />

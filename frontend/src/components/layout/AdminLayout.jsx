@@ -8,22 +8,22 @@ import CameraToggleButton from '../CameraToggleButton';
 import CelebrationOverlay from '../CelebrationOverlay';
 import './AdminLayout.css';
 
-function isDashboardPath(pathname) {
-  return pathname === '/dashboard' || pathname === '/dashboard/';
+function isHomePath(pathname) {
+  return pathname === '/modules' || pathname === '/modules/';
 }
 
 function AdminLayout() {
   const location = useLocation();
   const [prevPath, setPrevPath] = useState(location.pathname);
-  const onDashboard = isDashboardPath(location.pathname);
-  const [collapsed, setCollapsed] = useState(!onDashboard);
+  const onHome = isHomePath(location.pathname);
+  const [collapsed, setCollapsed] = useState(!onHome);
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     // Only set collapsed when navigating to a new path
     if (location.pathname !== prevPath) {
-      // Off-dashboard pages start minimized; dashboard starts open
-      setCollapsed(!isDashboardPath(location.pathname));
+      // Off-home pages start minimized; Modules (home) starts open
+      setCollapsed(!isHomePath(location.pathname));
       setHovered(false);
       setPrevPath(location.pathname);
     }

@@ -444,8 +444,11 @@ async function listStage4MovesFromSupabase({ limit = 500 } = {}) {
      LEFT JOIN chess_com_moves m
        ON m.chess_com_uuid = bm.chess_com_uuid AND m.ply = bm.ply_index + 1
      WHERE r.stage4_status = 'completed'
-       AND bm.is_brilliant = 1
-     ORDER BY r.stage4_run_at DESC NULLS LAST, bm.brilliance_score DESC NULLS LAST, bm.id DESC
+     ORDER BY
+       r.stage4_run_at DESC NULLS LAST,
+       bm.is_brilliant DESC,
+       bm.brilliance_score DESC NULLS LAST,
+       bm.id DESC
      LIMIT $1`,
     [safeLimit]
   );

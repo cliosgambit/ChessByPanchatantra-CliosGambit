@@ -12,7 +12,7 @@ import {
 import './ViewBrilliantMove.css';
 
 const BREADCRUMB = [
-  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Modules', to: '/modules' },
   { label: 'Brilliant Moves', to: '/brilliant-moves' },
 ];
 

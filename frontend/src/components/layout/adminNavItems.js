@@ -1,13 +1,12 @@
 import {
   FiGrid,
-  FiDatabase,
   FiZap,
   FiLayers,
   FiBook,
   FiBookOpen,
   FiUsers,
-  FiSettings,
-  FiHome,
+  FiCpu,
+  FiAward,
 } from 'react-icons/fi';
 import { normalizeRole } from '../../utils/roles';
 
@@ -18,15 +17,14 @@ export const SIDEBAR_WIDTH = 200;
 export const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export const PRIMARY_NAV_ITEMS = [
-  { label: 'Dashboard', path: '/dashboard', icon: FiHome, end: true, roles: null },
-  { label: 'Modules', path: '/modules', icon: FiBook, end: false, roles: null },
+  { label: 'Modules', path: '/modules', icon: FiBook, end: true, roles: null },
   { label: 'Library', path: '/library', icon: FiBookOpen, end: false, roles: ['admin', 'coach'] },
   { label: 'Puzzles', path: '/puzzles', icon: FiGrid, end: false, roles: null },
   { label: 'Students', path: '/students', icon: FiUsers, end: false, roles: ['admin', 'coach'] },
   { label: 'Brilliant Moves', path: '/brilliant-moves', icon: FiZap, end: false, roles: ['admin', 'coach'] },
+  { label: 'Achievements', path: '/achievements', icon: FiAward, end: false, roles: ['admin', 'coach'] },
   { label: 'All Games', path: '/all-games', icon: FiLayers, end: false, roles: ['admin', 'coach'] },
-  { label: 'Tables', path: '/tables', icon: FiDatabase, end: false, roles: ['admin'] },
-  { label: 'Settings', path: '/settings', icon: FiSettings, end: false, roles: ['admin'] },
+  { label: 'Workers', path: '/workers', icon: FiCpu, end: false, roles: ['admin'] },
 ];
 
 export function filterNavByRole(items, user) {

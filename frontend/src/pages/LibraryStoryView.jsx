@@ -380,7 +380,7 @@ function LibraryStoryView() {
       <div className="story-view">
         <PageBreadcrumb
           items={[
-            { label: 'Dashboard', to: '/dashboard' },
+            { label: 'Modules', to: '/modules' },
             { label: 'Library', to: '/library' },
             { label: 'Story' },
           ]}
@@ -404,13 +404,13 @@ function LibraryStoryView() {
               items={
                 cameFromModules
                   ? [
-                      { label: 'Dashboard', to: '/dashboard' },
+                      { label: 'Modules', to: '/modules' },
                       { label: 'Modules', to: '/modules' },
                       { label: parentLabel, to: backPath },
                       { label: editing ? 'Edit' : title || 'Story' },
                     ]
                   : [
-                      { label: 'Dashboard', to: '/dashboard' },
+                      { label: 'Modules', to: '/modules' },
                       { label: 'Library', to: '/library' },
                       { label: editing ? 'Edit Story' : title || 'Story' },
                     ]
