@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import { fetchAllRatedPuzzles } from '../services/puzzleService';
 import './ChroniclesChessPuzzlePage.css';
@@ -70,13 +69,6 @@ function ChroniclesRatedPuzzlePage() {
   return (
     <div className="chronicles-puzzle-page">
       <header className="chronicles-puzzle-page-header">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Chronicles', to: '/chronicles?tab=puzzles&source=rated3000' },
-            { label: '3000 rated puzzle' },
-          ]}
-        />
         <div>
           <h1 className="chronicles-puzzle-page-title">3000 rated puzzle</h1>
           <p className="chronicles-puzzle-page-subtitle">{puzzle.id}</p>

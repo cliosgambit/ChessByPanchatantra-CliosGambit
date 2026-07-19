@@ -194,6 +194,52 @@ export async function fetchAchievementsFeedFromDb({
   return apiFetch(`${API_BASE}/achievements-feed?${params.toString()}`);
 }
 
+export async function fetchPioneerWinsFromDb({
+  day = 'today',
+  timeZone = 'Asia/Kolkata',
+} = {}) {
+  const params = new URLSearchParams({ day, tz: timeZone });
+  return apiFetch(`${API_BASE}/pioneer-wins?${params.toString()}`);
+}
+
+export async function fetchPioneerScanTargetsFromDb({
+  day = 'today',
+  timeZone = 'Asia/Kolkata',
+} = {}) {
+  const params = new URLSearchParams({ day, tz: timeZone });
+  return apiFetch(`${API_BASE}/pioneer-wins/scan-targets?${params.toString()}`);
+}
+
+export async function fetchPioneerWinFromDb(uuid) {
+  return apiFetch(`${API_BASE}/pioneer-wins/${encodeURIComponent(uuid)}`);
+}
+
+export async function detectPioneerWinOneFromDb({
+  uuid,
+  chessComId,
+  maxMoveNumber = 10,
+} = {}) {
+  return apiFetch(`${API_BASE}/pioneer-wins/detect-one`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid, chessComId, maxMoveNumber }),
+  });
+}
+
+export async function detectPioneerWinsFromDb({
+  day = 'today',
+  timeZone = 'Asia/Kolkata',
+  maxMoveNumber = 10,
+  signal,
+} = {}) {
+  return apiFetch(`${API_BASE}/pioneer-wins/detect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ day, tz: timeZone, maxMoveNumber }),
+    signal,
+  });
+}
+
 export async function fetchBrilliancePipelineStatsFromDb({ day = 'all', timeZone = 'Asia/Kolkata' } = {}) {
   const params = new URLSearchParams({ day, tz: timeZone });
   return apiFetch(`${API_BASE}/brilliance-pipeline-stats?${params.toString()}`);

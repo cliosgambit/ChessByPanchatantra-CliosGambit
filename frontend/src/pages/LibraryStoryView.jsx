@@ -18,7 +18,6 @@ import {
   updateLibraryStory,
   uploadLibraryImages,
 } from '../services/libraryService';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './LibraryStoryView.css';
 
 function imageUrlsFromStory(story) {
@@ -51,10 +50,6 @@ function LibraryStoryView() {
   const { storyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const backPath = location.state?.from || '/library';
-  const cameFromModules = String(backPath).startsWith('/modules/');
-  const parentLabel =
-    (location.state?.fromLabel || 'Library').replace(/^Back to\s+/i, '') || 'Library';
 
   const [story, setStory] = useState(null);
   const [moralsCatalog, setMoralsCatalog] = useState([]);
@@ -378,13 +373,6 @@ function LibraryStoryView() {
   if ((error && !story) || !story) {
     return (
       <div className="story-view">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Library', to: '/library' },
-            { label: 'Story' },
-          ]}
-        />
         <p className="story-view-error">{error || 'Story not found.'}</p>
       </div>
     );
@@ -400,22 +388,6 @@ function LibraryStoryView() {
       <div className="story-view-panel story-view-panel--content">
         <div className="story-view-content-inner">
           <div className="story-view-toolbar">
-            <PageBreadcrumb
-              items={
-                cameFromModules
-                  ? [
-                      { label: 'Modules', to: '/modules' },
-                      { label: 'Modules', to: '/modules' },
-                      { label: parentLabel, to: backPath },
-                      { label: editing ? 'Edit' : title || 'Story' },
-                    ]
-                  : [
-                      { label: 'Modules', to: '/modules' },
-                      { label: 'Library', to: '/library' },
-                      { label: editing ? 'Edit Story' : title || 'Story' },
-                    ]
-              }
-            />
             {!editing ? (
               <button type="button" className="story-view-edit" onClick={startEdit}>
                 <FiEdit2 aria-hidden /> Edit

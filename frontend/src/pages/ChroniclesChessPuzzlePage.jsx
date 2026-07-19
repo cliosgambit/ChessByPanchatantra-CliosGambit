@@ -4,7 +4,6 @@ import { useDisclosure, useToast } from '@chakra-ui/react';
 import { FiEdit2, FiEye, FiEyeOff, FiShuffle, FiBarChart2 } from 'react-icons/fi';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
 import ChroniclesEditPuzzleModal from '../components/chronicles/ChroniclesEditPuzzleModal';
 import {
@@ -184,13 +183,6 @@ function ChroniclesChessPuzzlePage() {
   return (
     <div className="chronicles-puzzle-page">
       <header className="chronicles-puzzle-page-header">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Chronicles', to: '/chronicles?tab=puzzles' },
-            { label: puzzle.chess_puzzle_id || 'Puzzle' },
-          ]}
-        />
         <div>
           <h1 className="chronicles-puzzle-page-title">{puzzle.chess_puzzle_id}</h1>
           <p className="chronicles-puzzle-page-subtitle">Chess puzzle workspace</p>

@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { FiSearch, FiShuffle, FiUpload, FiX } from 'react-icons/fi';
 import FenHoverPreview from '../components/userProfile/FenHoverPreview';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import {
   fetchLichessPuzzles,
   uploadLichessPuzzlesFile,
@@ -224,13 +223,6 @@ function LichessPuzzles() {
   return (
     <div className="puzzles-page puzzles-page--wide gm-puzzles-page">
       <header className="puzzles-header gm-puzzles-header">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Puzzles', to: '/puzzles' },
-            { label: 'Lichess Puzzles' },
-          ]}
-        />
         <div className="puzzles-header-row">
           <div className="gm-puzzles-heading">
             <span className="gm-puzzles-eyebrow">Puzzle library</span>

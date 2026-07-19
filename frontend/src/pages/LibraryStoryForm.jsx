@@ -8,7 +8,6 @@ import {
   updateLibraryStory,
   uploadLibraryImages,
 } from '../services/libraryService';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Library.css';
 
 const EMPTY_FORM = {
@@ -267,13 +266,6 @@ function LibraryStoryForm() {
     <div className="library-page library-page--form">
       <header className="library-header">
         <div>
-          <PageBreadcrumb
-            items={[
-              { label: 'Modules', to: '/modules' },
-              { label: 'Library', to: '/library' },
-              { label: isEdit ? 'Edit Story' : 'Add Story' },
-            ]}
-          />
           <h1>{isEdit ? 'Edit Story' : 'Add Story'}</h1>
         </div>
       </header>

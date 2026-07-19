@@ -54,6 +54,8 @@ const LeftSidebar = ({
   hideOverview = false,
   columnHeight,
   importing = false,
+  /** 0-based ply to mark as the pioneer / focus sacrifice move. */
+  highlightPly = null,
 }) => {
   const pageStack = layout === 'pageStack';
   const asideHeight = columnHeight ?? boardWidth + 112;
@@ -216,33 +218,46 @@ const LeftSidebar = ({
               Load a PGN to see moves
             </p>
           ) : (
-            movePairs.map((pair, i) => (
+            movePairs.map((pair, i) => {
+              const whitePly = i * 2;
+              const blackPly = i * 2 + 1;
+              const whiteIsFocus = highlightPly != null && highlightPly === whitePly;
+              const blackIsFocus = highlightPly != null && highlightPly === blackPly;
+              return (
               <div key={i} className="tp-move-row">
                 <span className="tp-move-num">{pair.num}.</span>
                 <div
-                  className={`tp-move-pill ${navIndex === i * 2 + 1 ? 'tp-move-pill--active' : ''}`}
-                  onClick={() => setNavIndex(i * 2 + 1)}
+                  className={`tp-move-pill${navIndex === whitePly + 1 ? ' tp-move-pill--active' : ''}${
+                    whiteIsFocus ? ' tp-move-pill--pioneer' : ''
+                  }`}
+                  onClick={() => setNavIndex(whitePly + 1)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setNavIndex(i * 2 + 1)}
+                  title={whiteIsFocus ? 'Piece sacrifice' : undefined}
+                  onKeyDown={(e) => e.key === 'Enter' && setNavIndex(whitePly + 1)}
                 >
                   <div className="tp-move-pill-main">
                     <MoveClassIcon moveClass={pair.wClass} title={moveClassLabel(pair.wClass) || undefined} />
                     <span className={`tp-move-san ${moveClassTextClass(pair.wClass)}`}>{pair.w}</span>
+                    {whiteIsFocus ? <span className="tp-move-pioneer-tag">!!</span> : null}
                   </div>
                   {pair.wClock ? <span className="tp-move-clock">{pair.wClock}</span> : null}
                 </div>
                 {pair.b ? (
                   <div
-                    className={`tp-move-pill ${navIndex === i * 2 + 2 ? 'tp-move-pill--active' : ''}`}
-                    onClick={() => setNavIndex(i * 2 + 2)}
+                    className={`tp-move-pill${navIndex === blackPly + 1 ? ' tp-move-pill--active' : ''}${
+                      blackIsFocus ? ' tp-move-pill--pioneer' : ''
+                    }`}
+                    onClick={() => setNavIndex(blackPly + 1)}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && setNavIndex(i * 2 + 2)}
+                    title={blackIsFocus ? 'Piece sacrifice' : undefined}
+                    onKeyDown={(e) => e.key === 'Enter' && setNavIndex(blackPly + 1)}
                   >
                     <div className="tp-move-pill-main">
                       <MoveClassIcon moveClass={pair.bClass} title={moveClassLabel(pair.bClass) || undefined} />
                       <span className={`tp-move-san ${moveClassTextClass(pair.bClass)}`}>{pair.b}</span>
+                      {blackIsFocus ? <span className="tp-move-pioneer-tag">!!</span> : null}
                     </div>
                     {pair.bClock ? <span className="tp-move-clock">{pair.bClock}</span> : null}
                   </div>
@@ -250,7 +265,8 @@ const LeftSidebar = ({
                   <div />
                 )}
               </div>
-            ))
+              );
+            })
           )}
         </div>
 

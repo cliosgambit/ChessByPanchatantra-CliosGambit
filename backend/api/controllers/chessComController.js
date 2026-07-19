@@ -294,6 +294,104 @@ exports.getAchievementsFeed = async (req, res) => {
   }
 };
 
+exports.getPioneerWins = async (req, res) => {
+  try {
+    const pioneerService = require('../services/chessComPioneerWinsService');
+    const timeZone = req.query.tz || 'Asia/Kolkata';
+    const dayFilter = req.query.day || 'today';
+    const data = await pioneerService.listPioneerWins({ dayFilter, timeZone });
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com pioneer wins list error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load pioneer wins.' });
+  }
+};
+
+exports.getPioneerScanTargets = async (req, res) => {
+  try {
+    const pioneerService = require('../services/chessComPioneerWinsService');
+    const timeZone = req.query.tz || 'Asia/Kolkata';
+    const dayFilter = req.query.day || 'today';
+    const data = await pioneerService.listPioneerScanTargets({ dayFilter, timeZone });
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com pioneer scan targets error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load scan targets.' });
+  }
+};
+
+exports.getPioneerWin = async (req, res) => {
+  try {
+    const pioneerService = require('../services/chessComPioneerWinsService');
+    const row = await pioneerService.getPioneerWinByUuid(req.params.uuid);
+    if (!row) {
+      return res.status(404).json({ error: 'Pioneer win not found.' });
+    }
+    res.json({ pioneerWin: row });
+  } catch (err) {
+    console.error('Chess.com pioneer win get error:', err);
+    res.status(500).json({ error: err.message || 'Failed to load pioneer win.' });
+  }
+};
+
+exports.detectPioneerWinOne = async (req, res) => {
+  try {
+    const pioneerService = require('../services/chessComPioneerWinsService');
+    const uuid = req.body?.uuid || req.query.uuid;
+    const chessComId = req.body?.chessComId || req.query.chessComId;
+    const maxMoveNumber = req.body?.maxMoveNumber ?? req.query.maxMoveNumber;
+    // No abort/499 path — client stops between games, not mid-request.
+    const data = await pioneerService.detectPioneerWinForGame({
+      uuid,
+      chessComId,
+      maxMoveNumber,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('Chess.com pioneer win detect-one error:', err);
+    res.status(500).json({ error: err.message || 'Failed to detect pioneer win.' });
+  }
+};
+
+exports.detectPioneerWins = async (req, res) => {
+  const pioneerService = require('../services/chessComPioneerWinsService');
+  let cancelled = Boolean(req.aborted || req.socket?.destroyed);
+  const onClose = () => {
+    cancelled = true;
+  };
+  req.on('close', onClose);
+  req.on('aborted', onClose);
+
+  try {
+    const timeZone = req.body?.tz || req.query.tz || 'Asia/Kolkata';
+    const dayFilter = req.body?.day || req.query.day || 'today';
+    const maxMoveNumber = req.body?.maxMoveNumber ?? req.query.maxMoveNumber;
+    const data = await pioneerService.detectPioneerWins({
+      dayFilter,
+      timeZone,
+      maxMoveNumber,
+      shouldCancel: () => cancelled || Boolean(req.aborted || req.socket?.destroyed),
+    });
+    if (cancelled || res.writableEnded) return;
+    res.json(data);
+  } catch (err) {
+    if (err?.code === 'PIONEER_DETECT_CANCELLED' || err?.name === 'PioneerDetectCancelledError') {
+      // Soft cancel — 200 so proxies/browsers don't log a failed 499.
+      if (!res.writableEnded) {
+        res.json({ cancelled: true, error: 'Detection cancelled.', pioneerWins: [] });
+      }
+      return;
+    }
+    console.error('Chess.com pioneer wins detect error:', err);
+    if (!res.writableEnded) {
+      res.status(500).json({ error: err.message || 'Failed to detect pioneer wins.' });
+    }
+  } finally {
+    req.removeListener('close', onClose);
+    req.removeListener('aborted', onClose);
+  }
+};
+
 exports.getWinStreaks = async (req, res) => {
   try {
     const timeZone = req.query.tz || 'Asia/Kolkata';

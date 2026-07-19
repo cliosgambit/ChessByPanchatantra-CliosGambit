@@ -23,7 +23,22 @@ export async function parseApiResponse(response) {
     if (response.status === 503 && isBackendUnavailable(data)) {
       throw new Error(data.error || BACKEND_UNAVAILABLE_MSG);
     }
+    // Legacy abort status (should be rare now).
+    if (response.status === 499) {
+      const cancelErr = new Error(data.error || data.message || 'Detection cancelled.');
+      cancelErr.name = 'AbortError';
+      cancelErr.cancelled = true;
+      throw cancelErr;
+    }
     throw new Error(data.error || data.message || `Request failed (${response.status})`);
+  }
+
+  // Soft-cancel payloads use HTTP 200 with cancelled:true.
+  if (data?.cancelled) {
+    const cancelErr = new Error(data.error || data.message || 'Detection cancelled.');
+    cancelErr.name = 'AbortError';
+    cancelErr.cancelled = true;
+    throw cancelErr;
   }
 
   return data;
@@ -33,7 +48,8 @@ export async function apiFetch(url, options) {
   let response;
   try {
     response = await fetch(url, options);
-  } catch {
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
     throw new Error(BACKEND_UNAVAILABLE_MSG);
   }
   return parseApiResponse(response);

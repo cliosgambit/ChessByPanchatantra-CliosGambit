@@ -13,7 +13,6 @@ import {
   deleteLibraryStory,
   fetchLibraryStories,
 } from '../services/libraryService';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import PaginationBar from '../components/common/PaginationBar';
 import { canManageContent } from '../utils/roles';
 import './Library.css';
@@ -258,12 +257,6 @@ function Library() {
       <div className="library-sticky-head">
         <header className="library-header">
           <div>
-            <PageBreadcrumb
-              items={[
-                { label: 'Modules', to: '/modules' },
-                { label: 'Library' },
-              ]}
-            />
             <h1>Library</h1>
           </div>
           {canManage ? (

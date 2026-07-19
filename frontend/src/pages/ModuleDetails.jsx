@@ -21,7 +21,6 @@ import {
   UnorderedList,
   ListItem,
 } from '@chakra-ui/react';
-import { FiChevronRight } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import ChapterCard from '../components/moduleDetails/ChapterCard';
 import AddChapterModal from '../components/moduleDetails/AddChapterModal';
@@ -91,7 +90,6 @@ function ModuleDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  const breadcrumbColor = useColorModeValue('gray.500', 'gray.400');
   const subColor = useColorModeValue('gray.600', 'gray.400');
   const moduleLabel = formatModuleLabel(moduleId);
 
@@ -358,24 +356,6 @@ function ModuleDetails() {
       <StickyAdminPageLayout
         animated
         titleSize="md"
-        breadcrumbs={
-          <HStack spacing={2} fontSize="xs" color={breadcrumbColor} mb={1}>
-            <Text fontWeight="600">Admin</Text>
-            <Box as={FiChevronRight} />
-            <Text
-              fontWeight="600"
-              cursor="pointer"
-              _hover={{ color: 'gold.600' }}
-              onClick={() => navigate('/curriculum')}
-            >
-              Curriculum
-            </Text>
-            <Box as={FiChevronRight} />
-            <Text color="gold.600" fontWeight="600">
-              Module {moduleLabel}
-            </Text>
-          </HStack>
-        }
         title={`Chapters for Module ${moduleLabel}`}
         subtitle="Chapters from Supabase chapter table."
         headerExtra={

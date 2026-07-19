@@ -3,9 +3,173 @@ import React, { useMemo } from 'react';
 import EvaluationGraph from '../gameAnalysis/EvaluationGraph';
 import MoveClassIcon from './MoveClassIcon';
 import { classifyMoveByCplDelta } from '../../utils/moveClassification';
-import DepthEvalTable from './DepthEvalTable';
-import { getStage2DepthEvals, getStage3DepthEvals } from '../../utils/brillianceDepthEvals';
+// import DepthEvalTable from './DepthEvalTable';
+// import { getStage2DepthEvals, getStage3DepthEvals } from '../../utils/brillianceDepthEvals';
+import { stage4Summary } from '../../utils/brillianceStageSummaries';
 
+/** Same set as the Stage 4 tab: moves that passed Stage 3 → Stage 4. */
+function buildStage4PassedMoves(stage3Moves = [], stage4Moves = []) {
+  const s4ByPly = new Map();
+  for (const m of stage4Moves || []) {
+    if (m?.ply_index != null) s4ByPly.set(m.ply_index, m);
+  }
+
+  const rows = [];
+  const seen = new Set();
+
+  for (const s3 of stage3Moves || []) {
+    if (!s3?.proceed_to_stage4 || s3.ply_index == null) continue;
+    const ply = s3.ply_index;
+    seen.add(ply);
+    const s4 = s4ByPly.get(ply);
+    rows.push({
+      ...(s4 || {}),
+      ply_index: ply,
+      san_move: s4?.san_move || s3.san_move,
+      hasStage4Result: Boolean(s4),
+    });
+  }
+
+  // Include any Stage 4 rows not flagged on Stage 3 (defensive).
+  for (const s4 of stage4Moves || []) {
+    if (s4?.ply_index == null || seen.has(s4.ply_index)) continue;
+    rows.push({ ...s4, hasStage4Result: true });
+  }
+
+  rows.sort((a, b) => (a.ply_index ?? 0) - (b.ply_index ?? 0));
+  return rows;
+}
+
+function stage4Badge(move) {
+  if (move.is_brilliant || move.classification === 'BRILLIANT') {
+    return { label: 'BRILLIANT', className: 'tp-cell-brilliant' };
+  }
+  if (move.classification === 'practical_brilliant') {
+    return { label: 'practical_brilliant', className: 'tp-cell-stage3' };
+  }
+  if (move.classification) {
+    return { label: move.classification, className: 'tp-cell-stage3' };
+  }
+  if (move.hasStage4Result) {
+    return { label: 'Scored', className: 'tp-cell-stage3' };
+  }
+  return { label: '→ S4', className: 'tp-cell-pass' };
+}
+
+function Stage4PassedPanel({
+  stage3Moves = [],
+  stage4Moves = [],
+  moveListLabels = [],
+  navIndex = 0,
+  setNavIndex,
+  stage4Loading = false,
+  engineEvalLoading = false,
+  onDetailedView = null,
+  onBackToNewVersion = null,
+}) {
+  const passedMoves = useMemo(
+    () => buildStage4PassedMoves(stage3Moves, stage4Moves),
+    [stage3Moves, stage4Moves]
+  );
+
+  const loading = stage4Loading || engineEvalLoading;
+
+  return (
+    <aside className="tp-right-sidebar">
+      <div className="tp-engine-panel tp-stage4-panel">
+        <div className="tp-panel-header">
+          <h2>
+            <i className="fas fa-star tp-engine-icon" aria-hidden />
+            Stage 4 Passed
+          </h2>
+          <div className="tp-stage4-header-actions">
+            <span className="tp-engine-depth" title="Moves that passed into Stage 4">
+              {loading && !passedMoves.length ? '…' : `${passedMoves.length}`}
+            </span>
+            {typeof onDetailedView === 'function' && (
+              <button
+                type="button"
+                className="tp-stage4-detailed-btn"
+                onClick={onDetailedView}
+                title="Open Old Version with full stage cascade"
+              >
+                Detailed View
+              </button>
+            )}
+            {typeof onBackToNewVersion === 'function' && (
+              <button
+                type="button"
+                className="tp-stage4-detailed-btn"
+                onClick={onBackToNewVersion}
+                title="Back to New Version"
+              >
+                New Version
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="tp-engine-body tp-stage4-panel-body">
+          {loading && !passedMoves.length ? (
+            <div className="tp-engine-loading">
+              <i className="fas fa-spinner fa-spin tp-engine-spinner" aria-hidden />
+              <p>Running Stage 4…</p>
+            </div>
+          ) : passedMoves.length === 0 ? (
+            <div className="tp-engine-empty">
+              <p>No Stage 4 passed moves</p>
+              <p>Moves that clear Stage 3 will show here</p>
+            </div>
+          ) : (
+            <ul className="tp-stage4-list">
+              {passedMoves.map((move) => {
+                const ply = move.ply_index;
+                const label =
+                  Number.isFinite(ply) && moveListLabels[ply]
+                    ? moveListLabels[ply]
+                    : move.san_move || `Ply ${ply}`;
+                const isActive = navIndex > 0 && navIndex - 1 === ply;
+                const summary = move.hasStage4Result
+                  ? stage4Summary(move)
+                  : loading
+                    ? 'Running Stage 4…'
+                    : 'Awaiting Stage 4 result';
+                const badge = stage4Badge(move);
+                return (
+                  <li key={`s4-pass-${ply}`}>
+                    <button
+                      type="button"
+                      className={`tp-stage4-item${isActive ? ' tp-stage4-item--active' : ''}`}
+                      onClick={() => {
+                        if (Number.isFinite(ply) && typeof setNavIndex === 'function') {
+                          setNavIndex(ply + 1);
+                        }
+                      }}
+                    >
+                      <div className="tp-stage4-item-top">
+                        <span className="tp-stage4-item-move">{label}</span>
+                        <span className={badge.className}>{badge.label}</span>
+                      </div>
+                      <p className="tp-stage4-item-summary">{summary}</p>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className="tp-engine-footer">
+          <p className="tp-engine-footer-muted">
+            Short summary of Stage 4 passed moves · click to jump
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* Stockfish 18 helpers — restore with the empty-panel block below.
 function formatWhiteCpScore(cp) {
   if (cp == null || !Number.isFinite(cp)) return null;
   if (Math.abs(cp) >= 9000) {
@@ -37,6 +201,7 @@ function formatWhiteCpLabel(cp) {
   const pawns = cp / 100;
   return `${pawns >= 0 ? '+' : ''}${pawns.toFixed(2)}`;
 }
+*/
 
 const RightSidebar = ({ 
   analysis, 
@@ -52,38 +217,40 @@ const RightSidebar = ({
   multipv = 3,
   boardWidth = 560,
   empty = false,
+  panelMode = 'engine',
   stage2Move = null,
   stage3Move = null,
   stage4Move = null,
+  stage3Moves = [],
+  stage4Moves = [],
+  moveListLabels = [],
+  setNavIndex,
   engineEvalLoading = false,
+  stage4Loading = false,
+  onDetailedView = null,
+  onBackToNewVersion = null,
 }) => {
   const pageStack = layout === 'pageStack';
 
-  const activeMove = stage3Move || stage2Move;
-  const activeStage = stage3Move ? 3 : stage2Move ? 2 : null;
-
-  const evalDisplay = useMemo(() => {
-    if (!activeMove) return null;
-    const cp = stage3Move ? stage3Move.deep_eval_cp : stage2Move?.our_score_cp;
-    if (cp == null) return null;
-    return formatWhiteCpScore(cp);
-  }, [activeMove, stage2Move, stage3Move]);
-
-  const stage2BestDisplay = useMemo(() => {
-    if (!stage2Move || stage2Move.best_score_cp == null) return null;
-    return formatWhiteCpLabel(stage2Move.best_score_cp);
-  }, [stage2Move]);
-
-  const stage2DepthEvals = useMemo(() => getStage2DepthEvals(stage2Move), [stage2Move]);
-  const stage3DepthEvals = useMemo(() => getStage3DepthEvals(stage3Move), [stage3Move]);
-
-  const depthHeaderLabel = useMemo(() => {
-    if (stage3Move) return stage3DepthEvals.subtitle;
-    if (stage2Move) return stage2DepthEvals.subtitle;
-    return engineEvalLoading ? '…' : '—';
-  }, [stage2Move, stage3Move, stage2DepthEvals, stage3DepthEvals, engineEvalLoading]);
-
+  // Old + New analyze views both use Stage 4 Passed on the right.
   if (empty) {
+    return (
+      <Stage4PassedPanel
+        stage3Moves={stage3Moves}
+        stage4Moves={stage4Moves}
+        moveListLabels={moveListLabels}
+        navIndex={navIndex}
+        setNavIndex={setNavIndex}
+        stage4Loading={stage4Loading}
+        engineEvalLoading={engineEvalLoading}
+        onDetailedView={onDetailedView}
+        onBackToNewVersion={onBackToNewVersion}
+      />
+    );
+  }
+
+  /* Stockfish 18 empty-panel (old right rail) — kept for reference / restore later.
+  if (empty && panelMode === 'engine') {
     return (
       <aside className="tp-right-sidebar">
         <div className="tp-engine-panel">
@@ -92,9 +259,16 @@ const RightSidebar = ({
               <i className="fas fa-microchip tp-engine-icon" aria-hidden />
               Stockfish 18
             </h2>
-            <span className="tp-engine-depth" title="Search depths for this stage">
-              {depthHeaderLabel}
-            </span>
+            {typeof onBackToNewVersion === 'function' && (
+              <button
+                type="button"
+                className="tp-stage4-detailed-btn"
+                onClick={onBackToNewVersion}
+                title="Back to New Version Stage 4 summary"
+              >
+                New Version
+              </button>
+            )}
           </div>
 
           <div className="tp-engine-body">
@@ -148,7 +322,6 @@ const RightSidebar = ({
                     </div>
                     <DepthEvalTable
                       title={stage3DepthEvals.title}
-                      subtitle={stage3DepthEvals.subtitle}
                       rows={stage3DepthEvals.rows}
                     />
                   </>
@@ -177,7 +350,6 @@ const RightSidebar = ({
                     </div>
                     <DepthEvalTable
                       title={stage2DepthEvals.title}
-                      subtitle={stage2DepthEvals.subtitle}
                       rows={stage2DepthEvals.rows}
                     />
                   </>
@@ -244,6 +416,7 @@ const RightSidebar = ({
       </aside>
     );
   }
+  */
 
   const currentAnalysis = analysis[navIndex];
 

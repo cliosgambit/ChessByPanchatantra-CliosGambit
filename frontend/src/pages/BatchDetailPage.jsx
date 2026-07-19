@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiEdit2, FiPlus, FiUserMinus, FiUserPlus, FiX } from 'react-icons/fi';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import {
   addStudentsToBatch,
   fetchBatch,
@@ -207,13 +206,6 @@ function BatchDetailPage() {
   return (
     <div className="students-page">
       <header className="students-header">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Students', to: '/students' },
-            { label: batch.name },
-          ]}
-        />
         <div className="students-header-row">
           <div>
             <h1>{batch.name}</h1>

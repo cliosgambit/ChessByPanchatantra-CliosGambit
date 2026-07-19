@@ -2,16 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiExternalLink, FiShuffle } from 'react-icons/fi';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchLichessPuzzle, fetchLichessPuzzles } from '../services/lichessPuzzleService';
 import { resolveLichessPuzzlePosition } from '../utils/lichessPuzzleFen';
 import './LibraryMoralPuzzles.css';
-
-const LICHESS_BREADCRUMB = [
-  { label: 'Modules', to: '/modules' },
-  { label: 'Puzzles', to: '/puzzles' },
-  { label: 'Lichess Puzzles', to: '/puzzles/lichess' },
-];
 
 function LichessPuzzleView() {
   const { puzzleId } = useParams();
@@ -74,7 +67,6 @@ function LichessPuzzleView() {
   if (loading) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={[...LICHESS_BREADCRUMB, { label: 'Puzzle' }]} />
         <p className="moral-puzzles-muted">Loading…</p>
       </div>
     );
@@ -83,7 +75,6 @@ function LichessPuzzleView() {
   if (error || !puzzle || !resolved?.playFen) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={[...LICHESS_BREADCRUMB, { label: 'Puzzle' }]} />
         <p className="moral-puzzles-error">{error || 'Puzzle not found.'}</p>
       </div>
     );
@@ -103,9 +94,6 @@ function LichessPuzzleView() {
     <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
       <div className="moral-puzzles-zone moral-puzzles-zone--story">
         <div className="moral-puzzles-left-inner">
-          <PageBreadcrumb
-            items={[...LICHESS_BREADCRUMB, { label: `Puzzle #${puzzle.id}` }]}
-          />
 
           <h1 className="moral-play-title">Lichess Puzzle #{puzzle.id}</h1>
           <p className="moral-play-sub">{subtitle}</p>

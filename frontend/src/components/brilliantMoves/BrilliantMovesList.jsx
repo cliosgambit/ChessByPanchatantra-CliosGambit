@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import FenHoverPreview from '../userProfile/FenHoverPreview';
+import { brilliantMoveDetailPath } from '../../utils/brilliantMovesFilters';
 import './BrilliantMovesList.css';
 
 const PREVIEW_ANIMATION_MS = 280;
@@ -28,7 +29,25 @@ function ReviewedCell({ row }) {
   );
 }
 
-function BrilliantMovesList({ rows }) {
+/** Human-approved brilliant (verification_status = approved). */
+function IsBrilliantCell({ row }) {
+  const isHumanBrilliant = (row.verificationStatus || 'pending') === 'approved';
+
+  return (
+    <span
+      className={`chess-review-chip${
+        isHumanBrilliant
+          ? ' chess-review-chip--yes chess-review-chip--approved'
+          : ' chess-review-chip--no'
+      }`}
+      title={isHumanBrilliant ? 'Human reviewed as brilliant' : 'Not approved as brilliant'}
+    >
+      {isHumanBrilliant ? 'Yes' : 'No'}
+    </span>
+  );
+}
+
+function BrilliantMovesList({ rows, navFilters = {} }) {
   const navigate = useNavigate();
   const hideTimer = useRef(null);
   const [previewMounted, setPreviewMounted] = useState(false);
@@ -92,9 +111,9 @@ function BrilliantMovesList({ rows }) {
       setPreviewVisible(false);
       setPreviewMounted(false);
       setHoveredRow(null);
-      navigate(`/brilliant-moves/${row.id}`);
+      navigate(brilliantMoveDetailPath(row.id, navFilters));
     },
-    [clearTimers, navigate]
+    [clearTimers, navigate, navFilters]
   );
 
   useEffect(() => () => clearTimers(), [clearTimers]);
@@ -129,12 +148,11 @@ function BrilliantMovesList({ rows }) {
       <div className="chess-brilliant-moves-head" role="row">
         <span>Player</span>
         <span>Move</span>
-        <span>Class</span>
-        <span>FEN</span>
         <span>Score</span>
         <span>Rating</span>
         <span>Stage 4</span>
         <span>Reviewed</span>
+        <span>is_brilliant</span>
         <span>Date</span>
       </div>
 
@@ -184,21 +202,6 @@ function BrilliantMovesList({ rows }) {
                   <span className="chess-brilliant-move-link">{row.sanMove}</span>
                 </div>
 
-                <div className="chess-brilliant-moves-col chess-brilliant-moves-col--class">
-                  {row.classification}
-                </div>
-                <div className="chess-brilliant-moves-col chess-brilliant-moves-col--fen">
-                  {hasPreview ? (
-                    <code
-                      className="chess-brilliant-fen"
-                      title={row.fenBeforeMove || row.fenAfterMove}
-                    >
-                      {row.fenBeforeMove || row.fenAfterMove}
-                    </code>
-                  ) : (
-                    '—'
-                  )}
-                </div>
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--score">
                   {row.brillianceScore != null ? row.brillianceScore.toFixed(2) : '—'}
                 </div>
@@ -218,6 +221,9 @@ function BrilliantMovesList({ rows }) {
                 </div>
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--reviewed">
                   <ReviewedCell row={row} />
+                </div>
+                <div className="chess-brilliant-moves-col chess-brilliant-moves-col--is-brilliant">
+                  <IsBrilliantCell row={row} />
                 </div>
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--date">
                   {row.playedDate}

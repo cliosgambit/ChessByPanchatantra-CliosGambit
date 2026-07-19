@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import EmptyState from '../components/common/EmptyState';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import ChroniclesStoriesTab from '../components/chronicles/ChroniclesStoriesTab';
 import ChroniclesPuzzlesTab from '../components/chronicles/ChroniclesPuzzlesTab';
 import './Chronicles.css';
@@ -46,12 +45,6 @@ function Chronicles() {
   return (
     <div className="chronicles-page">
       <header className="chronicles-header">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Chronicles' },
-          ]}
-        />
         <div>
           <h1 className="chronicles-title">Chronicles</h1>
           <p className="chronicles-subtitle">

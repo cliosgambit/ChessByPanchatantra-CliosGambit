@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Box } from '@chakra-ui/react';
-import { FiActivity, FiAward, FiZap } from 'react-icons/fi';
-import { GiSparkles } from 'react-icons/gi';
+import { FiActivity, FiZap } from 'react-icons/fi';
+import { GiBroadsword, GiSparkles } from 'react-icons/gi';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
 import EmptyState from '../components/common/EmptyState';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { getStreakBadgeForLength } from '../components/userProfile/WinStreakBadges';
 import { fetchAchievementsFeedFromDb } from '../services/chessComDbService';
+import { openChessComGame } from '../utils/chessComGameNavigation';
 import {
   buildFilterLabels,
   DAY_FILTER_OPTIONS,
@@ -37,8 +37,8 @@ function displayName(row) {
 }
 
 function opponentLabel(row) {
-  if (row?.type === 'win_streak') {
-    return row.opponentUsername || null;
+  if (row?.type === 'win_streak' || row?.type === 'pioneer_win') {
+    if (row.opponentUsername) return row.opponentUsername;
   }
   const username = (row?.playerUsername || row?.chessComId || '').toLowerCase();
   if (!username) return null;
@@ -73,6 +73,13 @@ function achievementHeadline(row) {
       row.streakLabel || `${row.streakLength} wins in a row`
     }`;
   }
+  if (row?.type === 'pioneer_win') {
+    const piece = row.pieceLostLabel || 'Piece';
+    const move =
+      row.lossMoveNumber != null ? ` · m${row.lossMoveNumber}` : '';
+    const san = row.lossSan ? ` · ${row.lossSan}` : '';
+    return `Pioneer win · ${piece}${move}${san}`;
+  }
   const score =
     row?.brillianceScore != null ? ` · ${Number(row.brillianceScore).toFixed(1)}` : '';
   return `Brilliant move ${row?.sanMove || '—'}${score}`;
@@ -83,7 +90,27 @@ function achievementThemeKey(row) {
   if (row?.type === 'win_streak') {
     return getStreakBadgeForLength(row.streakLength).theme || 'bronze';
   }
+  if (row?.type === 'pioneer_win') {
+    return 'bronze';
+  }
   return 'teal';
+}
+
+function achievementLineIcon(row) {
+  if (row?.type === 'win_streak') return FiActivity;
+  if (row?.type === 'pioneer_win') return GiBroadsword;
+  return FiZap;
+}
+
+function groupTone(achievements) {
+  const brilliantCount = achievements.filter((a) => a.type === 'brilliant').length;
+  const streakCount = achievements.filter((a) => a.type === 'win_streak').length;
+  const pioneerCount = achievements.filter((a) => a.type === 'pioneer_win').length;
+  const kinds = [brilliantCount > 0, streakCount > 0, pioneerCount > 0].filter(Boolean).length;
+  if (kinds > 1) return 'mixed';
+  if (brilliantCount) return 'brilliant';
+  if (pioneerCount) return 'pioneer';
+  return 'win_streak';
 }
 
 function achievementMetaParts(row) {
@@ -139,12 +166,8 @@ function groupAchievementsByStudentDay(rows, dayFilter) {
     });
     group.brilliantCount = group.achievements.filter((a) => a.type === 'brilliant').length;
     group.streakCount = group.achievements.filter((a) => a.type === 'win_streak').length;
-    group.tone =
-      group.brilliantCount && group.streakCount
-        ? 'mixed'
-        : group.brilliantCount
-          ? 'brilliant'
-          : 'win_streak';
+    group.pioneerCount = group.achievements.filter((a) => a.type === 'pioneer_win').length;
+    group.tone = groupTone(group.achievements);
   }
 
   groups.sort((a, b) => {
@@ -189,6 +212,48 @@ function AchievementSideBadge({ row, onActivate }) {
           <div className="chess-ach-milestone-label">
             <span className="chess-ach-milestone-num">{badge.length}</span>
             <span className="chess-ach-milestone-unit">straight wins</span>
+          </div>
+        </div>
+      </>
+    );
+
+    if (clickable) {
+      return (
+        <button type="button" className={className} title={title} onClick={onActivate}>
+          {inner}
+        </button>
+      );
+    }
+    return (
+      <div className={className} aria-hidden="true" title={title}>
+        {inner}
+      </div>
+    );
+  }
+
+  if (row?.type === 'pioneer_win') {
+    const piece = row.pieceLostLabel || 'Piece';
+    const moveLabel =
+      row.lossMoveNumber != null ? `move ${row.lossMoveNumber}` : 'early giveaway';
+    const className = `chess-ach-milestone chess-ach-milestone--bronze is-unlocked achievements-side-badge achievements-side-badge--pioneer${
+      clickable ? ' achievements-side-badge--clickable' : ''
+    }`;
+    const title = row.lossSan
+      ? `Pioneer Win · ${piece} · ${row.lossSan}`
+      : `Pioneer Win · ${piece}`;
+    const inner = (
+      <>
+        <div className="chess-ach-milestone-aura" />
+        <div className="chess-ach-milestone-icon">
+          <GiBroadsword />
+        </div>
+        <div className="chess-ach-milestone-plaque">
+          <div className="chess-ach-milestone-name">Pioneer Win</div>
+          <div className="chess-ach-milestone-label">
+            <span className="chess-ach-milestone-num achievements-side-badge-san">
+              {row.lossSan || piece}
+            </span>
+            <span className="chess-ach-milestone-unit">{moveLabel}</span>
           </div>
         </div>
       </>
@@ -261,6 +326,7 @@ function Achievements() {
   const [meta, setMeta] = useState({
     brilliantCount: 0,
     streakCount: 0,
+    pioneerCount: 0,
     studentsCount: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -297,6 +363,16 @@ function Achievements() {
         navigate(`/brilliant-moves/${row.moveId}`);
         return;
       }
+      if (row?.type === 'pioneer_win' && username && row.uuid) {
+        openChessComGame(navigate, username, { uuid: row.uuid, chessComUuid: row.uuid }, {
+          viewOnly: true,
+          focusPly: row.lossPly,
+          focusSan: row.lossSan || row.lossUci || null,
+          focusPiece: row.pieceLostLabel || row.pieceLost || null,
+          focusMoveNumber: row.lossMoveNumber ?? null,
+        });
+        return;
+      }
       if (username) {
         navigate(`/players/${encodeURIComponent(username)}`);
       }
@@ -317,6 +393,7 @@ function Achievements() {
         setMeta({
           brilliantCount: data.brilliantCount ?? 0,
           streakCount: data.streakCount ?? 0,
+          pioneerCount: data.pioneerCount ?? 0,
           studentsCount: data.studentsCount ?? 0,
         });
       } catch (err) {
@@ -339,25 +416,7 @@ function Achievements() {
     <Box className="chess-profile-page achievements-page">
       <div className="achievements-shell">
         <header className="achievements-header">
-          <PageBreadcrumb
-            items={[
-              { label: 'Modules', to: '/modules' },
-              { label: 'Achievements' },
-            ]}
-          />
-
-          <div className="achievements-title-row">
-            <div>
-              <p className="achievements-kicker">Student highlights</p>
-              <h1 className="achievements-title">Achievements</h1>
-              <p className="achievements-subtitle">
-                Brilliant moves and win streaks · {dateLabel}
-              </p>
-            </div>
-            <div className="achievements-title-mark" aria-hidden="true">
-              <FiAward />
-            </div>
-          </div>
+          <h1 className="achievements-title">Achievements</h1>
 
           <div className="achievements-metrics" aria-label="Achievement summary">
             <div className="achievements-metric">
@@ -372,6 +431,13 @@ function Achievements() {
                 {loading ? '…' : meta.brilliantCount}
               </span>
               <span className="achievements-metric-label">Brilliant</span>
+            </div>
+            <div className="achievements-metric achievements-metric--pioneer">
+              <span className="achievements-metric-value">
+                <GiBroadsword aria-hidden="true" />
+                {loading ? '…' : meta.pioneerCount}
+              </span>
+              <span className="achievements-metric-label">Pioneer</span>
             </div>
             <div className="achievements-metric achievements-metric--streak">
               <span className="achievements-metric-value">
@@ -424,7 +490,7 @@ function Achievements() {
             ) : groups.length === 0 ? (
               <EmptyState
                 title="No achievements for this filter."
-                subtitle={`No brilliant moves or win streaks found for ${dateLabel}.`}
+                subtitle={`No brilliant moves, pioneer wins, or win streaks found for ${dateLabel}.`}
               />
             ) : (
               <ul className="achievements-grid">
@@ -461,6 +527,7 @@ function Achievements() {
                             {achievements.map((row) => {
                               const metaParts = achievementMetaParts(row);
                               const theme = achievementThemeKey(row);
+                              const LineIcon = achievementLineIcon(row);
                               return (
                                 <li key={row.id} className="achievements-item-line">
                                   <button
@@ -469,11 +536,7 @@ function Achievements() {
                                     onClick={() => openAchievement(row, username)}
                                   >
                                     <span className="achievements-item-line-title">
-                                      {row.type === 'win_streak' ? (
-                                        <FiActivity aria-hidden="true" />
-                                      ) : (
-                                        <FiZap aria-hidden="true" />
-                                      )}
+                                      <LineIcon aria-hidden="true" />
                                       {achievementHeadline(row)}
                                     </span>
                                     {metaParts.length ? (

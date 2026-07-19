@@ -1,20 +1,30 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import LoadingPanel from '../common/LoadingPanel';
 import ErrorPanel from '../common/ErrorPanel';
 import EmptyState from '../common/EmptyState';
+import AllGamesPagination from '../allGames/AllGamesPagination';
 import BrilliantMovesList from './BrilliantMovesList';
 import {
   fetchBrilliantMovesFromDb,
   fetchBrilliancePipelineStatsFromDb,
 } from '../../services/chessComDbService';
 import {
-  filterGamesByDay,
   filterLabelForKey,
   panelTitleForDayFilter,
 } from '../../utils/allGamesFilters';
+import {
+  BRILLIANT_FILTER_OPTIONS,
+  REVIEW_FILTER_OPTIONS,
+  filterBrilliantMoveRows,
+  resolveBrilliantFilter,
+  resolveReviewFilter,
+} from '../../utils/brilliantMovesFilters';
+import { useClientPagination } from '../../utils/pagination';
 import '../../pages/BrilliantMoves.css';
 
 const STATS_POLL_MS = 1500;
+const MOVES_PER_PAGE = 50;
 
 const EMPTY_PIPELINE_STATS = {
   gamesFetched: 0,
@@ -23,52 +33,79 @@ const EMPTY_PIPELINE_STATS = {
   analysisCompleted: 0,
   analysisFailed: 0,
   brilliantMovesFound: 0,
+  humanReviewedCount: 0,
+  humanApprovedBrilliantCount: 0,
   stagesRunning: { stage0: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0 },
   syncInProgress: false,
 };
 
-function formatStagesRunning(stagesRunning) {
-  if (!stagesRunning) return '';
-  const parts = [];
-  if (stagesRunning.stage0) parts.push(`S0:${stagesRunning.stage0}`);
-  if (stagesRunning.stage1) parts.push(`S1:${stagesRunning.stage1}`);
-  if (stagesRunning.stage2) parts.push(`S2:${stagesRunning.stage2}`);
-  if (stagesRunning.stage3) parts.push(`S3:${stagesRunning.stage3}`);
-  if (stagesRunning.stage4) parts.push(`S4:${stagesRunning.stage4}`);
-  return parts.join(' • ');
-}
-
-function liveStatusLabel(stats) {
-  if (stats.syncInProgress) return 'Syncing games from Chess.com…';
-  if (stats.analysisRunning > 0) {
-    const stages = formatStagesRunning(stats.stagesRunning);
-    return stages
-      ? `Running brilliance analysis (${stages})`
-      : `Running brilliance analysis (${stats.analysisRunning} game(s))`;
-  }
-  if (stats.analysisPending > 0) return `${stats.analysisPending} game(s) waiting for analysis`;
-  return 'Live — pipeline idle';
-}
-
 /**
- * Brilliant moves list + pipeline stats for a shared day filter.
+ * Brilliant moves list + review stats for a shared day filter.
  * Used inside the merged All Games / Brilliant Moves page.
  */
-function BrilliantMovesPanel({ activeFilter, filterLabels }) {
+function BrilliantMovesPanel({ activeFilter, filterLabels, onStatsChange }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [allRows, setAllRows] = useState([]);
   const [pipelineStats, setPipelineStats] = useState(EMPTY_PIPELINE_STATS);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const reviewFilter = resolveReviewFilter(searchParams);
+  const brilliantFilter = resolveBrilliantFilter(searchParams);
   const prevCompletedRef = useRef(0);
   const activeFilterRef = useRef(activeFilter);
+  const onStatsChangeRef = useRef(onStatsChange);
 
   activeFilterRef.current = activeFilter;
+  onStatsChangeRef.current = onStatsChange;
+
+  const navFilters = useMemo(
+    () => ({
+      day: activeFilter,
+      review: reviewFilter,
+      brilliant: brilliantFilter,
+    }),
+    [activeFilter, reviewFilter, brilliantFilter]
+  );
 
   const filteredRows = useMemo(
-    () => filterGamesByDay(allRows, activeFilter),
+    () =>
+      filterBrilliantMoveRows(allRows, {
+        dayFilter: activeFilter,
+        reviewFilter,
+        brilliantFilter,
+      }),
+    [allRows, activeFilter, reviewFilter, brilliantFilter]
+  );
+
+  const dayFilteredRows = useMemo(
+    () =>
+      filterBrilliantMoveRows(allRows, {
+        dayFilter: activeFilter,
+        reviewFilter: 'all',
+        brilliantFilter: 'all',
+      }),
     [allRows, activeFilter]
   );
+
+  const patchListFilters = useCallback(
+    (patch) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          Object.entries(patch).forEach(([key, value]) => {
+            if (value == null || value === '' || value === 'all') next.delete(key);
+            else next.set(key, value);
+          });
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  const pagination = useClientPagination(filteredRows, MOVES_PER_PAGE);
 
   const dateLabel = useMemo(
     () => filterLabelForKey(activeFilter, filterLabels),
@@ -80,7 +117,23 @@ function BrilliantMovesPanel({ activeFilter, filterLabels }) {
     [activeFilter, filterLabels]
   );
 
-  const isLiveActive = pipelineStats.syncInProgress || pipelineStats.analysisRunning > 0;
+  useEffect(() => {
+    pagination.setPage(1);
+  }, [activeFilter, reviewFilter, brilliantFilter, pagination.setPage]);
+
+  useEffect(() => {
+    onStatsChangeRef.current?.({
+      reviewed: pipelineStats.humanReviewedCount,
+      brilliant:
+        pipelineStats.humanApprovedBrilliantCount ?? pipelineStats.brilliantMovesFound,
+      loading: statsLoading,
+    });
+  }, [
+    pipelineStats.humanReviewedCount,
+    pipelineStats.humanApprovedBrilliantCount,
+    pipelineStats.brilliantMovesFound,
+    statsLoading,
+  ]);
 
   const reloadMoves = useCallback(async () => {
     try {
@@ -100,6 +153,8 @@ function BrilliantMovesPanel({ activeFilter, filterLabels }) {
       analysisCompleted: stats.analysisCompleted ?? 0,
       analysisFailed: stats.analysisFailed ?? 0,
       brilliantMovesFound: stats.brilliantMovesFound ?? 0,
+      humanReviewedCount: stats.humanReviewedCount ?? 0,
+      humanApprovedBrilliantCount: stats.humanApprovedBrilliantCount ?? 0,
       stagesRunning: stats.stagesRunning || EMPTY_PIPELINE_STATS.stagesRunning,
       syncInProgress: Boolean(stats.syncInProgress),
     });
@@ -165,92 +220,91 @@ function BrilliantMovesPanel({ activeFilter, filterLabels }) {
   }, [activeFilter, loadPipelineStats, reloadMoves]);
 
   return (
-    <>
-      <div className="brilliant-moves-stats" aria-label="Brilliance pipeline status">
-        <div className="brilliant-moves-stat">
-          <span className="brilliant-moves-stat-value">
-            {statsLoading ? '…' : pipelineStats.gamesFetched}
-          </span>
-          <span className="brilliant-moves-stat-label">Games fetched</span>
-        </div>
-        <div className="brilliant-moves-stat brilliant-moves-stat--pending">
-          <span className="brilliant-moves-stat-value">
-            {statsLoading ? '…' : pipelineStats.analysisPending}
-          </span>
-          <span className="brilliant-moves-stat-label">Pending analysis</span>
-        </div>
-        <div className="brilliant-moves-stat brilliant-moves-stat--running">
-          <span className="brilliant-moves-stat-value">
-            {statsLoading ? '…' : pipelineStats.analysisRunning}
-          </span>
-          <span className="brilliant-moves-stat-label">Running (S0–S4)</span>
-        </div>
-        <div className="brilliant-moves-stat brilliant-moves-stat--completed">
-          <span className="brilliant-moves-stat-value">
-            {statsLoading ? '…' : pipelineStats.analysisCompleted}
-          </span>
-          <span className="brilliant-moves-stat-label">Analysis done</span>
-        </div>
-        <div className="brilliant-moves-stat brilliant-moves-stat--failed">
-          <span className="brilliant-moves-stat-value">
-            {statsLoading ? '…' : pipelineStats.analysisFailed}
-          </span>
-          <span className="brilliant-moves-stat-label">Failed</span>
-        </div>
-        <div className="brilliant-moves-stat brilliant-moves-stat--brilliant">
-          <span className="brilliant-moves-stat-value">
-            {statsLoading ? '…' : pipelineStats.brilliantMovesFound}
-          </span>
-          <span className="brilliant-moves-stat-label">Brilliant moves</span>
+    <section className="chess-profile-panel chess-games-panel">
+      <header className="chess-profile-panel-header">
+        <span>
+          {loading
+            ? '…'
+            : `${filteredRows.length} moves${
+                filteredRows.length > MOVES_PER_PAGE
+                  ? ` • Page ${pagination.page}/${pagination.totalPages}`
+                  : ''
+              }`}
+        </span>
+        <span>{panelTitle}</span>
+      </header>
+
+      <div className="brilliant-moves-list-filters" aria-label="Move filters">
+        <div
+          className="brilliant-moves-list-filter-group"
+          role="tablist"
+          aria-label="Review status"
+        >
+          {REVIEW_FILTER_OPTIONS.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              role="tab"
+              aria-selected={reviewFilter === filter.key}
+              className={`brilliant-moves-list-filter-btn${
+                reviewFilter === filter.key ? ' is-active' : ''
+              }`}
+              onClick={() => patchListFilters({ review: filter.key })}
+            >
+              {filter.label}
+            </button>
+          ))}
         </div>
         <div
-          className={`brilliant-moves-live${isLiveActive ? ' brilliant-moves-live--active' : ''}`}
-          role="status"
-          aria-live="polite"
+          className="brilliant-moves-list-filter-group"
+          role="tablist"
+          aria-label="Brilliant status"
         >
-          <span className="brilliant-moves-live-dot" aria-hidden="true" />
-          <span className="brilliant-moves-live-label">
-            {statsLoading ? 'Loading pipeline status…' : liveStatusLabel(pipelineStats)}
-          </span>
+          {BRILLIANT_FILTER_OPTIONS.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              role="tab"
+              aria-selected={brilliantFilter === filter.key}
+              className={`brilliant-moves-list-filter-btn${
+                brilliantFilter === filter.key ? ' is-active' : ''
+              }${filter.key === 'brilliant' ? ' brilliant-moves-list-filter-btn--brilliant' : ''}`}
+              onClick={() => patchListFilters({ brilliant: filter.key })}
+            >
+              {filter.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {!statsLoading && pipelineStats.analysisRunning > 0 ? (
-        <p className="brilliant-moves-stats-note">
-          Active stages: {formatStagesRunning(pipelineStats.stagesRunning) || 'in progress'}
-        </p>
-      ) : null}
-
-      <section className="chess-profile-panel chess-games-panel">
-        <header className="chess-profile-panel-header">
-          {panelTitle}
-          <span>
-            {loading ? '…' : `${filteredRows.length} in list`}
-            {!statsLoading
-              ? ` • ${pipelineStats.analysisPending} pending • ${pipelineStats.analysisRunning} running • ${pipelineStats.analysisCompleted} done`
-              : ''}
-          </span>
-        </header>
-        <div className="chess-profile-panel-body chess-games-panel-body">
-          {loading ? (
-            <LoadingPanel message="Loading Stage 4 moves…" />
-          ) : error ? (
-            <ErrorPanel title="Unable to load Stage 4 moves" message={error} />
-          ) : filteredRows.length === 0 ? (
-            <EmptyState
-              title="No Stage 4–passed moves for this filter."
-              subtitle={
-                statsLoading
-                  ? 'Checking pipeline status…'
-                  : `${pipelineStats.gamesFetched} games fetched for ${dateLabel}. ${pipelineStats.analysisPending} still pending Stage 0–4 analysis.`
-              }
+      <div className="chess-profile-panel-body chess-games-panel-body">
+        {loading ? (
+          <LoadingPanel message="Loading Stage 4 moves…" />
+        ) : error ? (
+          <ErrorPanel title="Unable to load Stage 4 moves" message={error} />
+        ) : filteredRows.length === 0 ? (
+          <EmptyState
+            title="No moves match these filters."
+            subtitle={
+              dayFilteredRows.length
+                ? `${dayFilteredRows.length} Stage 4 moves on ${dateLabel}. Try another review or brilliant filter.`
+                : `No Stage 4 moves for ${dateLabel}.`
+            }
+          />
+        ) : (
+          <>
+            <BrilliantMovesList rows={pagination.paginatedItems} navFilters={navFilters} />
+            <AllGamesPagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              pageSize={MOVES_PER_PAGE}
+              onPageChange={pagination.setPage}
             />
-          ) : (
-            <BrilliantMovesList rows={filteredRows} />
-          )}
-        </div>
-      </section>
-    </>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 

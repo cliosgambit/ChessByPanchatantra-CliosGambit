@@ -50,6 +50,9 @@ const { ensureBrilliantMovePuzzlesTable } = require('./scripts/ensureBrilliantMo
 const {
   ensureChessComBrillianceTables,
 } = require('./scripts/ensureChessComBrillianceTables');
+const {
+  ensureChessComPioneerWinsTable,
+} = require('./scripts/ensureChessComPioneerWinsTable');
 const { ensureChessComSyncRawTable } = require('./scripts/ensureChessComSyncRawTable');
 const { autoCompleteActivityTracker } = require('./api/controllers/automationController');
 
@@ -183,6 +186,7 @@ const startServerAndServices = async () => {
     await ensurePlayerChessComColumns();
     await ensureBrilliantMovePuzzlesTable();
     await ensureChessComBrillianceTables();
+    await ensureChessComPioneerWinsTable();
     await ensureChessComSyncRawTable();
 
     // console.log('Triggering initial data orchestration cycle...');

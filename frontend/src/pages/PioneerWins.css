@@ -1,0 +1,145 @@
+.pioneer-wins-page .pioneer-win-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: 4.5rem;
+  line-height: 1.2;
+}
+
+.pioneer-wins-page .pioneer-win-badge strong {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c2410c;
+  letter-spacing: 0.01em;
+}
+
+.pioneer-wins-page .pioneer-win-badge span {
+  font-size: 0.7rem;
+  color: var(--chess-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.pioneer-wins-page .pioneer-win-badge-eval {
+  color: #b91c1c !important;
+  font-weight: 600;
+}
+
+.pioneer-wins-page .pioneer-stop-inline {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.pioneer-live-panel {
+  margin: 0.75rem 1rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 70%);
+}
+
+.pioneer-live-panel__top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.pioneer-live-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: #9a3412;
+}
+
+.pioneer-live-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.pioneer-live-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.pioneer-live-stat strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.pioneer-live-stat span {
+  font-size: 0.68rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pioneer-live-stat--yes strong {
+  color: #15803d;
+}
+
+.pioneer-live-stat--no strong {
+  color: #b91c1c;
+}
+
+.pioneer-live-progress {
+  margin-top: 0.65rem;
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.pioneer-live-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ea580c, #f59e0b);
+  transition: width 0.2s ease;
+}
+
+.pioneer-live-lines {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pioneer-live-lines p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #334155;
+  line-height: 1.35;
+}
+
+.pioneer-live-kicker {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.pioneer-live-kicker--yes {
+  color: #15803d;
+}
+
+.pioneer-live-kicker--no {
+  color: #b91c1c;
+}
+
+@media (max-width: 800px) {
+  .pioneer-live-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

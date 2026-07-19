@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchChapterStory } from '../services/modulesService';
 import './LibraryStoryView.css';
 
@@ -18,8 +17,6 @@ function ModuleStoryViewPage() {
   const navigate = useNavigate();
 
   const [story, setStory] = useState(null);
-  const [chapter, setChapter] = useState(null);
-  const [module, setModule] = useState(null);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,15 +33,11 @@ function ModuleStoryViewPage() {
         const data = await fetchChapterStory(moduleId, chapterId, storyId);
         if (cancelled) return;
         setStory(data.story || null);
-        setChapter(data.chapter || null);
-        setModule(data.module || null);
         setIndex(0);
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Failed to load story.');
           setStory(null);
-          setChapter(null);
-          setModule(null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -95,19 +88,11 @@ function ModuleStoryViewPage() {
     );
   }
 
-  const breadcrumbItems = [
-    { label: 'Modules', to: '/modules' },
-    { label: 'Modules', to: '/modules' },
-    { label: module?.name || 'Module', to: `/modules/${moduleId}` },
-    { label: chapter?.name || 'Chapter', to: chapterPath },
-  ];
-
   if (error || !story) {
     return (
       <div className="story-view">
         <div className="story-view-panel story-view-panel--content">
           <div className="story-view-content-inner">
-            <PageBreadcrumb items={[...breadcrumbItems, { label: 'Story' }]} />
             <p className="story-view-error">{error || 'Story not found.'}</p>
           </div>
         </div>
@@ -121,12 +106,6 @@ function ModuleStoryViewPage() {
     <div className="story-view">
       <div className="story-view-panel story-view-panel--content">
         <div className="story-view-content-inner">
-          <div className="story-view-toolbar">
-            <PageBreadcrumb
-              items={[...breadcrumbItems, { label: story.title || 'Story' }]}
-            />
-          </div>
-
           <h1>{story.title}</h1>
           {story.subheading ? <p className="story-view-sub">{story.subheading}</p> : null}
 

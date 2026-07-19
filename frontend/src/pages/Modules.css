@@ -14,14 +14,29 @@
   min-height: 2.5rem;
 }
 
+.modules-page-heading {
+  margin: 0.5rem 0 2rem;
+  text-align: center;
+}
+
 .modules-page-title {
-  margin: 0.5rem 0 2.25rem;
+  margin: 0;
   text-align: center;
   font-size: clamp(2rem, 4vw, 2.75rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: #1e293b;
   line-height: 1.1;
+}
+
+.modules-page-subtitle {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: clamp(1.2rem, 2.1vw, 1.45rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: #475569;
 }
 
 .modules-loading {

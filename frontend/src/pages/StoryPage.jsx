@@ -23,7 +23,7 @@ import {
   UnorderedList,
   ListItem,
 } from '@chakra-ui/react';
-import { FiChevronRight, FiSearch } from 'react-icons/fi';
+import { FiSearch } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import StoryCard from '../components/stories/StoryCard';
 import AddStoryModal from '../components/stories/AddStoryModal';
@@ -100,7 +100,6 @@ function StoryPage() {
   const [deleting, setDeleting] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  const breadcrumbColor = useColorModeValue('gray.500', 'gray.400');
   const subColor = useColorModeValue('gray.600', 'gray.400');
   const inputBg = useColorModeValue('white', 'navy.800');
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.200');
@@ -384,22 +383,6 @@ function StoryPage() {
       <StickyAdminPageLayout
         animated
         titleSize="md"
-        breadcrumbs={
-          <HStack spacing={2} fontSize="xs" color={breadcrumbColor} mb={1}>
-            <Text
-              fontWeight="600"
-              cursor="pointer"
-              _hover={{ color: 'gold.600' }}
-              onClick={() => navigate(-1)}
-            >
-              Chapters
-            </Text>
-            <Box as={FiChevronRight} />
-            <Text color="gold.600" fontWeight="600">
-              Chapter {chapterLabel}
-            </Text>
-          </HStack>
-        }
         title={`Stories for Chapter ${chapterLabel}`}
         subtitle="Stories from Supabase story table."
         headerExtra={

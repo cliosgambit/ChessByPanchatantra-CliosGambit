@@ -114,7 +114,7 @@
 
 .brilliant-view-dl > div {
   display: grid;
-  grid-template-columns: 3.75rem 1fr;
+  grid-template-columns: 4.75rem 1fr;
   gap: 0.4rem;
   align-items: baseline;
 }
@@ -132,6 +132,34 @@
   margin: 0;
   font-size: 0.86rem;
   font-weight: 650;
+}
+
+.brilliant-view-position {
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+.brilliant-view-position-label {
+  margin: 0 0 0.4rem !important;
+  font-size: 0.65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted) !important;
+}
+
+.brilliant-view-position .chess-game-hover-preview-board {
+  margin: 0 auto;
+}
+
+.brilliant-view-fen {
+  margin-top: 0.4rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.68rem !important;
+  font-weight: 500 !important;
+  word-break: break-all;
+  line-height: 1.35;
 }
 
 .brilliant-view-btn {

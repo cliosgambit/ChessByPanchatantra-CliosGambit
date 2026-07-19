@@ -1,5 +1,5 @@
 .chess-brilliant-moves-table {
-  --bm-columns: minmax(120px, 1.1fr) 72px minmax(96px, 0.85fr) minmax(140px, 1.4fr) 64px 64px 88px 76px minmax(96px, 0.8fr);
+  --bm-columns: minmax(140px, 1.4fr) 80px 64px 64px 88px 76px 92px minmax(96px, 0.9fr);
   width: 100%;
   background: #ffffff;
 }
@@ -36,20 +36,19 @@
 }
 
 .chess-brilliant-moves-head span:nth-child(1),
-.chess-brilliant-moves-head span:nth-child(2),
-.chess-brilliant-moves-head span:nth-child(3),
-.chess-brilliant-moves-head span:nth-child(4) {
+.chess-brilliant-moves-head span:nth-child(2) {
   text-align: left;
 }
 
+.chess-brilliant-moves-head span:nth-child(3),
+.chess-brilliant-moves-head span:nth-child(4),
 .chess-brilliant-moves-head span:nth-child(5),
 .chess-brilliant-moves-head span:nth-child(6),
-.chess-brilliant-moves-head span:nth-child(7),
-.chess-brilliant-moves-head span:nth-child(8) {
+.chess-brilliant-moves-head span:nth-child(7) {
   text-align: center;
 }
 
-.chess-brilliant-moves-head span:nth-child(9) {
+.chess-brilliant-moves-head span:nth-child(8) {
   text-align: right;
 }
 
@@ -117,36 +116,11 @@
   text-align: left;
 }
 
-.chess-brilliant-moves-col--class {
-  text-align: left;
-  color: #64748b;
-  font-size: 0.82rem;
-  letter-spacing: 0.03em;
-}
-
-.chess-brilliant-moves-col--fen {
-  text-align: left;
-}
-
-.chess-brilliant-fen {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: #475569;
-  background: #f1f5f9;
-  border-radius: 4px;
-  padding: 0.2rem 0.35rem;
-}
-
 .chess-brilliant-moves-col--score,
 .chess-brilliant-moves-col--rating,
 .chess-brilliant-moves-col--stage4,
-.chess-brilliant-moves-col--reviewed {
+.chess-brilliant-moves-col--reviewed,
+.chess-brilliant-moves-col--is-brilliant {
   text-align: center;
 }
 
@@ -244,14 +218,9 @@
   box-shadow: inset 0 0 0 1px #fcd34d;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .chess-brilliant-moves-table {
-    --bm-columns: minmax(120px, 1fr) 72px minmax(92px, 0.9fr) 64px 64px 88px 76px minmax(92px, 0.8fr);
-  }
-
-  .chess-brilliant-moves-head span:nth-child(4),
-  .chess-brilliant-moves-col--fen {
-    display: none;
+    --bm-columns: minmax(120px, 1.2fr) 72px 60px 60px 84px 72px 88px minmax(88px, 0.8fr);
   }
 
   .chess-brilliant-moves-head,
@@ -271,21 +240,19 @@
   .chess-brilliant-moves-head span:nth-child(4),
   .chess-brilliant-moves-head span:nth-child(5),
   .chess-brilliant-moves-head span:nth-child(6),
-  .chess-brilliant-moves-head span:nth-child(7),
-  .chess-brilliant-moves-col--class,
-  .chess-brilliant-moves-col--fen,
   .chess-brilliant-moves-col--score,
   .chess-brilliant-moves-col--rating,
-  .chess-brilliant-moves-col--stage4 {
+  .chess-brilliant-moves-col--stage4,
+  .chess-brilliant-moves-col--reviewed {
     display: none;
   }
 
-  .chess-brilliant-moves-head span:nth-child(8),
-  .chess-brilliant-moves-col--reviewed {
+  .chess-brilliant-moves-head span:nth-child(7),
+  .chess-brilliant-moves-col--is-brilliant {
     text-align: center;
   }
 
-  .chess-brilliant-moves-head span:nth-child(9),
+  .chess-brilliant-moves-head span:nth-child(8),
   .chess-brilliant-moves-col--date {
     text-align: right;
   }

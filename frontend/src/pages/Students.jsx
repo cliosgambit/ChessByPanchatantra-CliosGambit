@@ -24,7 +24,6 @@ import {
   fetchBatches,
 } from '../services/batchService';
 import { syncChessComPlayer } from '../services/chessComDbService';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Students.css';
 
 const EMPTY_FORM = {
@@ -439,12 +438,6 @@ function Students() {
     <div className="students-page">
       <header className="students-header">
         <div className="students-toolbar">
-          <PageBreadcrumb
-            items={[
-              { label: 'Modules', to: '/modules' },
-              { label: 'Students' },
-            ]}
-          />
           <div className="students-header-actions">
             {tab === 'students' ? (
               <>

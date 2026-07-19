@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiGrid, FiShuffle, FiTarget, FiZap } from 'react-icons/fi';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Puzzles.css';
 
 function Puzzles() {
@@ -41,12 +40,6 @@ function Puzzles() {
   return (
     <div className="puzzles-page">
       <header className="puzzles-header">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Puzzles' },
-          ]}
-        />
         <h1>Puzzles</h1>
         <p className="puzzles-muted">Choose a puzzle collection.</p>
       </header>

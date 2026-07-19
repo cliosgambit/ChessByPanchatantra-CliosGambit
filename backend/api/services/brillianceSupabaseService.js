@@ -464,6 +464,7 @@ async function getStage4MoveFromSupabase(moveId) {
        bm.*,
        r.stage4_status,
        r.stage4_run_at,
+       r.sqlite_game_id,
        m.fen_before AS fen_before_move,
        m.fen_after AS fen_after_move,
        COALESCE(

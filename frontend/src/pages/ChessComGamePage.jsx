@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { FiExternalLink } from 'react-icons/fi';
 import CustomGamePage from './test/CustomGamePage';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
-import { fetchChessComGameFromDb } from '../services/chessComDbService';
+import {
+  fetchChessComGameFromDb,
+  fetchPioneerWinFromDb,
+} from '../services/chessComDbService';
 import { loadChessComGame } from '../utils/chessComGameNavigation';
 import { sanitizeChessComPgn } from '../utils/chessComPgnUtils';
 import '../components/userProfile/ChessComGamePage.css';
@@ -22,8 +24,37 @@ function timeClassLabel(timeClass) {
 
 function ChessComGamePage() {
   const { userId, gameId } = useParams();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const profileUsername = decodeURIComponent(userId || '');
+  const viewOnly =
+    searchParams.get('viewOnly') === '1' || Boolean(location.state?.viewOnly);
+  const [activeVersion, setActiveVersion] = useState('new');
+
+  const focusFromQuery = useMemo(() => {
+    const plyRaw = searchParams.get('sacPly');
+    const ply = plyRaw != null && plyRaw !== '' ? Number(plyRaw) : null;
+    const moveRaw = searchParams.get('sacMove');
+    const moveNumber = moveRaw != null && moveRaw !== '' ? Number(moveRaw) : null;
+    const fromState = location.state || {};
+    const statePly = Number.isFinite(Number(fromState.focusPly))
+      ? Number(fromState.focusPly)
+      : null;
+    const stateMove = Number.isFinite(Number(fromState.focusMoveNumber))
+      ? Number(fromState.focusMoveNumber)
+      : null;
+    return {
+      focusPly: Number.isFinite(ply) ? ply : statePly,
+      focusSan: searchParams.get('sacSan') || fromState.focusSan || null,
+      focusPiece: searchParams.get('sacPiece') || fromState.focusPiece || null,
+      focusMoveNumber: Number.isFinite(moveNumber) ? moveNumber : stateMove,
+    };
+  }, [searchParams, location.state]);
+
   const [game, setGame] = useState(null);
+  const [pioneerFocus, setPioneerFocus] = useState(() =>
+    focusFromQuery.focusPly != null ? focusFromQuery : null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const loadedUuidRef = useRef(null);
@@ -66,6 +97,40 @@ function ChessComGamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when route ids change
   }, [profileUsername, gameId]);
 
+  // Resolve pioneer sacrifice focus from URL/state, or load from DB for deep links.
+  useEffect(() => {
+    if (!viewOnly || !gameId) {
+      setPioneerFocus(null);
+      return undefined;
+    }
+
+    if (focusFromQuery.focusPly != null) {
+      setPioneerFocus(focusFromQuery);
+      return undefined;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchPioneerWinFromDb(gameId);
+        const row = data?.pioneerWin;
+        if (cancelled || !row) return;
+        setPioneerFocus({
+          focusPly: row.lossPly ?? null,
+          focusSan: row.lossSan || row.lossUci || null,
+          focusPiece: row.pieceLostLabel || row.pieceLost || null,
+          focusMoveNumber: row.lossMoveNumber ?? null,
+        });
+      } catch {
+        if (!cancelled) setPioneerFocus(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewOnly, gameId, focusFromQuery]);
+
   const playerOverride = useMemo(() => {
     if (!game) return null;
     return {
@@ -89,22 +154,11 @@ function ChessComGamePage() {
     return sanitizeChessComPgn(game.pgn);
   }, [game?.pgn]);
 
-  const breadcrumbItems = [
-    { label: 'Modules', to: '/modules' },
-    { label: 'Students', to: '/students' },
-    {
-      label: profileUsername || 'Profile',
-      to: `/players/${encodeURIComponent(profileUsername)}`,
-    },
-    { label: 'Game' },
-  ];
-
   if (loading && !game) {
     return (
       <div className="chess-game-page chess-game-page--test">
         <div className="chess-game-page-inner chess-game-page-inner--test">
           <header className="chess-game-page-topbar">
-            <PageBreadcrumb items={breadcrumbItems} />
             <div className="chess-game-page-meta chess-game-page-meta--skeleton" aria-hidden>
               <span className="chess-game-skel-chip" />
               <span className="chess-game-skel-chip chess-game-skel-chip--short" />
@@ -126,7 +180,9 @@ function ChessComGamePage() {
                   <div className="chess-game-loading-overlay">
                     <span className="chess-game-loading-spinner" aria-hidden />
                     <p className="chess-game-loading-title">Loading game</p>
-                    <p className="chess-game-loading-sub">Fetching moves and analysis…</p>
+                    <p className="chess-game-loading-sub">
+                      {viewOnly ? 'Fetching moves…' : 'Fetching moves and analysis…'}
+                    </p>
                   </div>
                 </div>
                 <div className="chess-game-skel-player" />
@@ -150,9 +206,7 @@ function ChessComGamePage() {
     return (
       <div className="chess-game-page chess-game-page--test">
         <div className="chess-game-page-inner chess-game-page-inner--test">
-          <header className="chess-game-page-topbar">
-            <PageBreadcrumb items={breadcrumbItems} />
-          </header>
+          <header className="chess-game-page-topbar" />
           <div className="chess-game-page-empty chess-game-page-empty--light">
             {error || 'Game data not found. Sync games from the player profile first.'}
           </div>
@@ -163,22 +217,26 @@ function ChessComGamePage() {
 
   const timeIcon = game.timeClass ? TIME_CLASS_ICONS[game.timeClass] : null;
 
+  const sharedGameProps = {
+    inputSource: viewOnly ? 'chess_com_view' : 'chess_com_review',
+    hideBrilliancePanel: true,
+    viewOnly,
+    hideImport: true,
+    initialPgn,
+    chessComUuid: game.uuid || gameId,
+    profileUsername,
+    defaultOrientation,
+    playerOverride,
+    focusPly: viewOnly ? pioneerFocus?.focusPly ?? null : null,
+    focusSan: viewOnly ? pioneerFocus?.focusSan || null : null,
+    focusPiece: viewOnly ? pioneerFocus?.focusPiece || null : null,
+    focusMoveNumber: viewOnly ? pioneerFocus?.focusMoveNumber ?? null : null,
+  };
+
   return (
     <div className="chess-game-page chess-game-page--test">
       <div className="chess-game-page-inner chess-game-page-inner--test">
         <header className="chess-game-page-topbar">
-          <PageBreadcrumb
-            items={[
-              { label: 'Modules', to: '/modules' },
-              { label: 'Students', to: '/students' },
-              {
-                label: profileUsername || 'Profile',
-                to: `/players/${encodeURIComponent(profileUsername)}`,
-              },
-              { label: 'Game' },
-            ]}
-          />
-
           <div className="chess-game-page-meta">
             {timeIcon && <img src={timeIcon} alt="" className="chess-game-page-meta-icon" />}
             <span className="chess-game-page-meta-type">{timeClassLabel(game.timeClass)}</span>
@@ -207,18 +265,24 @@ function ChessComGamePage() {
           )}
         </header>
 
-        <CustomGamePage
-          key={game.uuid || gameId}
-          boardId={`ChessComReview-${game.uuid || gameId}`}
-          inputSource="chess_com_review"
-          hideBrilliancePanel
-          hideImport
-          initialPgn={initialPgn}
-          chessComUuid={game.uuid || gameId}
-          profileUsername={profileUsername}
-          defaultOrientation={defaultOrientation}
-          playerOverride={playerOverride}
-        />
+        {activeVersion === 'old' ? (
+          <CustomGamePage
+            key={`old-${game.uuid || gameId}-${viewOnly ? 'view' : 'review'}-${pioneerFocus?.focusPly ?? 'x'}`}
+            boardId={`ChessComReview-old-${game.uuid || gameId}`}
+            rightPanelMode="stage4"
+            onBackToNewVersion={() => setActiveVersion('new')}
+            {...sharedGameProps}
+          />
+        ) : (
+          <CustomGamePage
+            key={`new-${game.uuid || gameId}-${viewOnly ? 'view' : 'review'}-${pioneerFocus?.focusPly ?? 'x'}`}
+            boardId={`ChessComReview-new-${game.uuid || gameId}`}
+            rightPanelMode="stage4"
+            hideStageCascade
+            onDetailedView={() => setActiveVersion('old')}
+            {...sharedGameProps}
+          />
+        )}
       </div>
     </div>
   );

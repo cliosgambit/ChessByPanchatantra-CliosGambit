@@ -221,6 +221,11 @@ function AllGames() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [brillianceBatch, setBrillianceBatch] = useState(() => getBrillianceBatchState());
+  const [brilliantStats, setBrilliantStats] = useState({
+    reviewed: 0,
+    brilliant: 0,
+    loading: true,
+  });
 
   const syncPollTimerRef = useRef(null);
   const statusPollTimerRef = useRef(null);
@@ -649,106 +654,125 @@ function AllGames() {
             ) : null}
           </div>
 
-          <div
-            className="all-games-view-toggle"
-            role="tablist"
-            aria-label="Games or brilliant moves"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={isGamesView}
-              className={`all-games-view-btn${
-                isGamesView ? ' all-games-view-btn--active' : ''
-              }`}
-              onClick={() => setActiveView(VIEW_GAMES)}
-            >
-              All Games
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!isGamesView}
-              className={`all-games-view-btn${
-                !isGamesView ? ' all-games-view-btn--active' : ''
-              }`}
-              onClick={() => setActiveView(VIEW_BRILLIANT)}
-            >
-              Brilliant Moves
-            </button>
-          </div>
-
-          {isGamesView ? (
-            <p className="chess-profile-display-name">
-              Loaded: {initialLoading ? '…' : allGames.length} games • Showing: {dateLabel} •
-              Filtered: {filteredGames.length} • Players tracked: {playersCount}
-              {syncing || refreshing ? ' • Refreshing from Chess.com…' : ''}
-              {brillianceBatch?.running
-                ? ` • Brilliance ${brillianceBatch.index}/${brillianceBatch.total}${
-                    brillianceBatch.currentLabel
-                      ? ` · ${brillianceBatch.currentLabel}`
-                      : ''
-                  } (stages 0–4)`
-                : ''}
-              {brillianceBatch?.finished && !brillianceBatch.running
-                ? ` • Brilliance done: ${brillianceBatch.done} ok${
-                    brillianceBatch.failed ? `, ${brillianceBatch.failed} failed` : ''
-                  }${
-                    brillianceBatch.skipped
-                      ? `, ${brillianceBatch.skipped} already reviewed`
-                      : ''
-                  }${brillianceBatch.cancelled ? ' (stopped)' : ''}`
-                : ''}
-              {!brillianceBatch?.running ? ' • Click a game to open and review' : ''}
-            </p>
-          ) : (
-            <p className="chess-profile-display-name">
-              All Stage 4–passed moves for {dateLabel} (with FEN). Achievements only count
-              human-reviewed brilliant moves. Switch to All Games to sync or run analysis.
-            </p>
-          )}
-
-          <div className="all-games-toolbar">
-            <div className="all-games-filters" role="tablist" aria-label="Day filters">
-              {DAY_FILTERS.map((filter) => (
+          <div className="all-games-control-box">
+            <div className="all-games-control-box__top">
+              <div
+                className="all-games-view-toggle"
+                role="tablist"
+                aria-label="Games or brilliant moves"
+              >
                 <button
-                  key={filter.key}
                   type="button"
                   role="tab"
-                  aria-selected={activeFilter === filter.key}
-                  className={`all-games-filter-btn${
-                    activeFilter === filter.key ? ' all-games-filter-btn--active' : ''
+                  aria-selected={isGamesView}
+                  className={`all-games-view-btn${
+                    isGamesView ? ' all-games-view-btn--active' : ''
                   }`}
-                  onClick={() => setActiveFilter(filter.key)}
+                  onClick={() => setActiveView(VIEW_GAMES)}
                 >
-                  {filterButtonLabel(filter, filterLabels)}
+                  All Games
                 </button>
-              ))}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!isGamesView}
+                  className={`all-games-view-btn${
+                    !isGamesView ? ' all-games-view-btn--active' : ''
+                  }`}
+                  onClick={() => setActiveView(VIEW_BRILLIANT)}
+                >
+                  Brilliant Moves
+                </button>
+              </div>
+
+              {!isGamesView ? (
+                <div
+                  className="all-games-control-metrics"
+                  aria-label="Brilliant move review stats"
+                >
+                  <div className="all-games-control-metric">
+                    <strong>
+                      {brilliantStats.loading ? '…' : brilliantStats.reviewed}
+                    </strong>
+                    <span>Reviewed</span>
+                  </div>
+                  <div className="all-games-control-metric all-games-control-metric--brilliant">
+                    <strong>
+                      {brilliantStats.loading ? '…' : brilliantStats.brilliant}
+                    </strong>
+                    <span>Brilliant</span>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {isGamesView ? (
-              <label className="all-games-search-wrap">
-                <FiSearch className="all-games-search-icon" aria-hidden />
-                <input
-                  type="search"
-                  className="all-games-search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search player, time control…"
-                  aria-label="Search games"
-                />
-                {searchQuery ? (
-                  <button
-                    type="button"
-                    className="all-games-search-clear"
-                    onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
-                  >
-                    <FiX aria-hidden />
-                  </button>
-                ) : null}
-              </label>
+              <p className="chess-profile-display-name all-games-control-box__status">
+                Loaded: {initialLoading ? '…' : allGames.length} games • Showing: {dateLabel} •
+                Filtered: {filteredGames.length} • Players tracked: {playersCount}
+                {syncing || refreshing ? ' • Refreshing from Chess.com…' : ''}
+                {brillianceBatch?.running
+                  ? ` • Brilliance ${brillianceBatch.index}/${brillianceBatch.total}${
+                      brillianceBatch.currentLabel
+                        ? ` · ${brillianceBatch.currentLabel}`
+                        : ''
+                    } (stages 0–4)`
+                  : ''}
+                {brillianceBatch?.finished && !brillianceBatch.running
+                  ? ` • Brilliance done: ${brillianceBatch.done} ok${
+                      brillianceBatch.failed ? `, ${brillianceBatch.failed} failed` : ''
+                    }${
+                      brillianceBatch.skipped
+                        ? `, ${brillianceBatch.skipped} already reviewed`
+                        : ''
+                    }${brillianceBatch.cancelled ? ' (stopped)' : ''}`
+                  : ''}
+                {!brillianceBatch?.running ? ' • Click a game to open and review' : ''}
+              </p>
             ) : null}
+
+            <div className="all-games-toolbar">
+              <div className="all-games-filters" role="tablist" aria-label="Day filters">
+                {DAY_FILTERS.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeFilter === filter.key}
+                    className={`all-games-filter-btn${
+                      activeFilter === filter.key ? ' all-games-filter-btn--active' : ''
+                    }`}
+                    onClick={() => setActiveFilter(filter.key)}
+                  >
+                    {filterButtonLabel(filter, filterLabels)}
+                  </button>
+                ))}
+              </div>
+
+              {isGamesView ? (
+                <label className="all-games-search-wrap">
+                  <FiSearch className="all-games-search-icon" aria-hidden />
+                  <input
+                    type="search"
+                    className="all-games-search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search player, time control…"
+                    aria-label="Search games"
+                  />
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      className="all-games-search-clear"
+                      onClick={() => setSearchQuery('')}
+                      aria-label="Clear search"
+                    >
+                      <FiX aria-hidden />
+                    </button>
+                  ) : null}
+                </label>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -838,6 +862,7 @@ function AllGames() {
             <BrilliantMovesPanel
               activeFilter={activeFilter}
               filterLabels={filterLabels}
+              onStatsChange={setBrilliantStats}
             />
           )}
         </main>

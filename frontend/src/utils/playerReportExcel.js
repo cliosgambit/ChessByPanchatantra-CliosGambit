@@ -173,6 +173,7 @@ export async function downloadPlayerReport({
     ['Daily record', recordText(stats?.records?.daily)],
     ['Best win streak', achievements?.winStreak?.highest ?? '—'],
     ['Brilliant moves', achievements?.brilliantMoves?.count ?? 0],
+    ['Pioneer wins', achievements?.pioneerWins?.count ?? 0],
   ].forEach(([label, value], index) => {
     const row = summary.addRow([label, value]);
     const fill = index % 2 ? solidFill(PALETTE.altRow) : undefined;

@@ -61,6 +61,16 @@ export default function CustomGamePage({
   boardId = 'CustomGameBoard',
   inputSource = 'custom_game',
   hideBrilliancePanel = false,
+  /**
+   * Board + move playback only — do not run brilliance / stage review UI.
+   * Used by Pioneer Wins and other non-review entry points.
+   */
+  viewOnly = false,
+  /** 0-based ply to jump to after load (e.g. pioneer piece sacrifice). */
+  focusPly = null,
+  focusSan = null,
+  focusPiece = null,
+  focusMoveNumber = null,
   /** Auto-load this PGN on mount (Chess.com review). */
   initialPgn = null,
   /** Hide PGN import UI when reviewing an existing game. */
@@ -77,6 +87,14 @@ export default function CustomGamePage({
    * imports another PGN or leaves the page. Nothing is kept for All Games / DB browse.
    */
   ephemeral = false,
+  /** Right rail: Stockfish engine panel (default) or Stage 4 passed-move summary. */
+  rightPanelMode = 'engine',
+  /** Hide the bottom stage cascade table / report toolbar (New Version). */
+  hideStageCascade = false,
+  /** New Version: open Old Version detailed cascade view. */
+  onDetailedView = null,
+  /** Old Version: return to New Version Stage 4 summary. */
+  onBackToNewVersion = null,
 }) {
   const [importError, setImportError] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -119,8 +137,8 @@ export default function CustomGamePage({
   }, [chessComUuid, profileUsername]);
 
   const runAllStages = useCallback(async (id, { force = true } = {}) => {
-    if (!id || !hideBrilliancePanel) {
-      console.warn('[brilliance] runAllStages skipped', { id, hideBrilliancePanel });
+    if (!id || !hideBrilliancePanel || viewOnly) {
+      console.warn('[brilliance] runAllStages skipped', { id, hideBrilliancePanel, viewOnly });
       return;
     }
 
@@ -290,7 +308,7 @@ export default function CustomGamePage({
       }
     }
     });
-  }, [hideBrilliancePanel, syncStagesToAppDb]);
+  }, [hideBrilliancePanel, viewOnly, syncStagesToAppDb]);
 
   const {
     position,
@@ -382,9 +400,17 @@ export default function CustomGamePage({
         }
         setImporting(false);
 
-        if (hideBrilliancePanel) {
+        if (hideBrilliancePanel && !viewOnly) {
           // Prefer cache when valid; otherwise run 0→4 live (same as test page)
           await runAllStages(data.id, { force: false });
+        } else if (
+          viewOnly &&
+          focusPly != null &&
+          Number.isFinite(Number(focusPly)) &&
+          Number(focusPly) >= 0
+        ) {
+          // loadPGN ends at the final position; jump to the sacrifice ply.
+          setNavIndex(Number(focusPly) + 1);
         }
 
         return true;
@@ -402,10 +428,13 @@ export default function CustomGamePage({
       loadPGN,
       inputSource,
       hideBrilliancePanel,
+      viewOnly,
+      focusPly,
       runAllStages,
       chessComUuid,
       defaultOrientation,
       setOrientation,
+      setNavIndex,
     ]
   );
 
@@ -430,6 +459,7 @@ export default function CustomGamePage({
   const handleImportPGNRef = useRef(handleImportPGN);
   handleImportPGNRef.current = handleImportPGN;
   const autoLoadKeyRef = useRef(null);
+  const focusJumpKeyRef = useRef(null);
   useEffect(() => {
     const text = String(initialPgn || '').trim();
     if (!text) return undefined;
@@ -459,6 +489,18 @@ export default function CustomGamePage({
 
     return undefined;
   }, [initialPgn, chessComUuid]);
+
+  // After moves are available, jump once to the pioneer sacrifice ply.
+  useEffect(() => {
+    if (!viewOnly || focusPly == null || !Number.isFinite(Number(focusPly))) return;
+    if (!history.length) return;
+    const ply = Number(focusPly);
+    if (ply < 0 || ply >= history.length) return;
+    const key = `${chessComUuid || 'game'}:${ply}:${history.length}`;
+    if (focusJumpKeyRef.current === key) return;
+    focusJumpKeyRef.current = key;
+    setNavIndex(ply + 1);
+  }, [viewOnly, focusPly, history.length, chessComUuid, setNavIndex]);
 
   const stage2Move = useMemo(() => {
     if (!stage2?.moves?.length || navIndex <= 0) return null;
@@ -595,16 +637,39 @@ export default function CustomGamePage({
   const selectedS4Move = navIndex > 0 ? stage4ByPly.get(navIndex - 1) : null;
 
   const lastMoveHighlight = useMemo(() => {
+    // Review + view-only both use hideBrilliancePanel board chrome for last-move squares.
     if (!hideBrilliancePanel || navIndex <= 0) return {};
     const uci = history[navIndex - 1]?.uci;
     if (!uci || uci.length < 4) return {};
     const from = uci.slice(0, 2);
     const to = uci.slice(2, 4);
+    const isFocus =
+      focusPly != null && Number.isFinite(Number(focusPly)) && navIndex === Number(focusPly) + 1;
+    if (isFocus) {
+      return {
+        [from]: { background: 'rgba(234, 88, 12, 0.72)' },
+        [to]: { background: 'rgba(249, 115, 22, 0.62)' },
+      };
+    }
     return {
       [from]: { background: 'rgba(228, 228, 33, 0.64)' },
       [to]: { background: 'rgba(155, 199, 0, 0.55)' },
     };
-  }, [hideBrilliancePanel, navIndex, history]);
+  }, [hideBrilliancePanel, navIndex, history, focusPly]);
+
+  const focusBanner = useMemo(() => {
+    if (!viewOnly || focusPly == null || !Number.isFinite(Number(focusPly))) return null;
+    const piece = focusPiece || 'Piece';
+    const moveLabel =
+      focusMoveNumber != null && Number.isFinite(Number(focusMoveNumber))
+        ? `move ${focusMoveNumber}`
+        : `ply ${Number(focusPly) + 1}`;
+    const san = focusSan || history[Number(focusPly)]?.san || '';
+    return {
+      title: `Piece blunder · ${piece}`,
+      detail: san ? `${san} on ${moveLabel}` : moveLabel,
+    };
+  }, [viewOnly, focusPly, focusPiece, focusMoveNumber, focusSan, history]);
 
   const stagesRunning =
     stage0Loading || stage1Loading || stage2Loading || stage3Loading || stage4Loading;
@@ -714,6 +779,19 @@ export default function CustomGamePage({
       )}
 
       <main className="tp-main">
+        {focusBanner ? (
+          <div className="tp-pioneer-banner" role="status">
+            <strong>{focusBanner.title}</strong>
+            <span>{focusBanner.detail}</span>
+            <button
+              type="button"
+              className="tp-pioneer-banner-jump"
+              onClick={() => setNavIndex(Number(focusPly) + 1)}
+            >
+              Show sacrifice
+            </button>
+          </div>
+        ) : null}
         <div className="tp-top-row">
           <div className="tp-col-left">
             <LeftSidebar
@@ -727,6 +805,9 @@ export default function CustomGamePage({
               importing={importing}
               hideOverview
               hideImport={hideImport || Boolean(initialPgn)}
+              highlightPly={
+                focusPly != null && Number.isFinite(Number(focusPly)) ? Number(focusPly) : null
+              }
             />
           </div>
 
@@ -765,16 +846,25 @@ export default function CustomGamePage({
           <div className="tp-col-right">
             <RightSidebar
               empty
+              panelMode={rightPanelMode}
               stage2Move={stage2Move}
               stage3Move={stage3Move}
               stage4Move={stage4Move}
+              stage3Moves={stage3?.moves || []}
+              stage4Moves={stage4?.moves || []}
+              moveListLabels={moveListLabels}
+              navIndex={navIndex}
+              setNavIndex={setNavIndex}
               engineEvalLoading={engineEvalLoading}
+              stage4Loading={stage4Loading}
               boardWidth={boardWidth}
+              onDetailedView={onDetailedView}
+              onBackToNewVersion={onBackToNewVersion}
             />
           </div>
         </div>
 
-        {!hideBrilliancePanel && (
+        {!viewOnly && !hideBrilliancePanel && (
         <div className="w-full pt-2 lg:pt-0">
           {gameId ? (
             <BrillianceStagesPanel
@@ -798,7 +888,7 @@ export default function CustomGamePage({
         </div>
         )}
 
-        {hideBrilliancePanel && (
+        {!viewOnly && hideBrilliancePanel && !hideStageCascade && (
           <div className="tp-bottom-section">
             <div className="tp-stage-tabs">
               <button

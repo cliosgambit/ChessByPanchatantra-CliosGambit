@@ -9,7 +9,6 @@ import {
   FiZap,
 } from 'react-icons/fi';
 import { apiFetch } from '../utils/apiFetch';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import './Settings.css';
 
 function formatWhen(value) {
@@ -111,12 +110,6 @@ function Settings() {
 
       <header className="settings-header">
         <div className="settings-toolbar">
-          <PageBreadcrumb
-            items={[
-              { label: 'Modules', to: '/modules' },
-              { label: 'Workers' },
-            ]}
-          />
           <button
             type="button"
             className="settings-btn"

@@ -25,7 +25,6 @@ import { AddIcon, CloseIcon } from '@chakra-ui/icons';
 import { useParams } from 'react-router-dom';
 import ChessGame from './ChessGame';
 import PuzzleModal from '../components/principles/PuzzleModal';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchPrincipleById } from '../services/principlesService';
 import { fetchPuzzlesForPrinciple, unlinkPuzzleFromPrinciple } from '../services/puzzleService';
 
@@ -335,13 +334,6 @@ function PrincipleDetails() {
   if (error === 'not_found' || !principle) {
     return (
       <Box px={{ base: 4, md: 8 }} py={8} bg={pageBg} minH="100%">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Principles', to: '/principles' },
-            { label: 'Principle' },
-          ]}
-        />
         <Heading size="md" color="red.500" mt={4}>
           Principle not found.
         </Heading>
@@ -352,13 +344,6 @@ function PrincipleDetails() {
   if (error) {
     return (
       <Box px={{ base: 4, md: 8 }} py={8} bg={pageBg} minH="100%">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Principles', to: '/principles' },
-            { label: 'Principle' },
-          ]}
-        />
         <Heading size="md" color="red.500" mt={4}>
           {error}
         </Heading>
@@ -368,13 +353,6 @@ function PrincipleDetails() {
 
   const leftPanel = (
     <Box>
-      <PageBreadcrumb
-        items={[
-          { label: 'Modules', to: '/modules' },
-          { label: 'Principles', to: '/principles' },
-          { label: principleText || 'Principle' },
-        ]}
-      />
       <Heading mb={2} mt={2} size={{ base: 'lg', md: 'xl' }} color={headingColor} lineHeight="short">
         {principleText}
       </Heading>

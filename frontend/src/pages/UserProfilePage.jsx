@@ -16,7 +16,7 @@ import {
   FiFileText,
   FiCalendar,
 } from 'react-icons/fi';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
+import { GiBroadsword } from 'react-icons/gi';
 import { useChessComUserData } from '../hooks/useChessComUserData';
 import { openChessComGame } from '../utils/chessComGameNavigation';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
@@ -173,7 +173,6 @@ function UserProfilePage() {
       ratingPickDoneRef.current = true;
     }
   }, [stats]);
-
 
   useEffect(() => {
     let cancelled = false;
@@ -401,7 +400,6 @@ function UserProfilePage() {
     openChessComGame(navigate, chessUsername, game);
   };
 
-
   const displayName = profile?.username || chessUsername;
   const pageTitle = studentRecord?.player_name || displayName || chessUsername || 'Profile';
   const historyTotalPages = Math.max(1, Math.ceil(rangeGamesTotal / HISTORY_PAGE_SIZE));
@@ -456,16 +454,6 @@ function UserProfilePage() {
   return (
     <Box className="chess-profile-page chess-profile-page--blank">
       <div className="chess-profile-view-switch" data-pdf-ignore>
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            ...(fromStudents ? [{ label: 'Students', to: '/students' }] : []),
-            isReportMode
-              ? { label: pageTitle, to: profileBasePath, state: location.state }
-              : { label: pageTitle },
-            ...(isReportMode ? [{ label: 'Report' }] : []),
-          ]}
-        />
       </div>
 
       <div className="chess-basic-profile" ref={isReportMode ? reportPdfRef : undefined}>
@@ -1188,6 +1176,28 @@ function UserProfilePage() {
                           <div className="chess-ach-badge-meta">
                             {(achievements.brilliantMoves?.count || 0) > 0
                               ? 'Detected in analyzed games'
+                              : 'None found in this range yet'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`chess-ach-badge chess-ach-badge--pioneer${
+                          (achievements.pioneerWins?.count || 0) > 0 ? ' is-earned' : ''
+                        }`}
+                      >
+                        <div className="chess-ach-badge-icon chess-ach-badge-icon--sword">
+                          <GiBroadsword aria-hidden />
+                        </div>
+                        <div className="chess-ach-badge-body">
+                          <div className="chess-ach-badge-title">Pioneer Wins</div>
+                          <div className="chess-ach-badge-value">
+                            {formatNumber(achievements.pioneerWins?.count ?? 0)}
+                            <span>come-from-behind wins</span>
+                          </div>
+                          <div className="chess-ach-badge-meta">
+                            {(achievements.pioneerWins?.count || 0) > 0
+                              ? 'Lost a piece early and still won'
                               : 'None found in this range yet'}
                           </div>
                         </div>

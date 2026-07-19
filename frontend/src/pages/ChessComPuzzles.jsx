@@ -1,16 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiExternalLink, FiRefreshCw } from 'react-icons/fi';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchChessComRandomPuzzle } from '../services/chessComDbService';
 import { solutionTextFromChessCom } from '../utils/chessComPgnUtils';
 import './LibraryMoralPuzzles.css';
-
-const CHESSCOM_BREADCRUMB = [
-  { label: 'Modules', to: '/modules' },
-  { label: 'Puzzles', to: '/puzzles' },
-  { label: 'Chess.com Puzzles' },
-];
 
 const CHESSCOM_PUZZLE_CACHE_KEY = 'clio:chesscom-random-puzzle';
 const FETCH_NEW_MAX_ATTEMPTS = 40;
@@ -152,7 +145,6 @@ function ChessComPuzzles() {
   if (loading && !puzzle) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={CHESSCOM_BREADCRUMB} />
         <p className="moral-puzzles-muted">Fetching random Chess.com puzzle…</p>
       </div>
     );
@@ -161,7 +153,6 @@ function ChessComPuzzles() {
   if (error && !puzzle) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={CHESSCOM_BREADCRUMB} />
         <p className="moral-puzzles-error">{error}</p>
         <div className="moral-puzzles-add-row">
           <button
@@ -187,7 +178,6 @@ function ChessComPuzzles() {
     <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
       <div className="moral-puzzles-zone moral-puzzles-zone--story">
         <div className="moral-puzzles-left-inner">
-          <PageBreadcrumb items={CHESSCOM_BREADCRUMB} />
 
           <h1 className="moral-play-title">{puzzle?.title || 'Chess.com Puzzle'}</h1>
           <p className="moral-play-sub">

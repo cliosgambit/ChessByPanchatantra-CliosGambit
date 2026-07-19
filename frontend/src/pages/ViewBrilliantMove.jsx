@@ -1,29 +1,39 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiExternalLink, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import { useNavigate, useParams } from 'react-router-dom';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import BrilliantMoveBoardView from '../components/brilliantMoves/BrilliantMoveBoardView';
 import BrilliantMoveVerificationBar from '../components/brilliantMoves/BrilliantMoveVerificationBar';
+import FenHoverPreview from '../components/userProfile/FenHoverPreview';
 import {
   fetchBrilliantMoveFromDb,
   fetchBrilliantMovesFromDb,
   fetchChessComGameMovesFromDb,
 } from '../services/chessComDbService';
+import {
+  brilliantMoveDetailPath,
+  filterBrilliantMoveRows,
+  resolveBrilliantDayFilter,
+  resolveBrilliantFilter,
+  resolveReviewFilter,
+} from '../utils/brilliantMovesFilters';
 import './ViewBrilliantMove.css';
-
-const BREADCRUMB = [
-  { label: 'Modules', to: '/modules' },
-  { label: 'Games', to: '/all-games?view=brilliant' },
-];
 
 function formatScore(value) {
   if (value == null || Number.isNaN(Number(value))) return '—';
   return Number(value).toFixed(2);
 }
 
+function formatPieceLabel(pieceType) {
+  if (!pieceType || pieceType === '—') return null;
+  const text = String(pieceType).trim();
+  if (!text) return null;
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+}
+
 function ViewBrilliantMove() {
   const navigate = useNavigate();
   const { moveId } = useParams();
+  const [searchParams] = useSearchParams();
   const [move, setMove] = useState(null);
   const [moveHistory, setMoveHistory] = useState([]);
   const [gameList, setGameList] = useState([]);
@@ -31,6 +41,15 @@ function ViewBrilliantMove() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showMove, setShowMove] = useState(false);
+
+  const navFilters = useMemo(
+    () => ({
+      day: resolveBrilliantDayFilter(searchParams),
+      review: resolveReviewFilter(searchParams),
+      brilliant: resolveBrilliantFilter(searchParams),
+    }),
+    [searchParams]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -48,18 +67,33 @@ function ViewBrilliantMove() {
     };
   }, []);
 
+  const filteredGameList = useMemo(
+    () =>
+      filterBrilliantMoveRows(gameList, {
+        dayFilter: navFilters.day,
+        reviewFilter: navFilters.review,
+        brilliantFilter: navFilters.brilliant,
+      }),
+    [gameList, navFilters]
+  );
+
   const gameNav = useMemo(() => {
-    const currentIndex = gameList.findIndex((row) => String(row.id) === String(moveId));
+    const currentIndex = filteredGameList.findIndex(
+      (row) => String(row.id) === String(moveId)
+    );
     if (currentIndex < 0) return { prevId: null, nextId: null, positionLabel: null };
     return {
-      prevId: currentIndex > 0 ? gameList[currentIndex - 1].id : null,
-      nextId: currentIndex < gameList.length - 1 ? gameList[currentIndex + 1].id : null,
-      positionLabel: `${currentIndex + 1} / ${gameList.length}`,
+      prevId: currentIndex > 0 ? filteredGameList[currentIndex - 1].id : null,
+      nextId:
+        currentIndex < filteredGameList.length - 1
+          ? filteredGameList[currentIndex + 1].id
+          : null,
+      positionLabel: `${currentIndex + 1} / ${filteredGameList.length}`,
     };
-  }, [gameList, moveId]);
+  }, [filteredGameList, moveId]);
 
   const goToGame = (id) => {
-    if (id != null) navigate(`/brilliant-moves/${id}`);
+    if (id != null) navigate(brilliantMoveDetailPath(id, navFilters));
   };
 
   useEffect(() => {
@@ -109,7 +143,6 @@ function ViewBrilliantMove() {
     return (
       <div className="brilliant-view-page">
         <div className="brilliant-view-side">
-          <PageBreadcrumb items={[...BREADCRUMB, { label: 'Move' }]} />
           <p className="brilliant-view-muted">Loading…</p>
         </div>
       </div>
@@ -120,19 +153,24 @@ function ViewBrilliantMove() {
     return (
       <div className="brilliant-view-page">
         <div className="brilliant-view-side">
-          <PageBreadcrumb items={[...BREADCRUMB, { label: 'Move' }]} />
           <p className="brilliant-view-error">{error || 'Brilliant move not found.'}</p>
         </div>
       </div>
     );
   }
 
+  const sacrificedPiece = formatPieceLabel(move.sacrificedPieceType);
+  const sacrificedSquare = move.sacrificedPieceSquare
+    ? String(move.sacrificedPieceSquare).toUpperCase()
+    : null;
+  const positionFen = move.fenBeforeMove || move.fenAfterMove;
+  const boardOrientation = move.turn === 'white' ? 'white' : 'black';
+
   return (
     <div className="brilliant-view-page">
       <BrilliantMoveVerificationBar move={move} />
 
       <aside className="brilliant-view-side">
-        <PageBreadcrumb items={[...BREADCRUMB, { label: `#${move.id}` }]} />
 
         <h1 className="brilliant-view-title">Brilliant Move #{move.id}</h1>
         <p className="brilliant-view-sub">
@@ -170,10 +208,38 @@ function ViewBrilliantMove() {
               <dd>{move.sacType && move.sacType !== '—' ? move.sacType : '—'}</dd>
             </div>
             <div>
+              <dt>Sacrifice</dt>
+              <dd>
+                {sacrificedPiece
+                  ? sacrificedSquare
+                    ? `${sacrificedPiece} on ${sacrificedSquare}`
+                    : sacrificedPiece
+                  : '—'}
+              </dd>
+            </div>
+            <div>
               <dt>Score</dt>
               <dd>{formatScore(move.brillianceScore)}</dd>
             </div>
           </dl>
+
+          {positionFen ? (
+            <div className="brilliant-view-position">
+              <p className="brilliant-view-position-label">Position</p>
+              <FenHoverPreview
+                fen={positionFen}
+                uciMove={move.uciMove}
+                orientation={boardOrientation}
+                boardId={`brilliant-view-position-${move.id}`}
+                boardSize={180}
+                brilliantHighlight
+                showBoardNotation
+              />
+              <p className="brilliant-view-muted brilliant-view-fen" title={positionFen}>
+                {positionFen}
+              </p>
+            </div>
+          ) : null}
         </section>
 
         <section className="brilliant-view-card">

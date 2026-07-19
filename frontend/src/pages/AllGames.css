@@ -24,14 +24,22 @@
 }
 
 .all-games-page .chess-profile-header-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 0 1.25rem;
+  padding: 0.65rem 1.25rem 0.55rem;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(248, 250, 252, 0.9) 70%, rgba(248, 250, 252, 0.72) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgba(248, 250, 252, 0.85);
 }
 
 .all-games-page .chess-profile-header-card {
-  margin-top: 1rem !important;
-  padding: 1.15rem 1.25rem 1.1rem !important;
+  margin-top: 0.35rem !important;
+  padding: 0.95rem 1.1rem 0.95rem !important;
   background: #ffffff;
   border: 1px solid var(--chess-border);
   border-radius: 16px;
@@ -156,39 +164,106 @@
   gap: 0.55rem;
 }
 
+.all-games-control-box {
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  background: linear-gradient(165deg, #fbfcfe 0%, #f4f7fb 100%);
+}
+
+.all-games-control-box__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 0.9rem;
+}
+
+.all-games-control-metrics {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.all-games-control-metric {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.38rem 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.03);
+}
+
+.all-games-control-metric strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.all-games-control-metric span {
+  margin-top: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.all-games-control-metric--brilliant {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+}
+
+.all-games-control-metric--brilliant strong {
+  color: #c2410c;
+}
+
+.all-games-control-box__status {
+  margin: 0.65rem 0 0 !important;
+  font-size: 0.8rem !important;
+}
+
 .all-games-view-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.85rem;
-  padding: 0.25rem;
-  border: 1px solid var(--chess-border);
+  gap: 0.2rem;
+  margin-top: 0;
+  padding: 0.2rem;
+  border: 1px solid #dbe3ee;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: #eef2f7;
 }
 
 .all-games-view-btn {
-  min-height: 2rem;
-  padding: 0.35rem 0.95rem;
+  min-height: 1.95rem;
+  padding: 0.3rem 0.9rem;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: var(--chess-text-muted);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 750;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .all-games-view-btn:hover:not(.all-games-view-btn--active) {
   color: #0f172a;
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .all-games-view-btn--active {
   background: #ffffff;
   color: #c2410c;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
 }
 
 .all-games-toolbar {
@@ -196,14 +271,20 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1rem;
-  margin-top: 0.95rem;
+  gap: 0.65rem 0.9rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e6ebf2;
 }
 
 .all-games-filters {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid #dbe3ee;
+  border-radius: 999px;
+  background: #ffffff;
 }
 
 .all-games-search-wrap {
@@ -280,30 +361,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.15rem;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--chess-border);
+  min-height: 1.95rem;
+  padding: 0.3rem 0.8rem;
+  border: none;
   border-radius: 999px;
-  background: #ffffff;
+  background: transparent;
   color: var(--chess-text-muted);
-  font-size: 0.8rem;
-  font-weight: 650;
+  font-size: 0.76rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .all-games-filter-btn:hover:not(.all-games-filter-btn--active) {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: #f1f5f9;
   color: #0f172a;
 }
 
 .all-games-filter-btn--active {
-  background: #fff7ed;
-  border-color: #fdba74;
-  color: #c2410c;
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+  background: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.28);
 }
 
 /* Game table — white */
@@ -664,124 +742,20 @@
   cursor: not-allowed;
 }
 
-/* Shared brilliant-moves stats (kept light when this CSS is imported) */
-.brilliant-moves-stats {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.65rem;
-  margin-top: 0.85rem;
-}
-
-.brilliant-moves-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--chess-border, #e2e8f0);
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-.brilliant-moves-stat-value {
-  font-size: 1.35rem;
-  font-weight: 750;
-  line-height: 1.1;
-  color: #0f172a;
-}
-
-.brilliant-moves-stat-label {
-  font-size: 0.72rem;
-  font-weight: 650;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.brilliant-moves-stat--pending .brilliant-moves-stat-value {
-  color: #d97706;
-}
-
-.brilliant-moves-stat--running .brilliant-moves-stat-value {
-  color: #0284c7;
-}
-
-.brilliant-moves-stat--completed .brilliant-moves-stat-value {
-  color: #16a34a;
-}
-
-.brilliant-moves-stat--failed .brilliant-moves-stat-value {
-  color: #dc2626;
-}
-
-.brilliant-moves-stat--brilliant .brilliant-moves-stat-value {
-  color: #c2410c;
-}
-
-.brilliant-moves-live {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  min-width: 0;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--chess-border, #e2e8f0);
-  border-radius: 10px;
-  background: #ffffff;
-}
-
-.brilliant-moves-live--active {
-  border-color: rgba(22, 163, 74, 0.35);
-  background: #ecfdf5;
-}
-
-.brilliant-moves-live-dot {
-  flex-shrink: 0;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: #94a3b8;
-}
-
-.brilliant-moves-live--active .brilliant-moves-live-dot {
-  background: #16a34a;
-  animation: brilliant-moves-live-pulse 1.6s ease-out infinite;
-}
-
-.brilliant-moves-live-label {
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: #64748b;
-}
-
-.brilliant-moves-live--active .brilliant-moves-live-label {
-  color: #15803d;
-}
-
-.brilliant-moves-stats-note {
-  margin: 0.55rem 0 0;
-  font-size: 0.78rem;
-  color: #64748b;
-}
-
-@keyframes brilliant-moves-live-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
-  }
-}
 
 @media (max-width: 640px) {
+  .all-games-page .chess-profile-header-wrap {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
   .all-games-filters {
-    flex-direction: column;
+    width: 100%;
+    border-radius: 14px;
   }
 
   .all-games-filter-btn {
-    width: 100%;
+    flex: 1 1 calc(50% - 0.2rem);
   }
 
   .all-games-header-actions {
@@ -802,11 +776,25 @@
     justify-content: center;
   }
 
-  .brilliant-moves-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .all-games-control-box__top {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .brilliant-moves-live {
-    grid-column: 1 / -1;
+  .all-games-view-toggle {
+    width: 100%;
+  }
+
+  .all-games-view-btn {
+    flex: 1;
+  }
+
+  .all-games-control-metrics {
+    width: 100%;
+  }
+
+  .all-games-control-metric {
+    flex: 1;
+    justify-content: center;
   }
 }

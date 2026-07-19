@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiChevronLeft, FiChevronRight, FiExternalLink, FiShuffle } from 'react-icons/fi';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import {
   fetchBrilliantPuzzleFromDb,
   fetchBrilliantPuzzlesFromDb,
@@ -20,16 +19,6 @@ function ViewPuzzle() {
   const { puzzleId } = useParams();
   const isBrilliantPath = location.pathname.includes('/puzzles/brilliant');
   const listPath = isBrilliantPath ? '/puzzles/brilliant' : '/puzzles/chesscom';
-  const listLabel = isBrilliantPath ? 'Brilliant Move Puzzles' : 'Chess.com Puzzles';
-
-  const breadcrumbBase = useMemo(
-    () => [
-      { label: 'Modules', to: '/modules' },
-      { label: 'Puzzles', to: '/puzzles' },
-      { label: listLabel, to: listPath },
-    ],
-    [listLabel, listPath]
-  );
 
   const [puzzle, setPuzzle] = useState(null);
   const [puzzleList, setPuzzleList] = useState([]);
@@ -110,7 +99,6 @@ function ViewPuzzle() {
   if (loading) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={[...breadcrumbBase, { label: 'Puzzle' }]} />
         <p className="moral-puzzles-muted">Loading…</p>
       </div>
     );
@@ -119,7 +107,6 @@ function ViewPuzzle() {
   if (error || !puzzle) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={[...breadcrumbBase, { label: 'Puzzle' }]} />
         <p className="moral-puzzles-error">{error || 'Puzzle not found.'}</p>
       </div>
     );
@@ -141,9 +128,6 @@ function ViewPuzzle() {
     <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
       <div className="moral-puzzles-zone moral-puzzles-zone--story">
         <div className="moral-puzzles-left-inner">
-          <PageBreadcrumb
-            items={[...breadcrumbBase, { label: `Puzzle #${puzzle.id}` }]}
-          />
 
           <h1 className="moral-play-title">Brilliant Puzzle #{puzzle.id}</h1>
           <p className="moral-play-sub">{subtitle || 'Play this position'}</p>

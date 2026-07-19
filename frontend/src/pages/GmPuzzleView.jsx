@@ -2,16 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiShuffle } from 'react-icons/fi';
 import ChroniclesPuzzleBoard from '../components/chronicles/ChroniclesPuzzleBoard';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { fetchGmPuzzle, fetchGmPuzzles } from '../services/gmPuzzleService';
 import { fetchBestMoveSequence, uciSequenceToSans } from '../utils/stockfishClient';
 import './LibraryMoralPuzzles.css';
-
-const GM_BREADCRUMB = [
-  { label: 'Modules', to: '/modules' },
-  { label: 'Puzzles', to: '/puzzles' },
-  { label: 'GM Puzzles', to: '/puzzles/gm' },
-];
 
 const SOLUTION_ENGINE_DEPTH = 15;
 const SOLUTION_MAX_PLIES = 14;
@@ -131,7 +124,6 @@ function GmPuzzleView() {
   if (loading) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={[...GM_BREADCRUMB, { label: 'Puzzle' }]} />
         <p className="moral-puzzles-muted">Loading…</p>
       </div>
     );
@@ -140,7 +132,6 @@ function GmPuzzleView() {
   if (error || !puzzle) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={[...GM_BREADCRUMB, { label: 'Puzzle' }]} />
         <p className="moral-puzzles-error">{error || 'Puzzle not found.'}</p>
       </div>
     );
@@ -152,9 +143,6 @@ function GmPuzzleView() {
     <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
       <div className="moral-puzzles-zone moral-puzzles-zone--story">
         <div className="moral-puzzles-left-inner">
-          <PageBreadcrumb
-            items={[...GM_BREADCRUMB, { label: `Puzzle #${puzzle.id}` }]}
-          />
 
           <h1 className="moral-play-title">GM Puzzle #{puzzle.id}</h1>
           <p className="moral-play-sub">Grandmaster puzzle workspace</p>

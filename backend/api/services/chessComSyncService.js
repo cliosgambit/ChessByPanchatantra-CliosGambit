@@ -1921,6 +1921,8 @@ async function getBrilliancePipelineStats({
     analysisCompleted: 0,
     analysisFailed: 0,
     brilliantMovesFound: 0,
+    humanReviewedCount: 0,
+    humanApprovedBrilliantCount: 0,
     stagesRunning: { stage0: 0, stage1: 0, stage2: 0, stage3: 0, stage4: 0 },
   };
 
@@ -1950,10 +1952,15 @@ async function getBrilliancePipelineStats({
             OR r.stage4_status = 'failed')
            AND COALESCE(r.stage4_status, '') <> 'completed'
          THEN g.chess_com_uuid END) AS analysis_failed,
-       COUNT(DISTINCT CASE WHEN bm.is_brilliant = 1 THEN bm.id END) AS brilliant_moves_found
+       COUNT(DISTINCT CASE
+         WHEN p.verification_status IN ('approved', 'rejected') THEN p.stage4_move_id
+       END) AS human_reviewed_count,
+       COUNT(DISTINCT CASE
+         WHEN p.verification_status = 'approved' THEN p.stage4_move_id
+       END) AS human_approved_brilliant_count
      FROM chess_com_games g
      LEFT JOIN chess_com_brilliance_runs r ON r.chess_com_uuid = g.chess_com_uuid
-     LEFT JOIN brilliant_moves bm ON bm.chess_com_uuid = g.chess_com_uuid
+     LEFT JOIN brilliant_move_puzzles p ON p.chess_com_uuid = g.chess_com_uuid
      WHERE g.chess_com_id = ANY($1)
        AND g.played_at IS NOT NULL
        ${dateClause}`,
@@ -2020,7 +2027,11 @@ async function getBrilliancePipelineStats({
     analysisRunning,
     analysisCompleted,
     analysisFailed,
-    brilliantMovesFound: rows[0]?.brilliant_moves_found || 0,
+    // Human review counts (not engine is_brilliant).
+    humanReviewedCount: Number(rows[0]?.human_reviewed_count) || 0,
+    humanApprovedBrilliantCount: Number(rows[0]?.human_approved_brilliant_count) || 0,
+    // Backward-compatible alias: approved human brilliancies for the "Brilliant moves" tile.
+    brilliantMovesFound: Number(rows[0]?.human_approved_brilliant_count) || 0,
     stagesRunning,
   };
 }
@@ -2511,6 +2522,27 @@ async function getPlayerAchievements(chessComId, options = {}) {
     brilliantCount = 0;
   }
 
+  let pioneerWinCount = 0;
+  try {
+    const pioneerParams = [id];
+    let pioneerWhere = `LOWER(TRIM(pw.chess_com_id)) = $1`;
+    if (sinceIso) {
+      pioneerParams.push(sinceIso);
+      pioneerWhere += ` AND g.played_at >= $${pioneerParams.length}`;
+    }
+    const { rows: pioneerRows } = await db.query(
+      `SELECT COUNT(*) AS count
+       FROM chess_com_pioneer_wins pw
+       INNER JOIN chess_com_games g ON g.chess_com_uuid = pw.chess_com_uuid
+       WHERE ${pioneerWhere}`,
+      pioneerParams
+    );
+    pioneerWinCount = Number(pioneerRows[0]?.count) || 0;
+  } catch (err) {
+    console.warn('[achievements] pioneer wins count failed:', err.message);
+    pioneerWinCount = 0;
+  }
+
   return {
     since: sinceIso ? sinceIso.slice(0, 10) : null,
     all: all || !sinceDate,
@@ -2533,6 +2565,9 @@ async function getPlayerAchievements(chessComId, options = {}) {
     },
     brilliantMoves: {
       count: brilliantCount,
+    },
+    pioneerWins: {
+      count: pioneerWinCount,
     },
   };
 }
@@ -2873,8 +2908,8 @@ async function getAchievementsFeed({
          p.players_label,
          p.turn,
          g.self_color,
-         g.white_name,
-         g.black_name,
+         g.white_username AS game_white_username,
+         g.black_username AS game_black_username,
          g.time_control_label
        FROM brilliant_move_puzzles p
        LEFT JOIN chess_com_games g ON g.chess_com_uuid = p.chess_com_uuid
@@ -2902,8 +2937,10 @@ async function getAchievementsFeed({
       if (!chessComId) continue;
 
       const profile = profileById.get(chessComId);
-      const white = row.white_name || row.white_username || 'White';
-      const black = row.black_name || row.black_username || 'Black';
+      const white =
+        row.white_username || row.game_white_username || 'White';
+      const black =
+        row.black_username || row.game_black_username || 'Black';
       rows.push({
         id: `brilliant-${row.stage4_move_id}`,
         type: 'brilliant',
@@ -2918,10 +2955,10 @@ async function getAchievementsFeed({
         brillianceScore:
           row.brilliance_score != null ? Number(row.brilliance_score) : null,
         timeControl: row.time_control_label || row.time_control || '—',
-        whiteUsername: row.white_username,
-        blackUsername: row.black_username,
-        whiteName: row.white_name,
-        blackName: row.black_name,
+        whiteUsername: row.white_username || row.game_white_username,
+        blackUsername: row.black_username || row.game_black_username,
+        whiteName: white,
+        blackName: black,
         players: row.players_label || `${white} vs ${black}`,
         uuid: row.chess_com_uuid,
         title: 'Brilliant Move',
@@ -2934,6 +2971,87 @@ async function getAchievementsFeed({
     console.warn('[achievements-feed] brilliant moves failed:', err.message);
   }
 
+  if (playerIds.length) {
+    try {
+      const { rows: pioneerRows } = await db.query(
+        `SELECT
+           pw.chess_com_uuid,
+           LOWER(TRIM(pw.chess_com_id)) AS chess_com_id,
+           pw.piece_lost,
+           pw.loss_move_number,
+           pw.loss_ply,
+           pw.loss_uci,
+           pw.loss_san,
+           pw.win_pct_delta,
+           pw.cpl,
+           g.played_at,
+           g.opponent_username,
+           g.time_class,
+           g.time_control_label,
+           g.white_username,
+           g.black_username
+         FROM chess_com_pioneer_wins pw
+         INNER JOIN chess_com_games g ON g.chess_com_uuid = pw.chess_com_uuid
+         WHERE LOWER(TRIM(pw.chess_com_id)) = ANY($1)
+         ORDER BY g.played_at DESC NULLS LAST
+         LIMIT 2000`,
+        [playerIds]
+      );
+
+      for (const row of pioneerRows || []) {
+        const playedAt = row.played_at ? new Date(row.played_at).toISOString() : null;
+        if (!isAchievementInDayFilter(playedAt || row.played_at, filter, timeZone)) continue;
+
+        const chessComId = (row.chess_com_id || '').toLowerCase().trim();
+        if (!chessComId) continue;
+
+        const profile = profileById.get(chessComId);
+        const pieceRaw = String(row.piece_lost || 'piece').toLowerCase();
+        const pieceLostLabel =
+          !pieceRaw || pieceRaw === 'piece'
+            ? 'Piece'
+            : pieceRaw.charAt(0).toUpperCase() + pieceRaw.slice(1);
+        const white = row.white_username || 'White';
+        const black = row.black_username || 'Black';
+        const lossSan = row.loss_san || row.loss_uci || null;
+
+        rows.push({
+          id: `pioneer-${row.chess_com_uuid}`,
+          type: 'pioneer_win',
+          playedAt,
+          playedDate: achievementPlayedDate(playedAt || row.played_at, timeZone),
+          chessComId,
+          playerName: profile?.playerName || chessComId,
+          playerUsername: chessComId,
+          avatarUrl: profile?.avatarUrl || null,
+          uuid: row.chess_com_uuid,
+          pieceLost: row.piece_lost || null,
+          pieceLostLabel,
+          lossMoveNumber: row.loss_move_number != null ? Number(row.loss_move_number) : null,
+          lossPly: row.loss_ply != null ? Number(row.loss_ply) : null,
+          lossSan,
+          lossUci: row.loss_uci || null,
+          winPctDelta: row.win_pct_delta != null ? Number(row.win_pct_delta) : null,
+          cpl: row.cpl != null ? Number(row.cpl) : null,
+          opponentUsername: row.opponent_username || null,
+          timeClass: row.time_class || null,
+          timeControl: row.time_control_label || null,
+          whiteUsername: row.white_username,
+          blackUsername: row.black_username,
+          whiteName: white,
+          blackName: black,
+          players: `${white} vs ${black}`,
+          title: 'Pioneer Win',
+          detail: lossSan
+            ? `Blundered ${pieceLostLabel} with ${lossSan}`
+            : `Blundered ${pieceLostLabel} early and still won`,
+        });
+      }
+    } catch (err) {
+      console.warn('[achievements-feed] pioneer wins failed:', err.message);
+    }
+  }
+
   rows.sort((a, b) => {
     const aTime = a.playedAt ? new Date(a.playedAt).getTime() : 0;
     const bTime = b.playedAt ? new Date(b.playedAt).getTime() : 0;
@@ -2942,6 +3060,7 @@ async function getAchievementsFeed({
 
   const brilliantCount = rows.filter((r) => r.type === 'brilliant').length;
   const streakCount = rows.filter((r) => r.type === 'win_streak').length;
+  const pioneerCount = rows.filter((r) => r.type === 'pioneer_win').length;
   const studentKeys = new Set(
     rows.map((r) => (r.playerUsername || r.chessComId || '').toLowerCase()).filter(Boolean)
   );
@@ -2951,6 +3070,7 @@ async function getAchievementsFeed({
     total: rows.length,
     brilliantCount,
     streakCount,
+    pioneerCount,
     studentsCount: studentKeys.size,
     dayFilter: filter,
     dateLabel: filter === 'all' ? filterLabels.all : filterLabels[filter],

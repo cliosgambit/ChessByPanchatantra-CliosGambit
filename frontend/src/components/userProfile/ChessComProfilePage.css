@@ -1449,6 +1449,11 @@
   background: linear-gradient(165deg, #f5f3ff 0%, #ffffff 55%);
 }
 
+.chess-ach-badge--pioneer.is-earned {
+  border-color: #d6b48c;
+  background: linear-gradient(165deg, #faf6f1 0%, #ffffff 55%);
+}
+
 .chess-ach-badge--volume.is-earned {
   border-color: #93c5fd;
   background: linear-gradient(165deg, #eff6ff 0%, #ffffff 55%);
@@ -1477,6 +1482,11 @@
 .chess-ach-badge-icon--zap {
   background: #ede9fe;
   color: #7c3aed;
+}
+
+.chess-ach-badge-icon--sword {
+  background: #f5e6d3;
+  color: #92400e;
 }
 
 .chess-ach-badge-icon--grid {

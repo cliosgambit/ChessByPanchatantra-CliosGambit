@@ -36,7 +36,7 @@ export function formatCpPair(whiteCp, moverCp) {
  * d12 multipv + CPL, d10 fallback / responses, d8 preservation micro-check.
  */
 export function getStage2DepthEvals(s2) {
-  if (!s2) return { title: 'Stage 2 depths', subtitle: 'd8 · d10 · d12', rows: [] };
+  if (!s2) return { title: 'Stage 2 depths', subtitle: '', rows: [] };
 
   const eng = s2.features?.engine ?? {};
   const pres = s2.features?.preservation_check;
@@ -65,7 +65,7 @@ export function getStage2DepthEvals(s2) {
   if (s2.gate_fail_reason === 'piece_already_lost_engine_confirmed') {
     return {
       title: 'Stage 2 depths',
-      subtitle: `d${STAGE2_ENGINE_DEPTHS.preservation} preservation only`,
+      subtitle: '',
       rows,
     };
   }
@@ -111,7 +111,7 @@ export function getStage2DepthEvals(s2) {
 
   return {
     title: 'Stage 2 depths',
-    subtitle: `d${STAGE2_ENGINE_DEPTHS.preservation} preserve · d${STAGE2_ENGINE_DEPTHS.responseSearch} fallback/responses · d${STAGE2_ENGINE_DEPTHS.shallowPrimary} multipv`,
+    subtitle: '',
     rows,
   };
 }
@@ -128,7 +128,7 @@ function formatCpl(cpl) {
  */
 export function getStage2TopMoves(s2) {
   if (!s2) {
-    return { title: 'Legal moves', subtitle: 'd12 multipv · pre-move', rows: [], verdict: null };
+    return { title: 'Legal moves', subtitle: '', rows: [], verdict: null };
   }
 
   const eng = s2.features?.engine ?? s2.features ?? {};
@@ -141,7 +141,7 @@ export function getStage2TopMoves(s2) {
   if (!top5.length) {
     return {
       title: 'Legal moves',
-      subtitle: 'd12 multipv · pre-move',
+      subtitle: '',
       rows: [],
       verdict: null,
       nLegal,
@@ -205,7 +205,7 @@ export function getStage2TopMoves(s2) {
  * Stage 3 deep curve d5→d18 plus rank searches at d8 and d18.
  */
 export function getStage3DepthEvals(s3) {
-  if (!s3) return { title: 'Stage 3 depths', subtitle: 'd1 · d5 · d10 · d15 · d18', rows: [] };
+  if (!s3) return { title: 'Stage 3 depths', subtitle: '', rows: [] };
 
   const eng = s3.features?.engine ?? {};
   const depthEvals = s3.depth_evals ?? eng.depth_evals ?? {};
@@ -255,7 +255,7 @@ export function getStage3DepthEvals(s3) {
 
   return {
     title: 'Stage 3 depths',
-    subtitle: `curve d${STAGE3_DEPTH_CURVE.join('/d')} · ranks d${STAGE3_RANK_DEPTHS.shallow}/d${STAGE3_RANK_DEPTHS.deep}`,
+    subtitle: '',
     rows,
   };
 }

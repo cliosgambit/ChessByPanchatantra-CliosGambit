@@ -10,7 +10,6 @@ import {
   FiX,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import {
   createChapter,
   deleteChapter,
@@ -223,13 +222,6 @@ function ModuleDetailPage() {
   if (!module) {
     return (
       <div className="modules-page modules-page--gallery">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Modules', to: '/modules' },
-            { label: 'Module' },
-          ]}
-        />
         <p className="modules-error modules-error--center">{error || 'Module not found.'}</p>
       </div>
     );
@@ -237,16 +229,9 @@ function ModuleDetailPage() {
 
   return (
     <div className="modules-page modules-page--gallery">
-      <div className="modules-page-toolbar">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Modules', to: '/modules' },
-            { label: module.name || 'Module' },
-          ]}
-        />
-        {isAdmin ? (
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {isAdmin ? (
+        <div className="modules-page-toolbar">
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
             <button
               type="button"
               className="modules-btn"
@@ -267,17 +252,15 @@ function ModuleDetailPage() {
               <FiPlus aria-hidden /> New chapter
             </button>
           </div>
-        ) : (
-          <span aria-hidden />
-        )}
-      </div>
-
-      <h1 className="modules-page-title">Chapters</h1>
-      {module.description ? (
-        <p className="modules-muted" style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
-          {module.description}
-        </p>
+        </div>
       ) : null}
+
+      <header className="modules-page-heading">
+        <h1 className="modules-page-title">Chapters</h1>
+        {module.description ? (
+          <p className="modules-page-subtitle">{module.description}</p>
+        ) : null}
+      </header>
 
       {error ? <p className="modules-error modules-error--center">{error}</p> : null}
 

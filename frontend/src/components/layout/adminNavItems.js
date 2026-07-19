@@ -7,6 +7,7 @@ import {
   FiCpu,
   FiAward,
   FiUpload,
+  FiZap,
 } from 'react-icons/fi';
 import { normalizeRole } from '../../utils/roles';
 
@@ -22,6 +23,13 @@ export const PRIMARY_NAV_ITEMS = [
   { label: 'Puzzles', path: '/puzzles', icon: FiGrid, end: false, roles: null },
   { label: 'Students', path: '/students', icon: FiUsers, end: false, roles: ['admin', 'coach'] },
   { label: 'Games', path: '/all-games', icon: FiLayers, end: false, roles: ['admin', 'coach'] },
+  {
+    label: 'Pioneer Wins',
+    path: '/pioneer-wins',
+    icon: FiZap,
+    end: false,
+    roles: ['admin', 'coach'],
+  },
   {
     label: 'Analyze',
     path: '/analyze',

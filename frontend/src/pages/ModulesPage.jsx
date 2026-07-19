@@ -10,7 +10,6 @@ import {
   FiX,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import {
   createModule,
   deleteModule,
@@ -190,16 +189,13 @@ function ModulesPage() {
 
   return (
     <div className="modules-page modules-page--gallery">
-      <div className="modules-page-toolbar">
-        <PageBreadcrumb items={[{ label: 'Modules' }]} />
-        {isAdmin ? (
+      {isAdmin ? (
+        <div className="modules-page-toolbar">
           <button type="button" className="modules-btn modules-btn--primary" onClick={openCreate}>
             <FiPlus aria-hidden /> New module
           </button>
-        ) : (
-          <span aria-hidden />
-        )}
-      </div>
+        </div>
+      ) : null}
 
       <h1 className="modules-page-title">Modules</h1>
 

@@ -12,7 +12,6 @@ import {
   FiX,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import PaginationBar from '../components/common/PaginationBar';
 import { fetchLibraryStories } from '../services/libraryService';
 import {
@@ -71,7 +70,6 @@ function ChapterDetailPage() {
   const menuRef = useRef(null);
   const hideTimer = useRef(null);
 
-  const [module, setModule] = useState(null);
   const [chapter, setChapter] = useState(null);
   const [stories, setStories] = useState([]);
   const [moduleStoryIds, setModuleStoryIds] = useState(new Set());
@@ -107,7 +105,6 @@ function ChapterDetailPage() {
         fetchChapter(moduleId, chapterId),
         fetchModule(moduleId),
       ]);
-      setModule(chapterData.module || moduleData.module || null);
       setChapter(chapterData.chapter || null);
       setStories(chapterData.stories || []);
       setModuleStoryIds(
@@ -115,7 +112,6 @@ function ChapterDetailPage() {
       );
     } catch (err) {
       setError(err.message || 'Failed to load chapter.');
-      setModule(null);
       setChapter(null);
       setStories([]);
     } finally {
@@ -417,14 +413,6 @@ function ChapterDetailPage() {
   if (!chapter) {
     return (
       <div className="library-page">
-        <PageBreadcrumb
-          items={[
-            { label: 'Modules', to: '/modules' },
-            { label: 'Modules', to: '/modules' },
-            { label: module?.name || 'Module', to: `/modules/${moduleId}` },
-            { label: 'Chapter' },
-          ]}
-        />
         <p className="library-error">{error || 'Chapter not found.'}</p>
       </div>
     );
@@ -435,14 +423,6 @@ function ChapterDetailPage() {
       <div className="library-sticky-head">
         <header className="library-header">
           <div>
-            <PageBreadcrumb
-              items={[
-                { label: 'Modules', to: '/modules' },
-                { label: 'Modules', to: '/modules' },
-                { label: module?.name || 'Module', to: `/modules/${moduleId}` },
-                { label: chapter.name || 'Chapter' },
-              ]}
-            />
             <h1>{chapter.name}</h1>
             <p className="library-muted">{chapterSubtitle}</p>
           </div>

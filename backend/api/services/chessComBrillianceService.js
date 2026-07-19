@@ -558,7 +558,66 @@ function mapStage4Row(row, gameMap) {
     fenBeforeMove: row.fen_before_move || null,
     fenAfterMove: row.fen_after_move || null,
     uciMove: row.uci_move || null,
+    sacrificedPieceType: row.sacrificed_piece_type || null,
+    sacrificedPieceSquare: row.sacrificed_piece_square || null,
+    movingPieceType: row.moving_piece_type || null,
+    sacrificeMode: row.sacrifice_mode || null,
   };
+}
+
+function loadSacrificeDetailsFromSqlite(sqliteGameId, plyIndex) {
+  const gameId = Number(sqliteGameId);
+  const ply = Number(plyIndex);
+  if (!Number.isInteger(gameId) || gameId <= 0 || !Number.isInteger(ply) || ply < 0) {
+    return null;
+  }
+
+  try {
+    const { db } = require('../../brilliance/db/database');
+    const stage4 = db
+      .prepare(
+        `SELECT features_json FROM lichess_pgn_stage4
+         WHERE game_id = ? AND ply_index = ?`
+      )
+      .get(gameId, ply);
+
+    let features = null;
+    if (stage4?.features_json) {
+      try {
+        features = JSON.parse(stage4.features_json);
+      } catch {
+        features = null;
+      }
+    }
+
+    let stage1Features = null;
+    const stage1 = db
+      .prepare(
+        `SELECT features_json FROM lichess_pgn_stage1
+         WHERE game_id = ? AND ply_index = ?`
+      )
+      .get(gameId, ply);
+    if (stage1?.features_json) {
+      try {
+        stage1Features = JSON.parse(stage1.features_json);
+      } catch {
+        stage1Features = null;
+      }
+    }
+
+    const sacClass = stage1Features?.sacrifice_class || null;
+
+    return {
+      sacrificedPieceType:
+        features?.sacrificed_piece_type || sacClass?.sacrificed_piece_type || null,
+      sacrificedPieceSquare:
+        features?.sacrificed_piece_square || sacClass?.sacrificed_piece_square || null,
+      movingPieceType: features?.moving_piece_type || sacClass?.moving_piece_type || null,
+      sacrificeMode: features?.sacrifice_mode || sacClass?.sacrifice_mode || null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function loadGameMapForUuids(uuids) {
@@ -703,7 +762,17 @@ async function getBrilliantMoveById(moveId) {
     row.chess_com_uuid ? [row.chess_com_uuid] : []
   );
 
-  return mapStage4Row(row, gameMap);
+  const mapped = mapStage4Row(row, gameMap);
+  const sacrifice = loadSacrificeDetailsFromSqlite(row.sqlite_game_id, row.ply_index);
+  if (!sacrifice) return mapped;
+
+  return {
+    ...mapped,
+    sacrificedPieceType: sacrifice.sacrificedPieceType || mapped.sacrificedPieceType,
+    sacrificedPieceSquare: sacrifice.sacrificedPieceSquare || mapped.sacrificedPieceSquare,
+    movingPieceType: sacrifice.movingPieceType || mapped.movingPieceType,
+    sacrificeMode: sacrifice.sacrificeMode || mapped.sacrificeMode,
+  };
 }
 
 module.exports = {

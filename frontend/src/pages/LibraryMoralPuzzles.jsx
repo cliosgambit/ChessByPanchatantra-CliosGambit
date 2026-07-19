@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom';
 import { FiPlus, FiRefreshCw, FiShuffle, FiTrash2, FiX } from 'react-icons/fi';
 import FenHoverPreview from '../components/userProfile/FenHoverPreview';
-import PageBreadcrumb from '../components/common/PageBreadcrumb';
 import { useAuth } from '../context/AuthContext';
 import {
   assignMoralPuzzle,
@@ -149,15 +148,9 @@ function LibraryMoralPuzzles() {
   const { user } = useAuth();
   const isAdmin = canManageContent(user?.role);
   const canManage = isAdmin;
-  const storyBackPath =
-    moduleId && chapterId
-      ? `/modules/${moduleId}/chapters/${chapterId}/stories/${storyId}`
-      : `/library/${storyId}`;
 
   const [story, setStory] = useState(null);
   const [moral, setMoral] = useState(null);
-  const [moduleMeta, setModuleMeta] = useState(null);
-  const [chapterMeta, setChapterMeta] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -212,8 +205,6 @@ function LibraryMoralPuzzles() {
           : await fetchMoralPuzzles(storyId, moralId);
       setStory(data.story || null);
       setMoral(data.moral || null);
-      setModuleMeta(data.module || null);
-      setChapterMeta(data.chapter || null);
       setAssignments(data.assignments || []);
       setSelectedIndex(0);
       setBoardKey((k) => k + 1);
@@ -221,8 +212,6 @@ function LibraryMoralPuzzles() {
       setError(err.message || 'Failed to load moral puzzles.');
       setStory(null);
       setMoral(null);
-      setModuleMeta(null);
-      setChapterMeta(null);
       setAssignments([]);
     } finally {
       setLoading(false);
@@ -536,41 +525,6 @@ function LibraryMoralPuzzles() {
     }
   };
 
-  const moralBreadcrumb = useMemo(() => {
-    const moralLabel = moral?.moral_name || moral?.moral_code || 'Moral puzzles';
-    if (moduleId && chapterId) {
-      return [
-        { label: 'Modules', to: '/modules' },
-        { label: 'Modules', to: '/modules' },
-        { label: moduleMeta?.name || 'Module', to: `/modules/${moduleId}` },
-        {
-          label: chapterMeta?.name || 'Chapter',
-          to: `/modules/${moduleId}/chapters/${chapterId}`,
-        },
-        {
-          label: story?.title || 'Story',
-          to: storyBackPath,
-        },
-        { label: moralLabel },
-      ];
-    }
-    return [
-      { label: 'Modules', to: '/modules' },
-      { label: 'Library', to: '/library' },
-      { label: story?.title || 'Story', to: storyBackPath },
-      { label: moralLabel },
-    ];
-  }, [
-    moduleId,
-    chapterId,
-    moduleMeta?.name,
-    chapterMeta?.name,
-    story?.title,
-    storyBackPath,
-    moral?.moral_name,
-    moral?.moral_code,
-  ]);
-
   if (loading) {
     return (
       <div className="moral-puzzles-page">
@@ -582,7 +536,6 @@ function LibraryMoralPuzzles() {
   if (!story || !moral) {
     return (
       <div className="moral-puzzles-page">
-        <PageBreadcrumb items={moralBreadcrumb} />
         <p className="moral-puzzles-error">{error || 'Not found.'}</p>
       </div>
     );
@@ -592,8 +545,6 @@ function LibraryMoralPuzzles() {
     <div className="moral-puzzles-page moral-puzzles-page--play moral-puzzles-page--triple">
       <div className="moral-puzzles-zone moral-puzzles-zone--story">
         <div className="moral-puzzles-left-inner">
-        <PageBreadcrumb items={moralBreadcrumb} />
-
         <h1 className="moral-play-title">{story.title}</h1>
         {story.subheading ? <p className="moral-play-sub">{story.subheading}</p> : null}
 
