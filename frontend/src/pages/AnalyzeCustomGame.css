@@ -1,0 +1,12 @@
+.analyze-custom-page {
+  min-height: calc(100vh - 72px);
+  background:
+    radial-gradient(ellipse 70% 45% at 0% 0%, rgba(234, 88, 12, 0.07), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 0%, rgba(14, 165, 233, 0.05), transparent 50%),
+    #f8fafc;
+}
+
+.analyze-custom-page .test-page {
+  background: transparent;
+  min-height: unset;
+}

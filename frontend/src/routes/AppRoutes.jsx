@@ -23,6 +23,7 @@ import BrilliantMoves from '../pages/BrilliantMoves';
 import ViewBrilliantMove from '../pages/ViewBrilliantMove';
 import Achievements from '../pages/Achievements';
 import AllGames from '../pages/AllGames';
+import AnalyzeCustomGame from '../pages/AnalyzeCustomGame';
 import Settings from '../pages/Settings';
 import CatchAllRedirect from './CatchAllRedirect';
 
@@ -110,6 +111,7 @@ function AppRoutesContent() {
                 <Route path="/brilliant-moves/:moveId" element={<ViewBrilliantMove />} />
                 <Route path="/achievements" element={<Achievements />} />
                 <Route path="/all-games" element={<AllGames />} />
+                <Route path="/analyze" element={<AnalyzeCustomGame />} />
                 <Route path="/library" element={<Library />} />
                 <Route path="/library/new" element={<LibraryStoryForm />} />
                 <Route path="/library/:storyId/edit" element={<LibraryEditRedirect />} />

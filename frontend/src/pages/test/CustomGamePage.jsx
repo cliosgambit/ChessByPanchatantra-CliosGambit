@@ -14,7 +14,7 @@ import {
 } from '../../utils/testPageDownloadFilter';
 import DownloadReportFilterModal from '../../components/testPage/DownloadReportFilterModal';
 import { useChessGame } from '../../hooks/useChessGame';
-import { importCustomPgn } from '../../services/lichessPgnService';
+import { deleteLichessUpload, importCustomPgn } from '../../services/lichessPgnService';
 import api from '../../services/authService';
 import LeftSidebar from '../../components/testPage/LeftSidebar';
 import RightSidebar from '../../components/testPage/RightSidebar';
@@ -72,11 +72,17 @@ export default function CustomGamePage({
   defaultOrientation = 'white',
   /** Override player badge names/ratings from Chess.com game object. */
   playerOverride = null,
+  /**
+   * Temporary session: delete the working upload (and stage rows) when the user
+   * imports another PGN or leaves the page. Nothing is kept for All Games / DB browse.
+   */
+  ephemeral = false,
 }) {
   const [importError, setImportError] = useState(null);
   const [importing, setImporting] = useState(false);
   const [gameId, setGameId] = useState(null);
   const [gameInfo, setGameInfo] = useState(null);
+  const ephemeralUploadIdRef = useRef(null);
   const [stage2, setStage2] = useState(null);
   const [stage3, setStage3] = useState(null);
   const [stage4, setStage4] = useState(null);
@@ -310,6 +316,15 @@ export default function CustomGamePage({
     maxViewportHeightRatio: 0.8,
   });
 
+  const discardEphemeralUpload = useCallback(async (uploadId) => {
+    if (!ephemeral || uploadId == null) return;
+    try {
+      await deleteLichessUpload(uploadId);
+    } catch (err) {
+      console.warn('[brilliance] ephemeral cleanup failed:', err?.message || err);
+    }
+  }, [ephemeral]);
+
   const handleImportPGN = useCallback(
     async (pgn) => {
       const text = String(pgn || '').trim();
@@ -318,6 +333,9 @@ export default function CustomGamePage({
       // Cancel any in-flight stage run before starting a new import
       analysisRunIdRef.current += 1;
       console.log('[brilliance] import start — cancelled prior runs, gen=', analysisRunIdRef.current);
+
+      const previousUploadId = ephemeralUploadIdRef.current;
+      if (ephemeral) ephemeralUploadIdRef.current = null;
 
       setImportError(null);
       setImporting(true);
@@ -336,10 +354,15 @@ export default function CustomGamePage({
       setStageFilter(null);
 
       try {
+        // Drop prior temp session before creating a new one (no lasting DB rows).
+        if (previousUploadId != null) {
+          void discardEphemeralUpload(previousUploadId);
+        }
+
         const data = await importCustomPgn(
           text,
           chessComUuid ? `chesscom_${chessComUuid}.pgn` : 'Custom PGN',
-          { lichessGameId: chessComUuid || null }
+          { lichessGameId: ephemeral ? null : chessComUuid || null }
         );
         const ok = loadPGN(data.clean_pgn, {
           skipSessionCreate: true,
@@ -354,6 +377,9 @@ export default function CustomGamePage({
 
         setGameId(data.id);
         setGameInfo(data);
+        if (ephemeral && data.upload_id != null) {
+          ephemeralUploadIdRef.current = data.upload_id;
+        }
         setImporting(false);
 
         if (hideBrilliancePanel) {
@@ -371,6 +397,8 @@ export default function CustomGamePage({
       }
     },
     [
+      discardEphemeralUpload,
+      ephemeral,
       loadPGN,
       inputSource,
       hideBrilliancePanel,
@@ -380,6 +408,21 @@ export default function CustomGamePage({
       setOrientation,
     ]
   );
+
+  // Ephemeral sessions: cancel analysis + wipe working upload when leaving the page.
+  useEffect(() => {
+    if (!ephemeral) return undefined;
+    return () => {
+      analysisRunIdRef.current += 1;
+      const uploadId = ephemeralUploadIdRef.current;
+      ephemeralUploadIdRef.current = null;
+      if (uploadId != null) {
+        void deleteLichessUpload(uploadId).catch((err) => {
+          console.warn('[brilliance] ephemeral unmount cleanup failed:', err?.message || err);
+        });
+      }
+    };
+  }, [ephemeral]);
 
   // Auto-load PGN when opening a Chess.com game via Review.
   // Claim the key SYNCHRONOUSLY so React Strict Mode's double-effect cannot

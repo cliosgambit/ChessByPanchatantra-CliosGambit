@@ -1,16 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Box } from '@chakra-ui/react';
+import { FiSearch, FiX } from 'react-icons/fi';
 import LoadingPanel from '../components/common/LoadingPanel';
 import ErrorPanel from '../components/common/ErrorPanel';
 import EmptyState from '../components/common/EmptyState';
 import GameHistoryList from '../components/userProfile/GameHistoryList';
 import AllGamesPagination from '../components/allGames/AllGamesPagination';
+import BrilliantMovesPanel from '../components/brilliantMoves/BrilliantMovesPanel';
 import {
   fetchAllGamesFromDb,
-  runChessComGameBrilliance,
   syncAllGamesFromChessCom,
 } from '../services/chessComDbService';
+import {
+  getBrillianceBatchState,
+  isBrillianceBatchRunning,
+  isBrillianceComplete,
+  startBrillianceBatch,
+  stopBrillianceBatch as requestStopBrillianceBatch,
+  subscribeBrillianceBatch,
+} from '../services/allGamesBrillianceBatch';
 import { openChessComGame } from '../utils/chessComGameNavigation';
 import { useClientPagination } from '../utils/pagination';
 import {
@@ -25,6 +34,16 @@ import {
 } from '../utils/allGamesFilters';
 import '../components/userProfile/ChessComProfilePage.css';
 import './AllGames.css';
+import './BrilliantMoves.css';
+
+const VIEW_GAMES = 'games';
+const VIEW_BRILLIANT = 'brilliant';
+const VALID_VIEWS = new Set([VIEW_GAMES, VIEW_BRILLIANT]);
+
+function resolveActiveView(searchParams) {
+  const view = searchParams.get('view');
+  return VALID_VIEWS.has(view) ? view : VIEW_GAMES;
+}
 
 const POLL_MS = 4000;
 const STATUS_POLL_MS = 3000;
@@ -35,15 +54,22 @@ function gameOwnerUsername(game) {
   return game?.chessComId || (game?.isWhite ? game?.white : game?.black) || null;
 }
 
-function isBrillianceComplete(game) {
-  const run = game?.brillianceRun;
-  return run?.stage4Status === 'completed' || run?.pipelineStatus === 'passed';
-}
-
-function gameLabel(game) {
-  const white = game?.white || 'White';
-  const black = game?.black || 'Black';
-  return `${white} vs ${black}`;
+function gameMatchesSearch(game, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    game?.white,
+    game?.black,
+    game?.chessComId,
+    game?.timeClass,
+    game?.timeControl,
+    game?.resultNotation,
+    game?.resultType,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(q);
 }
 
 const DAY_FILTERS = DAY_FILTER_OPTIONS;
@@ -183,6 +209,8 @@ function AllGames() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeFilter = resolveActiveFilter(searchParams);
+  const activeView = resolveActiveView(searchParams);
+  const isGamesView = activeView === VIEW_GAMES;
   const filterLabels = useMemo(() => buildFilterLabels(), []);
 
   const [allGames, setAllGames] = useState([]);
@@ -191,19 +219,27 @@ function AllGames() {
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
-  const [brillianceBatch, setBrillianceBatch] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [brillianceBatch, setBrillianceBatch] = useState(() => getBrillianceBatchState());
 
   const syncPollTimerRef = useRef(null);
   const statusPollTimerRef = useRef(null);
   const activeFilterRef = useRef(activeFilter);
-  const brillianceCancelRef = useRef(false);
-  const brillianceRunningRef = useRef(false);
+  const activeViewRef = useRef(activeView);
+  const refreshBrillianceStatusesRef = useRef(null);
+  const mountedRef = useRef(true);
 
   activeFilterRef.current = activeFilter;
+  activeViewRef.current = activeView;
 
-  const filteredGames = useMemo(
+  const dayFilteredGames = useMemo(
     () => filterGamesByDay(allGames, activeFilter),
     [allGames, activeFilter]
+  );
+
+  const filteredGames = useMemo(
+    () => dayFilteredGames.filter((game) => gameMatchesSearch(game, searchQuery)),
+    [dayFilteredGames, searchQuery]
   );
 
   const pagination = useClientPagination(filteredGames, GAMES_PER_PAGE);
@@ -213,18 +249,45 @@ function AllGames() {
     [activeFilter, filterLabels]
   );
 
-  const setActiveFilter = useCallback(
-    (day) => {
-      if (!VALID_DAY_KEYS.has(day) || day === activeFilterRef.current) return;
-      // Default URL (no ?day) means today — persist `all` explicitly so it doesn't snap back.
-      setSearchParams(day === 'today' ? {} : { day }, { replace: true });
+  const patchSearchParams = useCallback(
+    (patch) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          Object.entries(patch).forEach(([key, value]) => {
+            if (value == null || value === '') next.delete(key);
+            else next.set(key, value);
+          });
+          // Defaults omitted from URL for cleaner links.
+          if (next.get('day') === 'today') next.delete('day');
+          if (next.get('view') === VIEW_GAMES) next.delete('view');
+          return next;
+        },
+        { replace: true }
+      );
     },
     [setSearchParams]
   );
 
+  const setActiveFilter = useCallback(
+    (day) => {
+      if (!VALID_DAY_KEYS.has(day) || day === activeFilterRef.current) return;
+      patchSearchParams({ day });
+    },
+    [patchSearchParams]
+  );
+
+  const setActiveView = useCallback(
+    (view) => {
+      if (!VALID_VIEWS.has(view) || view === activeViewRef.current) return;
+      patchSearchParams({ view });
+    },
+    [patchSearchParams]
+  );
+
   useEffect(() => {
     pagination.setPage(1);
-  }, [activeFilter, pagination.setPage]);
+  }, [activeFilter, activeView, searchQuery, pagination.setPage]);
 
   const applyAllGamesPayload = useCallback((data, { merge = false } = {}) => {
     const incoming = data.games || [];
@@ -268,7 +331,10 @@ function AllGames() {
     statusPollTimerRef.current = setInterval(async () => {
       try {
         const data = await refreshBrillianceStatuses();
-        if (!(data.games || []).some(gameNeedsStatusPoll)) clearStatusPoll();
+        const stillNeeded =
+          isBrillianceBatchRunning() ||
+          (data.games || []).some(gameNeedsStatusPoll);
+        if (!stillNeeded) clearStatusPoll();
       } catch {
         /* retry next tick */
       }
@@ -315,154 +381,54 @@ function AllGames() {
     }
   }, [applyAllGamesPayload, startPolling]);
 
+  refreshBrillianceStatusesRef.current = refreshBrillianceStatuses;
+
   const stopBrillianceBatch = useCallback(() => {
-    brillianceCancelRef.current = true;
-    setBrillianceBatch((prev) =>
-      prev?.running ? { ...prev, cancelling: true } : prev
-    );
+    requestStopBrillianceBatch();
   }, []);
 
-  const runAllBrilliance = useCallback(async () => {
-    if (brillianceRunningRef.current) return;
-
-    const queue = filteredGames.filter((game) => {
-      const owner = gameOwnerUsername(game);
-      return Boolean(owner && game?.uuid && !isBrillianceComplete(game));
-    });
-
-    if (queue.length === 0) {
-      setError(null);
-      setBrillianceBatch({
-        running: false,
-        index: 0,
-        total: 0,
-        currentLabel: null,
-        done: 0,
-        failed: 0,
-        skipped: filteredGames.length,
-        finished: true,
-      });
-      return;
-    }
-
-    brillianceRunningRef.current = true;
-    brillianceCancelRef.current = false;
+  const runAllBrilliance = useCallback(() => {
+    if (isBrillianceBatchRunning()) return;
     setError(null);
     startStatusPolling();
 
-    let done = 0;
-    let failed = 0;
-
-    const queueUuids = queue.map((g) => g.uuid);
-    const failedUuids = new Set();
-    const doneUuids = new Set();
-
-    setBrillianceBatch({
-      running: true,
-      cancelling: false,
-      index: 0,
-      total: queue.length,
-      currentUuid: null,
-      currentLabel: null,
-      queueUuids,
-      doneUuids: [],
-      failedUuids: [],
-      done: 0,
-      failed: 0,
-      skipped: filteredGames.length - queue.length,
-      finished: false,
-    });
-
-    try {
-      for (let i = 0; i < queue.length; i += 1) {
-        if (brillianceCancelRef.current) break;
-
-        const game = queue[i];
-        const owner = gameOwnerUsername(game);
-        const label = gameLabel(game);
-
-        setBrillianceBatch((prev) => ({
-          ...prev,
-          running: true,
-          index: i + 1,
-          total: queue.length,
-          currentUuid: game.uuid,
-          currentLabel: label,
-          doneUuids: [...doneUuids],
-          failedUuids: [...failedUuids],
-          done,
-          failed,
-        }));
-
+    // Fire-and-forget: module-level runner keeps going across pagination / route changes.
+    // Use day filter only — search shouldn't shrink the Run All queue.
+    void startBrillianceBatch(dayFilteredGames, {
+      onAfterGame: async () => {
+        if (!mountedRef.current || !refreshBrillianceStatusesRef.current) return;
         try {
-          // One game at a time: backend runs stages 0→4 sequentially.
-          await runChessComGameBrilliance(owner, game.uuid, { force: false });
-          done += 1;
-          doneUuids.add(game.uuid);
-        } catch (err) {
-          failed += 1;
-          failedUuids.add(game.uuid);
-          console.error(
-            `[all-games] brilliance failed for ${label}:`,
-            err?.message || err
-          );
-        }
-
-        try {
-          await refreshBrillianceStatuses();
+          await refreshBrillianceStatusesRef.current();
         } catch {
           /* keep going */
         }
-      }
-    } finally {
-      brillianceRunningRef.current = false;
-      const cancelled = brillianceCancelRef.current;
-      setBrillianceBatch({
-        running: false,
-        cancelling: false,
-        index: Math.min(done + failed, queue.length),
-        total: queue.length,
-        currentUuid: null,
-        currentLabel: null,
-        queueUuids,
-        doneUuids: [...doneUuids],
-        failedUuids: [...failedUuids],
-        done,
-        failed,
-        skipped: filteredGames.length - queue.length,
-        finished: true,
-        cancelled,
-      });
+      },
+    }).then(async () => {
+      if (!mountedRef.current || !refreshBrillianceStatusesRef.current) return;
       try {
-        const data = await refreshBrillianceStatuses();
+        const data = await refreshBrillianceStatusesRef.current();
         if ((data.games || []).some(gameNeedsStatusPoll)) startStatusPolling();
         else clearStatusPoll();
       } catch {
         /* ignore */
       }
-    }
-  }, [
-    clearStatusPoll,
-    filteredGames,
-    refreshBrillianceStatuses,
-    startStatusPolling,
-  ]);
+    });
+  }, [clearStatusPoll, dayFilteredGames, startStatusPolling]);
 
-  // Keep the table on the page that contains the game currently analyzing.
   useEffect(() => {
-    const uuid = brillianceBatch?.currentUuid;
-    if (!uuid || !brillianceBatch?.running) return;
-    const idx = filteredGames.findIndex((g) => g.uuid === uuid);
-    if (idx < 0) return;
-    const page = Math.floor(idx / GAMES_PER_PAGE) + 1;
-    if (page !== pagination.page) pagination.setPage(page);
-  }, [
-    brillianceBatch?.currentUuid,
-    brillianceBatch?.running,
-    filteredGames,
-    pagination.page,
-    pagination.setPage,
-  ]);
+    mountedRef.current = true;
+    const unsubscribe = subscribeBrillianceBatch((next) => {
+      setBrillianceBatch(next);
+      if (next?.running) startStatusPolling();
+    });
+
+    if (isBrillianceBatchRunning()) startStatusPolling();
+
+    return () => {
+      mountedRef.current = false;
+      unsubscribe();
+    };
+  }, [startStatusPolling]);
 
   useEffect(() => {
     let cancelled = false;
@@ -478,13 +444,23 @@ function AllGames() {
         setInitialLoading(false);
 
         if (quick.syncInProgress) startPolling();
-        else if ((quick.games || []).some(gameNeedsStatusPoll)) startStatusPolling();
+        else if (
+          isBrillianceBatchRunning() ||
+          (quick.games || []).some(gameNeedsStatusPoll)
+        ) {
+          startStatusPolling();
+        }
 
         const full = await fetchAllGames('all');
         if (cancelled) return;
         applyAllGamesPayload(full);
         if (full.syncInProgress) startPolling();
-        else if ((full.games || []).some(gameNeedsStatusPoll)) startStatusPolling();
+        else if (
+          isBrillianceBatchRunning() ||
+          (full.games || []).some(gameNeedsStatusPoll)
+        ) {
+          startStatusPolling();
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Failed to load games.');
@@ -497,7 +473,7 @@ function AllGames() {
 
     return () => {
       cancelled = true;
-      brillianceCancelRef.current = true;
+      // Do NOT cancel the brilliance batch — it keeps running in the background.
       clearPoll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
@@ -628,162 +604,242 @@ function AllGames() {
   }, [activeFilter, filterLabels]);
 
   return (
-    <Box className="chess-profile-page all-games-page">
+    <Box
+      className={`chess-profile-page all-games-page${
+        isGamesView ? '' : ' brilliant-moves-page'
+      }`}
+    >
       <div className="chess-profile-header-wrap">
         <div className="chess-profile-header-card">
           <div className="chess-profile-name-row">
-            <h1 className="chess-profile-username">All Games</h1>
-            <div className="all-games-header-actions">
-              <button
-                type="button"
-                className="chess-btn chess-btn-secondary"
-                onClick={runSync}
-                disabled={syncing || brillianceBatch?.running}
-              >
-                {syncing ? 'Syncing…' : 'Sync from Chess.com'}
-              </button>
-              {brillianceBatch?.running ? (
+            <h1 className="chess-profile-username">
+              {isGamesView ? 'All Games' : 'Brilliant Moves'}
+            </h1>
+            {isGamesView ? (
+              <div className="all-games-header-actions">
                 <button
                   type="button"
                   className="chess-btn chess-btn-secondary"
-                  onClick={stopBrillianceBatch}
-                  disabled={brillianceBatch.cancelling}
+                  onClick={runSync}
+                  disabled={syncing || brillianceBatch?.running}
                 >
-                  {brillianceBatch.cancelling ? 'Stopping…' : 'Stop Brilliance'}
+                  {syncing ? 'Syncing…' : 'Sync from Chess.com'}
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="chess-btn chess-btn-primary"
-                  onClick={runAllBrilliance}
-                  disabled={syncing || initialLoading || filteredGames.length === 0}
-                  title="Run stages 0–4 on each filtered game, one game at a time"
-                >
-                  Run All Brilliance
-                </button>
-              )}
-            </div>
+                {brillianceBatch?.running ? (
+                  <button
+                    type="button"
+                    className="chess-btn chess-btn-secondary"
+                    onClick={stopBrillianceBatch}
+                    disabled={brillianceBatch.cancelling}
+                  >
+                    {brillianceBatch.cancelling ? 'Stopping…' : 'Stop Brilliance'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="chess-btn chess-btn-primary"
+                    onClick={runAllBrilliance}
+                    disabled={syncing || initialLoading || dayFilteredGames.length === 0}
+                    title="Run stages 0–4 on each filtered game, one game at a time"
+                  >
+                    Run All Brilliance
+                  </button>
+                )}
+              </div>
+            ) : null}
           </div>
-          <p className="chess-profile-display-name">
-            Loaded: {initialLoading ? '…' : allGames.length} games • Showing: {dateLabel} • Filtered:{' '}
-            {filteredGames.length} • Players tracked: {playersCount}
-            {syncing || refreshing ? ' • Refreshing from Chess.com…' : ''}
-            {brillianceBatch?.running
-              ? ` • Brilliance ${brillianceBatch.index}/${brillianceBatch.total}${
-                  brillianceBatch.currentLabel
-                    ? ` · ${brillianceBatch.currentLabel}`
-                    : ''
-                } (stages 0–4)`
-              : ''}
-            {brillianceBatch?.finished && !brillianceBatch.running
-              ? ` • Brilliance done: ${brillianceBatch.done} ok${
-                  brillianceBatch.failed ? `, ${brillianceBatch.failed} failed` : ''
-                }${
-                  brillianceBatch.skipped
-                    ? `, ${brillianceBatch.skipped} already reviewed`
-                    : ''
-                }${brillianceBatch.cancelled ? ' (stopped)' : ''}`
-              : ''}
-            {!brillianceBatch?.running ? ' • Click a game to open and review' : ''}
-          </p>
 
-          <div className="all-games-filters" role="tablist" aria-label="Game day filters">
-            {DAY_FILTERS.map((filter) => (
-              <button
-                key={filter.key}
-                type="button"
-                role="tab"
-                aria-selected={activeFilter === filter.key}
-                className={`all-games-filter-btn${
-                  activeFilter === filter.key ? ' all-games-filter-btn--active' : ''
-                }`}
-                onClick={() => setActiveFilter(filter.key)}
-              >
-                {filterButtonLabel(filter, filterLabels)}
-              </button>
-            ))}
+          <div
+            className="all-games-view-toggle"
+            role="tablist"
+            aria-label="Games or brilliant moves"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isGamesView}
+              className={`all-games-view-btn${
+                isGamesView ? ' all-games-view-btn--active' : ''
+              }`}
+              onClick={() => setActiveView(VIEW_GAMES)}
+            >
+              All Games
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!isGamesView}
+              className={`all-games-view-btn${
+                !isGamesView ? ' all-games-view-btn--active' : ''
+              }`}
+              onClick={() => setActiveView(VIEW_BRILLIANT)}
+            >
+              Brilliant Moves
+            </button>
+          </div>
+
+          {isGamesView ? (
+            <p className="chess-profile-display-name">
+              Loaded: {initialLoading ? '…' : allGames.length} games • Showing: {dateLabel} •
+              Filtered: {filteredGames.length} • Players tracked: {playersCount}
+              {syncing || refreshing ? ' • Refreshing from Chess.com…' : ''}
+              {brillianceBatch?.running
+                ? ` • Brilliance ${brillianceBatch.index}/${brillianceBatch.total}${
+                    brillianceBatch.currentLabel
+                      ? ` · ${brillianceBatch.currentLabel}`
+                      : ''
+                  } (stages 0–4)`
+                : ''}
+              {brillianceBatch?.finished && !brillianceBatch.running
+                ? ` • Brilliance done: ${brillianceBatch.done} ok${
+                    brillianceBatch.failed ? `, ${brillianceBatch.failed} failed` : ''
+                  }${
+                    brillianceBatch.skipped
+                      ? `, ${brillianceBatch.skipped} already reviewed`
+                      : ''
+                  }${brillianceBatch.cancelled ? ' (stopped)' : ''}`
+                : ''}
+              {!brillianceBatch?.running ? ' • Click a game to open and review' : ''}
+            </p>
+          ) : (
+            <p className="chess-profile-display-name">
+              All Stage 4–passed moves for {dateLabel} (with FEN). Achievements only count
+              human-reviewed brilliant moves. Switch to All Games to sync or run analysis.
+            </p>
+          )}
+
+          <div className="all-games-toolbar">
+            <div className="all-games-filters" role="tablist" aria-label="Day filters">
+              {DAY_FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeFilter === filter.key}
+                  className={`all-games-filter-btn${
+                    activeFilter === filter.key ? ' all-games-filter-btn--active' : ''
+                  }`}
+                  onClick={() => setActiveFilter(filter.key)}
+                >
+                  {filterButtonLabel(filter, filterLabels)}
+                </button>
+              ))}
+            </div>
+
+            {isGamesView ? (
+              <label className="all-games-search-wrap">
+                <FiSearch className="all-games-search-icon" aria-hidden />
+                <input
+                  type="search"
+                  className="all-games-search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search player, time control…"
+                  aria-label="Search games"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    className="all-games-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                  >
+                    <FiX aria-hidden />
+                  </button>
+                ) : null}
+              </label>
+            ) : null}
           </div>
         </div>
       </div>
 
       <div className="chess-profile-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
         <main className="chess-profile-main">
-          <section className="chess-profile-panel chess-games-panel">
-            <header className="chess-profile-panel-header">
-              {panelTitle}
-              <span>
-                {filteredGames.length} total
-                {filteredGames.length > GAMES_PER_PAGE
-                  ? ` • Page ${pagination.page}/${pagination.totalPages}`
-                  : ''}
-              </span>
-            </header>
-            {brillianceBatch?.running ? (
-              <div className="all-games-live-bar" role="status" aria-live="polite">
-                <span className="all-games-live-bar-pulse" aria-hidden="true" />
-                <div className="all-games-live-bar-main">
-                  <strong>
-                    Analyzing {brillianceBatch.index}/{brillianceBatch.total}
-                  </strong>
-                  <span className="all-games-live-bar-game">
-                    {brillianceBatch.currentLabel || '…'}
-                  </span>
+          {isGamesView ? (
+            <section className="chess-profile-panel chess-games-panel">
+              <header className="chess-profile-panel-header">
+                {panelTitle}
+                <span>
+                  {filteredGames.length} total
+                  {filteredGames.length > GAMES_PER_PAGE
+                    ? ` • Page ${pagination.page}/${pagination.totalPages}`
+                    : ''}
+                </span>
+              </header>
+              {brillianceBatch?.running ? (
+                <div className="all-games-live-bar" role="status" aria-live="polite">
+                  <span className="all-games-live-bar-pulse" aria-hidden="true" />
+                  <div className="all-games-live-bar-main">
+                    <strong>
+                      Analyzing {brillianceBatch.index}/{brillianceBatch.total}
+                    </strong>
+                    <span className="all-games-live-bar-game">
+                      {brillianceBatch.currentLabel || '…'}
+                    </span>
+                  </div>
+                  <div className="all-games-live-bar-stats">
+                    <span>{brillianceBatch.done} done</span>
+                    <span>{brillianceBatch.failed} failed</span>
+                    <span>
+                      {Math.max(0, brillianceBatch.total - brillianceBatch.index)} waiting
+                    </span>
+                  </div>
                 </div>
-                <div className="all-games-live-bar-stats">
-                  <span>{brillianceBatch.done} done</span>
-                  <span>{brillianceBatch.failed} failed</span>
-                  <span>
-                    {Math.max(
-                      0,
-                      brillianceBatch.total - brillianceBatch.index
-                    )}{' '}
-                    waiting
-                  </span>
-                </div>
-              </div>
-            ) : null}
-            <div className="chess-profile-panel-body chess-games-panel-body">
-              {initialLoading ? (
-                <LoadingPanel message="Loading games…" />
-              ) : error ? (
-                <ErrorPanel title="Unable to load games" message={error} onRetry={runSync} />
-              ) : filteredGames.length === 0 ? (
-                syncing ? (
-                  <LoadingPanel message="Syncing players from Chess.com…" />
+              ) : null}
+              <div className="chess-profile-panel-body chess-games-panel-body">
+                {initialLoading ? (
+                  <LoadingPanel message="Loading games…" />
+                ) : error ? (
+                  <ErrorPanel title="Unable to load games" message={error} onRetry={runSync} />
+                ) : filteredGames.length === 0 ? (
+                  syncing ? (
+                    <LoadingPanel message="Syncing players from Chess.com…" />
+                  ) : (
+                    <EmptyState
+                      title={
+                        searchQuery.trim()
+                          ? 'No games match your search.'
+                          : 'No games found for this filter.'
+                      }
+                      subtitle={
+                        searchQuery.trim()
+                          ? `${dayFilteredGames.length} games on ${dateLabel}. Try another player name.`
+                          : allGames.length
+                            ? `${allGames.length} games loaded. None match ${dateLabel}.`
+                            : 'Click Sync from Chess.com to fetch recent games.'
+                      }
+                    />
+                  )
                 ) : (
-                  <EmptyState
-                    title="No games found for this filter."
-                    subtitle={
-                      allGames.length
-                        ? `${allGames.length} games loaded. None match ${dateLabel}.`
-                        : 'Click Sync from Chess.com to fetch recent games.'
-                    }
-                  />
-                )
-              ) : (
-                <>
-                  <GameHistoryList
-                    games={pagination.paginatedItems}
-                    onSelect={handleSelect}
-                    showHeader
-                    dateColumnLabel="Date & Time"
-                    extraColumnLabel="Review"
-                    extraColumn={renderBrillianceColumn}
-                    renderAccuracy={renderAccuracyColumn}
-                    getRowClassName={getRowClassName}
-                    prefetchPgn={false}
-                  />
-                  <AllGamesPagination
-                    page={pagination.page}
-                    totalPages={pagination.totalPages}
-                    total={pagination.total}
-                    pageSize={GAMES_PER_PAGE}
-                    onPageChange={pagination.setPage}
-                  />
-                </>
-              )}
-            </div>
-          </section>
+                  <>
+                    <GameHistoryList
+                      games={pagination.paginatedItems}
+                      onSelect={handleSelect}
+                      showHeader
+                      dateColumnLabel="Date & Time"
+                      extraColumnLabel="Review"
+                      extraColumn={renderBrillianceColumn}
+                      renderAccuracy={renderAccuracyColumn}
+                      getRowClassName={getRowClassName}
+                      prefetchPgn={false}
+                    />
+                    <AllGamesPagination
+                      page={pagination.page}
+                      totalPages={pagination.totalPages}
+                      total={pagination.total}
+                      pageSize={GAMES_PER_PAGE}
+                      onPageChange={pagination.setPage}
+                    />
+                  </>
+                )}
+              </div>
+            </section>
+          ) : (
+            <BrilliantMovesPanel
+              activeFilter={activeFilter}
+              filterLabels={filterLabels}
+            />
+          )}
         </main>
       </div>
     </Box>

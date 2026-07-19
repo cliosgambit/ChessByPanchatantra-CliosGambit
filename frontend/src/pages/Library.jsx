@@ -25,7 +25,7 @@ const PREVIEW_ANIMATION_MS = 280;
 const PREVIEW_HIDE_DELAY_MS = 120;
 
 const USAGE_OPTIONS = [
-  { value: 'all', label: 'Both' },
+  { value: 'all', label: 'ALL' },
   { value: 'used', label: 'Used' },
   { value: 'unused', label: 'Unused' },
 ];
@@ -265,7 +265,6 @@ function Library() {
               ]}
             />
             <h1>Library</h1>
-            <p className="library-muted">Create and manage stories for CLIO.</p>
           </div>
           {canManage ? (
             <Link to="/library/new" className="library-btn library-btn--primary">

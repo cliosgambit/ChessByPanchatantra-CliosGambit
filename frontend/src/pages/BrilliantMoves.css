@@ -96,11 +96,12 @@
   margin-bottom: 0.65rem;
 }
 
-.brilliant-moves-page .brilliant-moves-stats {
+.brilliant-moves-page .brilliant-moves-stats,
+.all-games-page .brilliant-moves-stats {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.65rem;
-  margin-top: 0.95rem;
+  margin: 0 0 0.85rem;
 }
 
 .brilliant-moves-page .brilliant-moves-stat {

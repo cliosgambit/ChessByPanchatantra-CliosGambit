@@ -255,6 +255,10 @@ async function verifyBrilliantMove(moveId, { status, verifiedBy = null } = {}) {
        verification_status = EXCLUDED.verification_status,
        verified_at = EXCLUDED.verified_at,
        verified_by = EXCLUDED.verified_by,
+       saved_at = CASE
+         WHEN EXCLUDED.verification_status = 'approved' THEN brilliant_move_puzzles.saved_at
+         ELSE NULL
+       END,
        updated_at = NOW()
      RETURNING *`,
     [
@@ -293,8 +297,8 @@ async function saveBrilliantPuzzle(moveId, { verifiedBy = null } = {}) {
     throw new Error('Review whether this is a brilliant move before saving as a puzzle');
   }
 
-  if (existing.verificationStatus === 'pending') {
-    throw new Error('Review whether this is a brilliant move before saving as a puzzle');
+  if (existing.verificationStatus !== 'approved') {
+    throw new Error('Only human-approved brilliant moves can be saved as puzzles');
   }
 
   if (existing.savedAt) {

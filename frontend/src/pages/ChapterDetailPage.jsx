@@ -82,6 +82,7 @@ function ChapterDetailPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedStoryId, setSelectedStoryId] = useState(null);
   const [addVisible, setAddVisible] = useState(true);
+  const [pickerSearch, setPickerSearch] = useState('');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [contextMenu, setContextMenu] = useState(null);
@@ -243,6 +244,18 @@ function ChapterDetailPage() {
     });
   }, [stories, search]);
 
+  const filteredLibraryStories = useMemo(() => {
+    const q = pickerSearch.trim().toLowerCase();
+    if (!q) return libraryStories;
+    return libraryStories.filter((story) => {
+      const haystack = [story.title, story.subheading, story.status]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [libraryStories, pickerSearch]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [search]);
@@ -272,6 +285,7 @@ function ChapterDetailPage() {
     setPickerOpen(true);
     setSelectedStoryId(null);
     setAddVisible(true);
+    setPickerSearch('');
     setError('');
     try {
       const data = await fetchLibraryStories();
@@ -281,6 +295,12 @@ function ChapterDetailPage() {
     }
   };
 
+  const closePicker = () => {
+    setPickerOpen(false);
+    setPickerSearch('');
+    setSelectedStoryId(null);
+  };
+
   const handleAddStory = async (e) => {
     e.preventDefault();
     if (!selectedStoryId) return;
@@ -288,7 +308,7 @@ function ChapterDetailPage() {
     setError('');
     try {
       await addStoryToChapter(moduleId, chapterId, selectedStoryId, addVisible);
-      setPickerOpen(false);
+      closePicker();
       await load();
     } catch (err) {
       setError(err.message || 'Failed to add story.');
@@ -720,17 +740,29 @@ function ChapterDetailPage() {
                 type="button"
                 className="modules-icon-btn"
                 aria-label="Close"
-                onClick={() => setPickerOpen(false)}
+                onClick={closePicker}
               >
                 <FiX aria-hidden />
               </button>
             </div>
             <div className="modules-form">
+              <label className="library-search modules-picker-search">
+                <FiSearch aria-hidden />
+                <input
+                  type="search"
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  placeholder="Search library stories…"
+                  aria-label="Search library stories"
+                />
+              </label>
               <div className="modules-picker-list">
                 {libraryStories.length === 0 ? (
                   <p className="modules-muted">No library stories found.</p>
+                ) : filteredLibraryStories.length === 0 ? (
+                  <p className="modules-muted">No stories match your search.</p>
                 ) : (
-                  libraryStories.map((story) => {
+                  filteredLibraryStories.map((story) => {
                     const already = attachedIds.has(Number(story.id));
                     const selected = selectedStoryId === story.id;
                     return (
@@ -773,7 +805,7 @@ function ChapterDetailPage() {
               </label>
             </div>
             <div className="modules-modal-actions">
-              <button type="button" className="modules-btn" onClick={() => setPickerOpen(false)}>
+              <button type="button" className="modules-btn" onClick={closePicker}>
                 Cancel
               </button>
               <button

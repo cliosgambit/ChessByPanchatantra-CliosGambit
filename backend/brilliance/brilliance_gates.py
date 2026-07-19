@@ -130,12 +130,14 @@ def _blocks_alternative_path(stage1):
     disq = (stage1.get("sacrifice_class") or {}).get("disqualifiers") or []
     if "winning_capture_not_sacrifice" in disq:
         return True
+    if "low_rated_pawn_sacrifice" in disq:
+        return True
     if "piece_already_lost_before_move" in disq and not stage1.get("tactical_bypass"):
         return True
     return False
 
 
-def resolve_engine_candidate(board, move, ply_index):
+def resolve_engine_candidate(board, move, ply_index, player_rating=None):
     """
     Stage 2 entry gate — permissive candidate filter.
     Paths: sacrifice (Stage 1), quiet (direct), alternative, defensive.
@@ -160,7 +162,7 @@ def resolve_engine_candidate(board, move, ply_index):
             "quiet",
         )
 
-    stage1 = analyze_stage1_move(board, move, ply_index)
+    stage1 = analyze_stage1_move(board, move, ply_index, player_rating=player_rating)
     if stage1 and stage1["proceed_to_stage2"]:
         stage1["candidate_path"] = "sacrifice"
         return stage1, "sacrifice"

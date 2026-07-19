@@ -654,6 +654,13 @@
   resize: vertical;
 }
 
+.modules-picker-search {
+  width: 100%;
+  min-width: 0;
+  flex: none;
+  border-radius: 12px;
+}
+
 .modules-picker-list {
   display: flex;
   flex-direction: column;

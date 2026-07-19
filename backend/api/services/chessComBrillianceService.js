@@ -508,6 +508,11 @@ function mapStage4Row(row, gameMap) {
         ? game?.black_avatar_url || null
         : null;
 
+  const playerRating = row.player_rating ?? null;
+  const sanMove = row.san_move || '—';
+  const blockedLowRatedPawn =
+    Number(playerRating ?? 1500) < 2200 && /^[a-h]/.test(String(sanMove));
+
   return {
     id: row.id,
     gameId: row.sqlite_game_id ?? null,
@@ -525,14 +530,17 @@ function mapStage4Row(row, gameMap) {
     whiteRating: game?.white_rating ?? null,
     blackRating: game?.black_rating ?? null,
     players: `${white} vs ${black}`,
-    sanMove: row.san_move || '—',
+    sanMove,
     plyIndex: row.ply_index,
     turn: row.turn,
     sacType: row.sac_type || '—',
-    classification: row.classification || '—',
-    isBrilliant: Boolean(row.is_brilliant),
+    classification: blockedLowRatedPawn
+      ? 'good_sacrifice'
+      : row.classification || '—',
+    isBrilliant: Boolean(row.is_brilliant) && !blockedLowRatedPawn,
+    blockedLowRatedPawnSacrifice: blockedLowRatedPawn,
     brillianceScore: row.brilliance_score ?? null,
-    playerRating: row.player_rating ?? null,
+    playerRating,
     stage4Status: row.stage4_status,
     stage4RunAt: row.stage4_run_at,
     playedAt: game?.played_at || null,

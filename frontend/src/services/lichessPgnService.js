@@ -9,6 +9,13 @@ export async function importCustomPgn(pgnText, filename = 'custom_game.pgn', opt
   return data;
 }
 
+/** Remove a temporary custom-PGN upload (cascades to game + stage rows). */
+export async function deleteLichessUpload(uploadId) {
+  if (uploadId == null) return null;
+  const { data } = await api.delete(`/lichess-pgns/uploads/${encodeURIComponent(uploadId)}`);
+  return data;
+}
+
 export async function runLichessBrilliance(gameId, { force = false } = {}) {
   const { data } = await api.post(`/lichess-pgns/games/${gameId}/brilliance/run`, { force });
   return data;

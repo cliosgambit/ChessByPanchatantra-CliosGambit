@@ -31,6 +31,38 @@ TYPE_MULTIPLIERS = {
     "pseudo_sacrifice": 0.8,
 }
 
+# Mirror Stage 1: pawn sacs below this Elo never count as BRILLIANT.
+LOW_RATED_PAWN_SAC_MIN_RATING = 2200
+
+
+def _is_low_rated_pawn_sacrifice(move_input):
+    """Block pawn sacrifices for movers rated below 2200 (final product gate)."""
+    rating = int(move_input.get("player_rating") or 1500)
+    if rating >= LOW_RATED_PAWN_SAC_MIN_RATING:
+        return False
+
+    sacrificed = (move_input.get("sacrificed_piece_type") or "").lower()
+    if sacrificed == "pawn":
+        return True
+
+    moving = (move_input.get("moving_piece_type") or "").lower()
+    mode = (move_input.get("sacrifice_mode") or "").lower()
+    if moving == "pawn" and mode in ("direct", "positional", "temporary"):
+        return True
+
+    # Scoring path maps pawn assets to real/tactical sacrifice types.
+    scoring = (
+        move_input.get("scoring_sac_type")
+        or _scoring_sac_type(move_input.get("sac_type"), move_input.get("sacrificed_piece_type"))
+        or ""
+    ).lower()
+    if sacrificed == "pawn" or (
+        moving == "pawn" and scoring in ("real_sacrifice", "tactical_sacrifice", "pseudo_sacrifice")
+    ):
+        return True
+
+    return False
+
 
 def _scoring_sac_type(sac_type, sacrificed_piece_type=None):
     """
@@ -476,6 +508,20 @@ def analyze_stage4_move(move_input):
         )
     )
 
+    blocked_low_rated_pawn = _is_low_rated_pawn_sacrifice(
+        {
+            **move_input,
+            "scoring_sac_type": scoring_sac_type,
+        }
+    )
+    if blocked_low_rated_pawn and classification in ("BRILLIANT", "practical_brilliant"):
+        classification = "good_sacrifice"
+        score_breakdown = {
+            **(score_breakdown or {}),
+            "blocked_reason": "low_rated_pawn_sacrifice",
+            "blocked_rating": player_rating,
+        }
+
     return {
         "ply_index": move_input.get("ply_index"),
         "san_move": move_input.get("san_move"),
@@ -494,6 +540,7 @@ def analyze_stage4_move(move_input):
         "score_breakdown": score_breakdown,
         "classification": classification,
         "is_brilliant": classification == "BRILLIANT",
+        "blocked_low_rated_pawn_sacrifice": blocked_low_rated_pawn,
         "engine_used": False,
     }
 

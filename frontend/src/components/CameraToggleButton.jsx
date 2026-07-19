@@ -96,17 +96,41 @@ function CameraToggleButton() {
   }, [active, stopTracks]);
 
   useEffect(() => {
+    const spaceHeldRef = { current: false };
+
+    const isSpaceKey = (event) => event.code === 'Space' || event.key === ' ';
+
     const handleKeyDown = (event) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
-      if (event.key.toLowerCase() !== 'c') return;
+      if (isSpaceKey(event)) {
+        if (!event.repeat) spaceHeldRef.current = true;
+        return;
+      }
+
+      if (!spaceHeldRef.current) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key.toLowerCase() !== 'c' || event.repeat) return;
       if (isEditableTarget(event.target)) return;
 
       event.preventDefault();
       toggleCamera();
     };
 
+    const handleKeyUp = (event) => {
+      if (isSpaceKey(event)) spaceHeldRef.current = false;
+    };
+
+    const clearSpace = () => {
+      spaceHeldRef.current = false;
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', clearSpace);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', clearSpace);
+    };
   }, [toggleCamera]);
 
   const clampPosition = useCallback((x, y) => {

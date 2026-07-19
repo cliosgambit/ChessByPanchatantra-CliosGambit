@@ -13,7 +13,7 @@ import './ViewBrilliantMove.css';
 
 const BREADCRUMB = [
   { label: 'Modules', to: '/modules' },
-  { label: 'Brilliant Moves', to: '/brilliant-moves' },
+  { label: 'Games', to: '/all-games?view=brilliant' },
 ];
 
 function formatScore(value) {

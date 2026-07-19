@@ -33,6 +33,7 @@ HARD_DISQUALIFIERS = frozenset({
     "equal_trade_not_sacrifice",
     "opening_gambit_pawn_sacrifice",
     "pawn_sacrifice_insufficient_justification",
+    "low_rated_pawn_sacrifice",
 })
 SACRIFICE_UNCERTAINTY_CAP = 25.0
 
@@ -42,6 +43,74 @@ GAMBIT_PHASE_THRESHOLD = 4500
 PAWN_SAC_MIN_MOVE_NUMBER = 20
 PAWN_SAC_KING_SAFETY_BYPASS = -60
 PAWN_SAC_TM_BYPASS = 6
+
+# Pawn sacrifices only count as brilliance candidates at this Elo and above.
+LOW_RATED_PAWN_SAC_MIN_RATING = 2200
+DEFAULT_PLAYER_RATING = 1500
+
+
+def _parse_elo_value(raw):
+    try:
+        rating = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return rating if rating > 0 else None
+
+
+def mover_rating_from_headers(headers, turn_is_white, default=DEFAULT_PLAYER_RATING):
+    """Mover Elo from PGN headers (WhiteElo / BlackElo), matching Stage 4."""
+    if not headers:
+        return default
+    if turn_is_white:
+        keys = ("WhiteElo", "white_elo", "WhiteRating", "WhiteEloAccurate")
+    else:
+        keys = ("BlackElo", "black_elo", "BlackRating", "BlackEloAccurate")
+    for key in keys:
+        rating = _parse_elo_value(headers.get(key))
+        if rating is not None:
+            return rating
+    return default
+
+
+def _is_pawn_sacrifice(sac_class):
+    """True when the intentionally sacrificed asset is a pawn (or a direct pawn offer)."""
+    if not sac_class:
+        return False
+    sacrificed = sac_class.get("sacrificed_piece_type")
+    if isinstance(sacrificed, str) and sacrificed.lower() == "pawn":
+        return True
+    moving = sac_class.get("moving_piece_type")
+    mode = (sac_class.get("sacrifice_mode") or "").lower()
+    # Direct pawn offer / abandonment with no other sacrificed asset recorded.
+    if isinstance(moving, str) and moving.lower() == "pawn" and mode in (
+        "direct",
+        "positional",
+        "temporary",
+    ):
+        return True
+    return False
+
+
+def apply_low_rated_pawn_sacrifice_gate(sac_class, player_rating):
+    """
+    Hard-reject pawn sacrifices when mover rating is below 2200.
+    Missing rating is treated as below threshold (defaults to 1500 elsewhere).
+    Returns True if the disqualifier was applied.
+    """
+    if sac_class is None:
+        return False
+    if not _is_pawn_sacrifice(sac_class):
+        return False
+    rating = DEFAULT_PLAYER_RATING if player_rating is None else int(player_rating)
+    if rating >= LOW_RATED_PAWN_SAC_MIN_RATING:
+        return False
+
+    disqualifiers = list(sac_class.get("disqualifiers") or [])
+    if "low_rated_pawn_sacrifice" not in disqualifiers:
+        disqualifiers.append("low_rated_pawn_sacrifice")
+    sac_class["disqualifiers"] = disqualifiers
+    sac_class["is_valid_sacrifice"] = False
+    return True
 
 
 def _variance(values):
@@ -491,7 +560,7 @@ def _should_proceed_to_stage2(stage0, sac_class, forced, ctx):
     return True, None
 
 
-def analyze_stage1_move(board, move, ply_index):
+def analyze_stage1_move(board, move, ply_index, player_rating=None):
     color = board.turn
     stage0 = is_sacrifice_candidate(board, move, color, ply_index=ply_index)
 
@@ -510,6 +579,7 @@ def analyze_stage1_move(board, move, ply_index):
         ctx=ctx,
         stage0=stage0,
     )
+    apply_low_rated_pawn_sacrifice_gate(sac_class, player_rating)
     forced = is_forced_move(board, move)
 
     proceed_to_stage2, override_reason = _should_proceed_to_stage2(
@@ -547,9 +617,11 @@ def analyze_pgn_stage1(pgn_text):
 
     board = game.board()
     candidates = []
+    headers = game.headers
 
     for ply_index, move in enumerate(game.mainline_moves()):
-        result = analyze_stage1_move(board, move, ply_index)
+        rating = mover_rating_from_headers(headers, board.turn == chess.WHITE)
+        result = analyze_stage1_move(board, move, ply_index, player_rating=rating)
         if result:
             candidates.append(result)
         board.push(move)

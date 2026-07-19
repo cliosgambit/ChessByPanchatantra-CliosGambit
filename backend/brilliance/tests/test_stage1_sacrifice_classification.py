@@ -3,7 +3,12 @@ import unittest
 
 import chess
 
-from brilliance_stage1 import classify_sacrifice_type, _move_context
+from brilliance_stage1 import (
+    apply_low_rated_pawn_sacrifice_gate,
+    classify_sacrifice_type,
+    mover_rating_from_headers,
+    _move_context,
+)
 
 
 class Stage1SacrificeClassificationTests(unittest.TestCase):
@@ -109,6 +114,59 @@ class Stage1SacrificeClassificationTests(unittest.TestCase):
 
         result = analyze_stage1_move(board, move, ply_index=18)
         self.assertIsNone(result)
+
+    def test_low_rated_pawn_sacrifice_rejected_below_2200(self):
+        sac_class = {
+            "sacrificed_piece_type": "pawn",
+            "disqualifiers": [],
+            "is_valid_sacrifice": True,
+        }
+        applied = apply_low_rated_pawn_sacrifice_gate(sac_class, 2199)
+        self.assertTrue(applied)
+        self.assertIn("low_rated_pawn_sacrifice", sac_class["disqualifiers"])
+        self.assertFalse(sac_class["is_valid_sacrifice"])
+
+    def test_low_rated_pawn_sacrifice_rejected_when_rating_missing(self):
+        sac_class = {
+            "sacrificed_piece_type": "pawn",
+            "disqualifiers": [],
+            "is_valid_sacrifice": True,
+        }
+        applied = apply_low_rated_pawn_sacrifice_gate(sac_class, None)
+        self.assertTrue(applied)
+        self.assertIn("low_rated_pawn_sacrifice", sac_class["disqualifiers"])
+
+    def test_low_rated_pawn_sacrifice_allowed_at_2200(self):
+        sac_class = {
+            "sacrificed_piece_type": "pawn",
+            "disqualifiers": [],
+            "is_valid_sacrifice": True,
+        }
+        applied = apply_low_rated_pawn_sacrifice_gate(sac_class, 2200)
+        self.assertFalse(applied)
+        self.assertNotIn("low_rated_pawn_sacrifice", sac_class["disqualifiers"])
+        self.assertTrue(sac_class["is_valid_sacrifice"])
+
+    def test_piece_sacrifice_not_blocked_by_rating_gate(self):
+        sac_class = {
+            "sacrificed_piece_type": "bishop",
+            "disqualifiers": [],
+            "is_valid_sacrifice": True,
+        }
+        applied = apply_low_rated_pawn_sacrifice_gate(sac_class, 1500)
+        self.assertFalse(applied)
+        self.assertTrue(sac_class["is_valid_sacrifice"])
+
+    def test_mover_rating_from_headers_defaults_missing_elo(self):
+        self.assertEqual(mover_rating_from_headers({}, True), 1500)
+        self.assertEqual(
+            mover_rating_from_headers({"WhiteElo": "2350"}, True),
+            2350,
+        )
+        self.assertEqual(
+            mover_rating_from_headers({"BlackElo": "1800"}, False),
+            1800,
+        )
 
 
 if __name__ == "__main__":

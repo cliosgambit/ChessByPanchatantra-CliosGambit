@@ -12,6 +12,7 @@ import chess.engine
 import chess.pgn
 
 from brilliance_gates import resolve_engine_candidate
+from brilliance_stage1 import mover_rating_from_headers
 from brilliance_eval import (
     EVAL_PERSPECTIVE,
     STAGE2_SEARCH_TIME_S,
@@ -424,9 +425,11 @@ def apply_stage2_gate(engine_features, stage1=None):
     }
 
 
-def analyze_stage2_move(board, move, ply_index, engine):
+def analyze_stage2_move(board, move, ply_index, engine, player_rating=None):
     color = board.turn
-    stage1, candidate_path = resolve_engine_candidate(board, move, ply_index)
+    stage1, candidate_path = resolve_engine_candidate(
+        board, move, ply_index, player_rating=player_rating
+    )
     if not stage1 or not stage1["proceed_to_stage2"]:
         return None
 
@@ -501,8 +504,12 @@ def analyze_pgn_stage2(pgn_text, engine_path=None):
             pass
 
         board = game.board()
+        headers = game.headers
         for ply_index, move in enumerate(game.mainline_moves()):
-            result = analyze_stage2_move(board, move, ply_index, engine)
+            rating = mover_rating_from_headers(headers, board.turn == chess.WHITE)
+            result = analyze_stage2_move(
+                board, move, ply_index, engine, player_rating=rating
+            )
             if result:
                 result["engine"]["stockfish_path"] = path
                 moves_out.append(result)

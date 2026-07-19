@@ -54,7 +54,7 @@ const FEATURE_CARDS = [
     title: 'Brilliant Moves',
     description: 'Discover and celebrate the most creative chess moments from your students.',
     cta: 'Explore Now',
-    path: '/brilliant-moves',
+    path: '/all-games?view=brilliant',
     icon: FiZap,
     image: '/dashboard/brilliant-moves.png',
   },

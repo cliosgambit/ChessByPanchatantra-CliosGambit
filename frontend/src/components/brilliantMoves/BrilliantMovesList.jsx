@@ -130,6 +130,7 @@ function BrilliantMovesList({ rows }) {
         <span>Player</span>
         <span>Move</span>
         <span>Class</span>
+        <span>FEN</span>
         <span>Score</span>
         <span>Rating</span>
         <span>Stage 4</span>
@@ -186,6 +187,18 @@ function BrilliantMovesList({ rows }) {
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--class">
                   {row.classification}
                 </div>
+                <div className="chess-brilliant-moves-col chess-brilliant-moves-col--fen">
+                  {hasPreview ? (
+                    <code
+                      className="chess-brilliant-fen"
+                      title={row.fenBeforeMove || row.fenAfterMove}
+                    >
+                      {row.fenBeforeMove || row.fenAfterMove}
+                    </code>
+                  ) : (
+                    '—'
+                  )}
+                </div>
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--score">
                   {row.brillianceScore != null ? row.brillianceScore.toFixed(2) : '—'}
                 </div>
@@ -193,7 +206,15 @@ function BrilliantMovesList({ rows }) {
                   {row.playerRating ?? '—'}
                 </div>
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--stage4">
-                  <span className="chess-stage4-chip chess-stage4-chip--pass">Passed</span>
+                  <span
+                    className={`chess-stage4-chip${
+                      row.isBrilliant
+                        ? ' chess-stage4-chip--brilliant'
+                        : ' chess-stage4-chip--pass'
+                    }`}
+                  >
+                    {row.isBrilliant ? 'Brilliant' : 'Passed'}
+                  </span>
                 </div>
                 <div className="chess-brilliant-moves-col chess-brilliant-moves-col--reviewed">
                   <ReviewedCell row={row} />

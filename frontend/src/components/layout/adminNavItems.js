@@ -1,12 +1,12 @@
 import {
   FiGrid,
-  FiZap,
   FiLayers,
   FiBook,
   FiBookOpen,
   FiUsers,
   FiCpu,
   FiAward,
+  FiUpload,
 } from 'react-icons/fi';
 import { normalizeRole } from '../../utils/roles';
 
@@ -21,9 +21,15 @@ export const PRIMARY_NAV_ITEMS = [
   { label: 'Library', path: '/library', icon: FiBookOpen, end: false, roles: ['admin', 'coach'] },
   { label: 'Puzzles', path: '/puzzles', icon: FiGrid, end: false, roles: null },
   { label: 'Students', path: '/students', icon: FiUsers, end: false, roles: ['admin', 'coach'] },
-  { label: 'Brilliant Moves', path: '/brilliant-moves', icon: FiZap, end: false, roles: ['admin', 'coach'] },
+  { label: 'Games', path: '/all-games', icon: FiLayers, end: false, roles: ['admin', 'coach'] },
+  {
+    label: 'Analyze',
+    path: '/analyze',
+    icon: FiUpload,
+    end: true,
+    roles: ['admin', 'coach'],
+  },
   { label: 'Achievements', path: '/achievements', icon: FiAward, end: false, roles: ['admin', 'coach'] },
-  { label: 'All Games', path: '/all-games', icon: FiLayers, end: false, roles: ['admin', 'coach'] },
   { label: 'Workers', path: '/workers', icon: FiCpu, end: false, roles: ['admin'] },
 ];
 

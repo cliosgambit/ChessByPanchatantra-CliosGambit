@@ -234,17 +234,6 @@ function BrilliantMoveBoardView({
     return classes.join(' ');
   };
 
-  const lineClass = (pair) => {
-    const classes = ['brilliant-hist-line'];
-    if (pair.whiteIndex === moveIndex || pair.blackIndex === moveIndex) {
-      classes.push('brilliant-hist-line--active');
-    }
-    if (pair.whiteIndex === brilliantIndex || pair.blackIndex === brilliantIndex) {
-      classes.push('brilliant-hist-line--brilliant');
-    }
-    return classes.join(' ');
-  };
-
   const panelHeight = boardWidth + TOOLBAR_H;
 
   return (
@@ -289,7 +278,7 @@ function BrilliantMoveBoardView({
             <p className="brilliant-hist-empty">No moves.</p>
           ) : (
             pairs.map((pair) => (
-              <div key={pair.number} className={lineClass(pair)}>
+              <div key={pair.number} className="brilliant-hist-line">
                 <span className="brilliant-hist-num">{pair.number}.</span>
                 <button
                   type="button"
@@ -297,7 +286,7 @@ function BrilliantMoveBoardView({
                   className={moveBtnClass(pair.whiteIndex)}
                   onClick={() => goToMove(pair.whiteIndex)}
                 >
-                  {pair.white?.san || ''}
+                  <span className="brilliant-hist-san">{pair.white?.san || ''}</span>
                 </button>
                 <button
                   type="button"
@@ -308,7 +297,7 @@ function BrilliantMoveBoardView({
                   onClick={() => pair.blackIndex != null && goToMove(pair.blackIndex)}
                   disabled={pair.blackIndex == null}
                 >
-                  {pair.black?.san || ''}
+                  <span className="brilliant-hist-san">{pair.black?.san || ''}</span>
                 </button>
               </div>
             ))

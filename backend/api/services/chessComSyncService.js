@@ -2487,6 +2487,7 @@ async function getPlayerAchievements(chessComId, options = {}) {
     let brilliantWhere = `
       LOWER(g.chess_com_id) = $1
       AND bm.is_brilliant = 1
+      AND p.verification_status = 'approved'
       AND (
         (LOWER(g.self_color) = 'white' AND LOWER(bm.turn) = 'white')
         OR (LOWER(g.self_color) = 'black' AND LOWER(bm.turn) = 'black')
@@ -2499,6 +2500,7 @@ async function getPlayerAchievements(chessComId, options = {}) {
       `SELECT COUNT(*) AS count
        FROM brilliant_moves bm
        INNER JOIN chess_com_games g ON g.chess_com_uuid = bm.chess_com_uuid
+       INNER JOIN brilliant_move_puzzles p ON p.stage4_move_id = bm.id
        WHERE ${brilliantWhere}`,
       brilliantParams
     );
@@ -2856,34 +2858,76 @@ async function getAchievementsFeed({
   }
 
   try {
-    const brillianceService = require('./chessComBrillianceService');
-    const brilliant = await brillianceService.listBrilliantMoves({ limit: 2000 });
-    for (const move of brilliant.rows || []) {
-      if (!move?.isBrilliant) continue;
-      if (!isAchievementInDayFilter(move.playedAt, filter, timeZone)) continue;
-      const chessComId = (move.chessComId || move.playerUsername || '').toLowerCase();
-      const profile = chessComId ? profileById.get(chessComId) : null;
+    // Source of truth: human-approved reviews (not raw stage-4 list).
+    const { rows: approvedRows } = await db.query(
+      `SELECT
+         p.stage4_move_id,
+         p.solution_san,
+         p.brilliance_score,
+         p.time_control,
+         p.chess_com_uuid,
+         p.chess_com_id,
+         p.played_at,
+         p.white_username,
+         p.black_username,
+         p.players_label,
+         p.turn,
+         g.self_color,
+         g.white_name,
+         g.black_name,
+         g.time_control_label
+       FROM brilliant_move_puzzles p
+       LEFT JOIN chess_com_games g ON g.chess_com_uuid = p.chess_com_uuid
+       WHERE p.verification_status = 'approved'
+       ORDER BY p.verified_at DESC NULLS LAST, p.played_at DESC NULLS LAST
+       LIMIT 2000`
+    );
+
+    for (const row of approvedRows || []) {
+      const playedAt = row.played_at ? new Date(row.played_at).toISOString() : null;
+      if (!isAchievementInDayFilter(playedAt || row.played_at, filter, timeZone)) continue;
+
+      // Attribute the achievement to the tracked student who played the move.
+      let chessComId = (row.chess_com_id || '').toLowerCase().trim();
+      const turn = String(row.turn || '').toLowerCase();
+      const selfColor = String(row.self_color || '').toLowerCase();
+      if (selfColor && turn && selfColor !== turn) {
+        // Opponent played this move in a tracked student's game — skip.
+        continue;
+      }
+      if (!chessComId) {
+        if (turn === 'white') chessComId = String(row.white_username || '').toLowerCase();
+        else if (turn === 'black') chessComId = String(row.black_username || '').toLowerCase();
+      }
+      if (!chessComId) continue;
+
+      const profile = profileById.get(chessComId);
+      const white = row.white_name || row.white_username || 'White';
+      const black = row.black_name || row.black_username || 'Black';
       rows.push({
-        id: `brilliant-${move.id}`,
+        id: `brilliant-${row.stage4_move_id}`,
         type: 'brilliant',
-        playedAt: move.playedAt || null,
-        playedDate: move.playedDate || achievementPlayedDate(move.playedAt, timeZone),
-        chessComId: chessComId || null,
-        playerName: profile?.playerName || move.playerName || move.moverName || chessComId,
-        playerUsername: chessComId || move.playerUsername || null,
-        avatarUrl: profile?.avatarUrl || move.avatarUrl || null,
-        moveId: move.id,
-        sanMove: move.sanMove,
-        brillianceScore: move.brillianceScore,
-        timeControl: move.timeControl,
-        whiteUsername: move.whiteUsername,
-        blackUsername: move.blackUsername,
-        whiteName: move.whiteName,
-        blackName: move.blackName,
-        players: move.players,
-        uuid: move.uuid,
+        playedAt,
+        playedDate: achievementPlayedDate(playedAt || row.played_at, timeZone),
+        chessComId,
+        playerName: profile?.playerName || chessComId,
+        playerUsername: chessComId,
+        avatarUrl: profile?.avatarUrl || null,
+        moveId: row.stage4_move_id,
+        sanMove: row.solution_san || '—',
+        brillianceScore:
+          row.brilliance_score != null ? Number(row.brilliance_score) : null,
+        timeControl: row.time_control_label || row.time_control || '—',
+        whiteUsername: row.white_username,
+        blackUsername: row.black_username,
+        whiteName: row.white_name,
+        blackName: row.black_name,
+        players: row.players_label || `${white} vs ${black}`,
+        uuid: row.chess_com_uuid,
         title: 'Brilliant Move',
-        detail: move.sanMove ? `Played ${move.sanMove}` : 'Played a brilliant move',
+        detail: row.solution_san
+          ? `Played ${row.solution_san}`
+          : 'Played a brilliant move',
       });
     }
   } catch (err) {

@@ -184,8 +184,9 @@ function BrilliantMoveVerificationBar({ move }) {
     try {
       const data = await verifyBrilliantPuzzle(moveId, 'rejected');
       setPuzzleState(data.puzzle);
-      setPuzzleAddDeclined(false);
+      setPuzzleAddDeclined(true);
       setStep1Editing(false);
+      setEditExpanded(false);
     } catch (err) {
       setError(err.message || 'Failed to mark as not brilliant.');
     } finally {
@@ -237,14 +238,18 @@ function BrilliantMoveVerificationBar({ move }) {
   const status = puzzleState?.verificationStatus || 'pending';
   const isSaved = Boolean(puzzleState?.savedAt);
   const brillianceReviewComplete = status === 'approved' || status === 'rejected';
-  const puzzleDecisionComplete = isSaved || puzzleAddDeclined;
+  // Only approved brilliancies can become puzzles; rejected finishes after step 1.
+  const puzzleDecisionComplete =
+    status === 'rejected' || isSaved || puzzleAddDeclined;
   const reviewFinished = brillianceReviewComplete && puzzleDecisionComplete;
 
   const showSummaryCollapsed = !loadingStatus && reviewFinished && !editExpanded;
   const showStep1Form =
     !loadingStatus && (!brillianceReviewComplete || editExpanded || step1Editing);
   const showStep2 =
-    !loadingStatus && brillianceReviewComplete && (!puzzleDecisionComplete || editExpanded);
+    !loadingStatus &&
+    status === 'approved' &&
+    (!puzzleDecisionComplete || editExpanded);
   const showStep1ResultButton =
     showStep2 && !editExpanded && brillianceReviewComplete && !step1Editing;
 
@@ -312,7 +317,7 @@ function BrilliantMoveVerificationBar({ move }) {
             yesActive={isSaved}
             noActive={puzzleAddDeclined && !isSaved}
             disabled={actionLoading}
-            meta="You can save it as a puzzle even if it is not brilliant"
+            meta="Only confirmed brilliant moves can be saved as puzzles"
           />
 
           <PuzzlePreview

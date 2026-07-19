@@ -156,11 +156,124 @@
   gap: 0.55rem;
 }
 
+.all-games-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.85rem;
+  padding: 0.25rem;
+  border: 1px solid var(--chess-border);
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.all-games-view-btn {
+  min-height: 2rem;
+  padding: 0.35rem 0.95rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--chess-text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.all-games-view-btn:hover:not(.all-games-view-btn--active) {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.all-games-view-btn--active {
+  background: #ffffff;
+  color: #c2410c;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.all-games-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: 0.95rem;
+}
+
 .all-games-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin-top: 0.95rem;
+}
+
+.all-games-search-wrap {
+  position: relative;
+  flex: 1 1 220px;
+  min-width: min(100%, 220px);
+  max-width: 320px;
+  margin-left: auto;
+}
+
+.all-games-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.all-games-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--chess-border);
+  border-radius: 999px;
+  padding: 0.5rem 2.1rem 0.5rem 2.2rem;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 550;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.all-games-search::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.all-games-search:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.all-games-search:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.16);
+}
+
+.all-games-search-clear {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.all-games-search-clear:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .all-games-filter-btn {

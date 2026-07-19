@@ -272,7 +272,7 @@ function ModuleDetailPage() {
         )}
       </div>
 
-      <h1 className="modules-page-title">{module.name}</h1>
+      <h1 className="modules-page-title">Chapters</h1>
       {module.description ? (
         <p className="modules-muted" style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
           {module.description}

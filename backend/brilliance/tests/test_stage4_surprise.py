@@ -1,7 +1,11 @@
 """Stage 4 recommended surprise formula tests."""
 import unittest
 
-from brilliance_stage4 import rating_relative_surprise
+from brilliance_stage4 import (
+    _is_low_rated_pawn_sacrifice,
+    analyze_stage4_move,
+    rating_relative_surprise,
+)
 
 
 class Stage4SurpriseFormulaTests(unittest.TestCase):
@@ -48,6 +52,51 @@ class Stage4SurpriseFormulaTests(unittest.TestCase):
             legal_moves=20,
         )
         self.assertAlmostEqual(result["rank_ratio"], 1.0)
+
+    def test_low_rated_pawn_sacrifice_blocked(self):
+        self.assertTrue(
+            _is_low_rated_pawn_sacrifice(
+                {
+                    "player_rating": 1800,
+                    "sacrificed_piece_type": "pawn",
+                }
+            )
+        )
+        self.assertFalse(
+            _is_low_rated_pawn_sacrifice(
+                {
+                    "player_rating": 2200,
+                    "sacrificed_piece_type": "pawn",
+                }
+            )
+        )
+
+    def test_analyze_stage4_demotes_low_rated_pawn_brilliant(self):
+        result = analyze_stage4_move(
+            {
+                "ply_index": 20,
+                "san_move": "e5",
+                "turn": "white",
+                "player_rating": 1700,
+                "sac_type": "real_sacrifice",
+                "sacrificed_piece_type": "pawn",
+                "moving_piece_type": "pawn",
+                "sacrifice_mode": "direct",
+                "ev_score": 4,
+                "rank_at_depth8": 4,
+                "good_moves_top5": 1,
+                "legal_moves": 30,
+                "non_obvious_score": 9,
+                "defense_difficulty": 8,
+                "multiplexing_score": 7,
+                "deep_eval_mover_cp": 200,
+                "deep_eval_sound_score": 8,
+                "depth_eval_span_score": 7,
+            }
+        )
+        self.assertTrue(result["blocked_low_rated_pawn_sacrifice"])
+        self.assertFalse(result["is_brilliant"])
+        self.assertNotEqual(result["classification"], "BRILLIANT")
 
 
 if __name__ == "__main__":
